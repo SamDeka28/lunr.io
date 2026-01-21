@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Link2, Loader2, Mail, Lock, ArrowRight, Sparkles } from "lucide-react";
@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useUserStore } from "@/store/user-store";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -376,5 +376,20 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gradient-to-br from-neutral-bg via-white to-neutral-bg flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-5 w-5 animate-spin text-electric-sapphire" />
+          <span className="text-neutral-muted">Loading...</span>
+        </div>
+      </main>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 }
