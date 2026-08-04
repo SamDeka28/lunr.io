@@ -59,7 +59,7 @@ export function PortfolioLayout(props: PortfolioLayoutProps) {
       verticalAlign={props.verticalAlign}
 >
       <div
-        className="flex flex-col sm:flex-row gap-4 sm:gap-5 items-center sm:items-start w-full pb-4 sm:pb-5"
+        className="flex flex-row gap-4 sm:gap-5 items-start w-full pb-4 sm:pb-5"
         style={{ borderBottom: `2px solid ${textColor}14` }}
       >
         {showProfileImage && profileImageUrl && (
@@ -76,7 +76,7 @@ export function PortfolioLayout(props: PortfolioLayoutProps) {
           </div>
         )}
         <div
-          className="flex-1 flex flex-col items-center sm:items-start min-w-0 w-full"
+          className="flex-1 flex flex-col items-start min-w-0"
           style={{
             gap: 8,
             paddingTop: hasTopImage ? 8 : 0,
@@ -84,9 +84,10 @@ export function PortfolioLayout(props: PortfolioLayoutProps) {
         >
           {title && (
             <h1
-              className="break-words text-center sm:text-left w-full"
+              className="break-words w-full"
               style={{
                 fontSize: fluidTitle(titleFontSize, 1.05),
+                textAlign: "left",
                 fontFamily: `"${fontFamily}", sans-serif`,
                 color: textColor,
                 fontWeight: titleFontWeight,
@@ -99,9 +100,10 @@ export function PortfolioLayout(props: PortfolioLayoutProps) {
           )}
           {description && (
             <p
-              className="break-words text-center sm:text-left w-full"
+              className="break-words w-full"
               style={{
                 fontSize: fluidBody(descriptionFontSize),
+                textAlign: "left",
                 fontFamily: `"${fontFamily}", sans-serif`,
                 color: textColor,
                 opacity: 0.7,

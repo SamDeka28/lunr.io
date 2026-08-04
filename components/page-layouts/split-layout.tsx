@@ -58,16 +58,16 @@ export function SplitLayout(props: SplitLayoutProps) {
 >
       <div
         className={cn(
-          "w-full grid gap-4 sm:gap-6 items-start",
+          "w-full grid gap-5 sm:gap-6 items-start",
           showProfileImage && profileImageUrl
-            ? "grid-cols-1 sm:grid-cols-[minmax(120px,36%)_1fr]"
+            ? "grid-cols-[minmax(110px,38%)_1fr]"
             : "grid-cols-1"
         )}
       >
         {showProfileImage && profileImageUrl && (
-          <div className={cn("mx-auto w-full max-w-[220px] sm:max-w-none sm:mx-0", avatarOverlapClass(hasTopImage, "md"))}>
+          <div className={cn(avatarOverlapClass(hasTopImage, "md"))}>
             <div
-              className="w-full overflow-hidden rounded-2xl border-[3px] bg-white shadow-lg aspect-square sm:aspect-[4/5]"
+              className="w-full overflow-hidden rounded-2xl border-[3px] bg-white shadow-lg aspect-[4/5]"
               style={{ borderColor: buttonColor }}
             >
               <img
@@ -83,7 +83,7 @@ export function SplitLayout(props: SplitLayoutProps) {
         )}
 
         <div
-          className="flex flex-col items-start min-w-0 w-full"
+          className="flex flex-col items-start min-w-0"
           style={{
             gap: fluidSpace(Math.max(12, spacing * 0.7)),
             paddingTop: hasTopImage ? 10 : 0,

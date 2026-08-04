@@ -58,9 +58,9 @@ export function AsymmetricLayout(props: AsymmetricLayoutProps) {
       spacing={spacing}
       verticalAlign={props.verticalAlign}
 >
-      <div className="w-full flex flex-col sm:flex-row gap-4 sm:gap-5 items-start">
+      <div className="w-full flex flex-row gap-4 sm:gap-5 items-start">
         {showProfileImage && profileImageUrl && (
-          <div className={cn("flex-shrink-0 self-center sm:self-start", avatarOverlapClass(hasTopImage, "md"))}>
+          <div className={cn("flex-shrink-0", avatarOverlapClass(hasTopImage, "md"))}>
             <img
               src={profileImageUrl}
               alt="Profile"
@@ -78,7 +78,7 @@ export function AsymmetricLayout(props: AsymmetricLayoutProps) {
           </div>
         )}
         <div
-          className="flex-1 flex flex-col items-start min-w-0 w-full"
+          className="flex-1 flex flex-col items-start min-w-0"
           style={{
             gap: fluidSpace(Math.max(10, spacing * 0.6)),
             paddingTop: hasTopImage ? 8 : 4,
@@ -86,9 +86,10 @@ export function AsymmetricLayout(props: AsymmetricLayoutProps) {
         >
           {title && (
             <h1
-              className="break-words text-center sm:text-left w-full"
+              className="break-words w-full"
               style={{
                 fontSize: fluidTitle(titleFontSize, 1.08),
+                textAlign: "left",
                 fontFamily: `"${fontFamily}", sans-serif`,
                 color: textColor,
                 fontWeight: titleFontWeight,
@@ -101,9 +102,10 @@ export function AsymmetricLayout(props: AsymmetricLayoutProps) {
           )}
           {description && (
             <p
-              className="break-words text-center sm:text-left w-full"
+              className="break-words w-full"
               style={{
                 fontSize: fluidBody(descriptionFontSize),
+                textAlign: "left",
                 fontFamily: `"${fontFamily}", sans-serif`,
                 color: textColor,
                 opacity: 0.72,

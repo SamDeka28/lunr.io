@@ -108,10 +108,10 @@ export function GridLayout(props: GridLayoutProps) {
         </p>
       )}
       {pageLinks.length > 0 && (
-        <div className="w-full grid grid-cols-1 min-[380px]:grid-cols-2 gap-2 sm:gap-3 pt-1">
+        <div className="w-full grid grid-cols-2 gap-2.5 sm:gap-3 pt-1">
           {pageLinks.map((link) => {
             const linkContent = (
-              <div className="flex flex-col items-center justify-center gap-1 sm:gap-1.5 min-h-[56px] sm:min-h-[72px]">
+              <div className="flex flex-col items-center justify-center gap-1.5 min-h-[64px] sm:min-h-[72px]">
                 <span className="line-clamp-2 w-full px-1 font-semibold break-words">{link.title}</span>
                 <ExternalLink className="h-3.5 w-3.5 opacity-70 flex-shrink-0" />
               </div>

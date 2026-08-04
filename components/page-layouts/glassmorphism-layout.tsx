@@ -57,14 +57,14 @@ export function GlassmorphismLayout(props: GlassmorphismLayoutProps) {
       spacing={0}
       verticalAlign={props.verticalAlign}
       contentStyle={{
-        marginTop: hasTopImage ? -40 : 16,
+        marginTop: hasTopImage ? -56 : 24,
         paddingTop: 0,
       }}
     >
       <div
-        className="w-full rounded-2xl sm:rounded-3xl px-4 py-6 sm:px-7 sm:py-9 flex flex-col items-center"
+        className="w-full rounded-3xl px-5 py-7 sm:px-7 sm:py-9 flex flex-col items-center"
         style={{
-          gap: `clamp(${Math.max(12, Math.round(spacing * 0.7))}px, 3vw, ${spacing}px)`,
+          gap: `clamp(${Math.max(12, Math.round(spacing * 0.75))}px, 2.5vw, ${spacing || 24}px)`,
           background: "rgba(255, 255, 255, 0.72)",
           backdropFilter: "blur(24px) saturate(1.4)",
           WebkitBackdropFilter: "blur(24px) saturate(1.4)",
