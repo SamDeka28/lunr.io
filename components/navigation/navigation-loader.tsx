@@ -71,12 +71,12 @@ function LunrMarkLoader({ className }: { className?: string }) {
 
       {/* Squircle tile */}
       <rect
-        x="8"
-        y="8"
-        width="227"
-        height="227"
-        rx="52"
-        ry="52"
+        x="14"
+        y="14"
+        width="215"
+        height="215"
+        rx="48"
+        ry="48"
         fill="url(#lunr-loader-grad)"
       />
 
@@ -84,8 +84,8 @@ function LunrMarkLoader({ className }: { className?: string }) {
       <path
         d={LUNR_MARK_PATH}
         fill="none"
-        stroke="#0a0a0a"
-        strokeWidth="38"
+        stroke="#111827"
+        strokeWidth="22"
         strokeLinecap="round"
         strokeLinejoin="round"
         pathLength={1}
@@ -96,8 +96,8 @@ function LunrMarkLoader({ className }: { className?: string }) {
       <circle
         cx="180.9"
         cy="71.1"
-        r="20"
-        fill="#0a0a0a"
+        r="12"
+        fill="#111827"
         className="lunr-loader-dot"
       />
     </svg>
@@ -185,14 +185,14 @@ export function NavigationLoaderProvider({
       {children}
       {isNavigating && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-[3px]"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-white/45 backdrop-blur-[2px]"
           aria-live="polite"
           aria-busy="true"
           aria-label="Loading"
           role="status"
         >
-          <div className="lunr-loader-mark w-[88px] h-[88px] sm:w-[104px] sm:h-[104px]">
-            <LunrMarkLoader className="w-full h-full drop-shadow-sm" />
+          <div className="lunr-loader-mark w-[72px] h-[72px] sm:w-[84px] sm:h-[84px]">
+            <LunrMarkLoader className="w-full h-full" />
           </div>
         </div>
       )}
