@@ -312,3 +312,51 @@ html {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #4B5563;
 }
+
+/* Navigation loader — SVG path draw of lunr mark (loops until route loads) */
+@keyframes lunr-path-draw {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  42% {
+    stroke-dashoffset: 0;
+  }
+  68% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes lunr-dot-pop {
+  0%,
+  28% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  42%,
+  68% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  82%,
+  100% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+}
+
+.lunr-loader-path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: lunr-path-draw 1.6s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+}
+
+.lunr-loader-dot {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lunr-dot-pop 1.6s cubic-bezier(0.34, 1.2, 0.64, 1) infinite;
+}
+

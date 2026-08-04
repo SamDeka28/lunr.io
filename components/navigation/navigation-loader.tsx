@@ -10,10 +10,6 @@ import {
   useState,
 } from "react";
 import { usePathname } from "next/navigation";
-import dynamic from "next/dynamic";
-import navLoaderAnimation from "./nav-loader.json";
-
-const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 
 type NavigationLoaderContextValue = {
   isNavigating: boolean;
@@ -47,6 +43,67 @@ function isInternalNavHref(href: string | null, currentPath: string) {
   return normalizePath(href) !== currentPath;
 }
 
+/** Centerline traced from lunr-mark.png (viewBox 0 0 243 243) */
+const LUNR_MARK_PATH =
+  "M135.0 181.0 C131.8 178.5 123.8 166.0 116.0 166.0 C108.2 166.0 96.5 179.2 88.0 181.0 C79.5 182.8 70.8 179.7 65.0 177.0 C59.2 174.3 55.8 170.3 53.0 165.0 C50.2 159.7 47.8 151.7 48.0 145.0 C48.2 138.3 49.0 134.0 54.0 125.0 C59.0 116.0 71.2 99.5 78.0 91.0 C84.8 82.5 88.7 78.5 95.0 74.0 C101.3 69.5 109.0 65.0 116.0 64.0 C123.0 63.0 133.5 67.3 137.0 68.0";
+
+function LunrMarkLoader({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 243 243"
+      className={className}
+      aria-hidden
+      style={{ overflow: "visible" }}
+    >
+      <defs>
+        <linearGradient
+          id="lunr-loader-grad"
+          x1="18%"
+          y1="12%"
+          x2="88%"
+          y2="92%"
+        >
+          <stop offset="0%" stopColor="#4361ee" />
+          <stop offset="55%" stopColor="#3f37c9" />
+          <stop offset="100%" stopColor="#f72585" />
+        </linearGradient>
+      </defs>
+
+      {/* Squircle tile */}
+      <rect
+        x="8"
+        y="8"
+        width="227"
+        height="227"
+        rx="52"
+        ry="52"
+        fill="url(#lunr-loader-grad)"
+      />
+
+      {/* Glyph stroke — drawn via dash offset */}
+      <path
+        d={LUNR_MARK_PATH}
+        fill="none"
+        stroke="#0a0a0a"
+        strokeWidth="38"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        pathLength={1}
+        className="lunr-loader-path"
+      />
+
+      {/* Dot above the tip */}
+      <circle
+        cx="180.9"
+        cy="71.1"
+        r="20"
+        fill="#0a0a0a"
+        className="lunr-loader-dot"
+      />
+    </svg>
+  );
+}
+
 export function NavigationLoaderProvider({
   children,
 }: {
@@ -57,7 +114,7 @@ export function NavigationLoaderProvider({
   const startedAtRef = useRef(0);
   const pathWhenStartedRef = useRef(pathname);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const minVisibleMs = 320;
+  const minVisibleMs = 720;
 
   const clearHideTimer = () => {
     if (hideTimerRef.current) {
@@ -77,7 +134,6 @@ export function NavigationLoaderProvider({
     [pathname]
   );
 
-  // Catch all in-app link clicks across the dashboard
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -98,7 +154,6 @@ export function NavigationLoaderProvider({
     return () => document.removeEventListener("click", onClick, true);
   }, [pathname, startNavigation]);
 
-  // Hide only after the route actually changes
   useEffect(() => {
     if (!isNavigating) return;
     if (pathname === pathWhenStartedRef.current) return;
@@ -114,7 +169,6 @@ export function NavigationLoaderProvider({
     return clearHideTimer;
   }, [pathname, isNavigating]);
 
-  // Safety: never leave the overlay stuck
   useEffect(() => {
     if (!isNavigating) return;
     const timeout = setTimeout(() => setIsNavigating(false), 8000);
@@ -131,23 +185,14 @@ export function NavigationLoaderProvider({
       {children}
       {isNavigating && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-[4px]"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-[3px]"
           aria-live="polite"
           aria-busy="true"
+          aria-label="Loading"
           role="status"
         >
-          <div className="flex flex-col items-center gap-3 rounded-3xl bg-white/95 px-10 py-8 shadow-soft border border-neutral-border">
-            <div className="w-[120px] h-[120px]">
-              <Lottie
-                animationData={navLoaderAnimation}
-                loop
-                autoplay
-                style={{ width: "100%", height: "100%" }}
-              />
-            </div>
-            <p className="text-sm font-semibold text-neutral-text tracking-tight">
-              Loading…
-            </p>
+          <div className="lunr-loader-mark w-[88px] h-[88px] sm:w-[104px] sm:h-[104px]">
+            <LunrMarkLoader className="w-full h-full drop-shadow-sm" />
           </div>
         </div>
       )}
