@@ -62,9 +62,17 @@ export class ApiKeyService {
       name?: string;
       is_active?: boolean;
       expires_at?: string | null;
+      scopes?: string[] | null;
     }
   ): Promise<ApiKey> {
     return this.apiKeyRepo.update(keyId, updates);
+  }
+
+  /**
+   * Rotate API key secret
+   */
+  async rotateApiKey(keyId: string) {
+    return this.apiKeyRepo.rotate(keyId);
   }
 
   /**

@@ -35,17 +35,41 @@ export function BillingPageClient({
 
     setUpgradingPlanId(planId);
     try {
-      // TODO: Integrate with Stripe checkout or payment processing
-      toast.info(`Upgrading to ${planName} plan...`);
-      // For now, just show a message
-      // In production, this would redirect to Stripe checkout
-      setTimeout(() => {
-        setUpgradingPlanId(null);
-        toast.success("Redirecting to checkout...");
-      }, 1000);
+      const response = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan_id: planId,
+          billing_cycle: billingCycle,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to start checkout");
+      }
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      throw new Error("No checkout URL returned");
     } catch (error: any) {
       toast.error(error.message || "Failed to upgrade plan");
       setUpgradingPlanId(null);
+    }
+  };
+
+  const handleManageBilling = async () => {
+    try {
+      const response = await fetch("/api/stripe/portal", { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to open billing portal");
+      }
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to open billing portal");
     }
   };
 
@@ -197,6 +221,16 @@ export function BillingPageClient({
                   {currentPlan.stripe_subscription_id}
                 </p>
               </div>
+            )}
+
+            {currentPlanName !== "free" && (
+              <button
+                type="button"
+                onClick={handleManageBilling}
+                className="mt-4 w-full h-11 rounded-xl border-2 border-neutral-border text-neutral-text text-sm font-semibold hover:bg-neutral-bg transition-all"
+              >
+                Manage billing
+              </button>
             )}
           </div>
         </div>

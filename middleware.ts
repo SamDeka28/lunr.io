@@ -1,6 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const AUTH_PAGES = ["/login", "/signup"];
+const AUTH_EXCEPTION_PAGES = ["/auth/reset-password/confirm"];
+
+function isEmailProvider(user: {
+  app_metadata?: { provider?: string };
+  identities?: { provider: string }[] | null;
+}): boolean {
+  const provider =
+    user.app_metadata?.provider ?? user.identities?.[0]?.provider;
+  return provider === "email";
+}
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -48,13 +60,24 @@ export async function middleware(request: NextRequest) {
     const domainName = hostname.split(":")[0]; // Remove port if present
     const { data: customDomain } = await supabase
       .from("custom_domains")
-      .select("page_id")
+      .select("page_id, user_id")
       .eq("domain", domainName)
       .eq("verification_status", "verified")
-      .single();
+      .maybeSingle();
 
     if (customDomain) {
-      // Get the page details
+      const path = request.nextUrl.pathname;
+      // Branded short links: yourdomain.com/{shortCode} → rewrite to /{shortCode}
+      // Exclude root and known app paths — root still serves the bio page
+      const isRoot = path === "/" || path === "";
+      const isReserved = /^\/(api|auth|dashboard|login|signup|docs|_next|p)\b/i.test(path);
+
+      if (!isRoot && !isReserved) {
+        // Pass through to short-code redirect handler
+        return supabaseResponse;
+      }
+
+      // Get the page details for apex/root → bio page
       const { data: page } = await supabase
         .from("pages")
         .select("slug, is_active, is_public")
@@ -62,31 +85,50 @@ export async function middleware(request: NextRequest) {
         .single();
 
       if (page && page.is_active && page.is_public) {
-        // Rewrite the URL to serve the page
         const url = request.nextUrl.clone();
         url.pathname = `/p/${page.slug}`;
-        // Preserve query parameters
         return NextResponse.rewrite(url);
       }
     }
   }
 
+  const pathname = request.nextUrl.pathname;
+
   // Protect dashboard routes
-  if (request.nextUrl.pathname.startsWith("/dashboard")) {
+  if (pathname.startsWith("/dashboard")) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
-      url.searchParams.set("redirect", request.nextUrl.pathname);
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
+    }
+
+    // Block email-provider users who have not confirmed their email
+    if (!user.email_confirmed_at && isEmailProvider(user)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("error", "email_unconfirmed");
       return NextResponse.redirect(url);
     }
   }
 
-  // Redirect authenticated users away from auth pages
+  // Password recovery must stay reachable with a recovery session —
+  // never treat it as "already logged in → redirect to dashboard"
   if (
-    (request.nextUrl.pathname === "/login" ||
-      request.nextUrl.pathname === "/signup") &&
-    user
+    AUTH_EXCEPTION_PAGES.some(
+      (page) => pathname === page || pathname.startsWith(`${page}/`)
+    )
   ) {
+    return supabaseResponse;
+  }
+
+  // Redirect authenticated users away from login/signup only
+  if (AUTH_PAGES.includes(pathname) && user) {
+    // Unconfirmed email users should stay on login to see the notice
+    if (!user.email_confirmed_at && isEmailProvider(user)) {
+      return supabaseResponse;
+    }
+
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);

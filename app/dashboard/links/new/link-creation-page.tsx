@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import QRCode from "qrcode";
 import { usePlan } from "@/hooks/use-plan";
 import { SuccessModal } from "@/components/success-modal";
+import { BulkImportModal } from "@/components/bulk-import-modal";
 
 export function LinkCreationPage({
   userId,
@@ -47,8 +48,11 @@ export function LinkCreationPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
   const [createdLink, setCreatedLink] = useState<any>(null);
   const [createdQRCode, setCreatedQRCode] = useState<string>("");
+  const [tags, setTags] = useState("");
+  const [folder, setFolder] = useState("");
 
   // UTM Parameters State
   const [utmEnabled, setUtmEnabled] = useState(false);
@@ -351,7 +355,12 @@ export function LinkCreationPage({
           short_code: customCode || undefined,
           expires_at: expiresAt || null,
           title: title || undefined,
+          password: password && isPremium ? password : undefined,
           campaign_id: selectedCampaignId || undefined,
+          tags: tags.trim()
+            ? tags.split(",").map((t) => t.trim()).filter(Boolean)
+            : undefined,
+          folder: folder.trim() || undefined,
           utm_parameters: utmEnabled && canUseUTMParameters() && (utmSource || utmMedium) ? {
             utm_source: utmSource || undefined,
             utm_medium: utmMedium || undefined,
@@ -373,7 +382,7 @@ export function LinkCreationPage({
       // Generate and save QR code only if toggle is enabled
       if (generateQR) {
         const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-        const shortUrl = `${baseUrl}/${linkData.short_code}`;
+        const shortUrl = `${baseUrl}/${linkData.short_code}?utm_medium=qr&utm_source=qr`;
         
         // First, save the QR code to the database
         try {
@@ -472,6 +481,8 @@ export function LinkCreationPage({
     setTitle("");
     setCustomCode("");
     setExpiresAt("");
+    setTags("");
+    setFolder("");
     setPreviewQR("");
     setPreviewImageUrl(null);
     setPreviewImage(null);
@@ -492,7 +503,11 @@ export function LinkCreationPage({
                   Shorten your URL and track performance with detailed analytics
                 </p>
               </div>
-              <button className="px-4 py-2 rounded-xl border-2 border-neutral-border hover:border-electric-sapphire hover:text-electric-sapphire text-sm font-semibold text-neutral-text transition-colors flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowBulkModal(true)}
+                className="px-4 py-2 rounded-xl border-2 border-neutral-border hover:border-electric-sapphire hover:text-electric-sapphire text-sm font-semibold text-neutral-text transition-colors flex items-center gap-2"
+              >
                 <Upload className="h-4 w-4" />
                 Bulk upload
               </button>
@@ -590,6 +605,44 @@ export function LinkCreationPage({
                       "transition-all"
                     )}
                   />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                      Tags (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={tags}
+                      onChange={(e) => setTags(e.target.value)}
+                      placeholder="marketing, launch"
+                      className={cn(
+                        "w-full h-12 px-4 rounded-xl bg-white border-2 border-neutral-border",
+                        "text-neutral-text text-sm font-medium",
+                        "focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire",
+                        "transition-all"
+                      )}
+                    />
+                    <p className="text-xs text-neutral-muted mt-1.5">Comma-separated</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                      Folder (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={folder}
+                      onChange={(e) => setFolder(e.target.value)}
+                      placeholder="e.g. social"
+                      className={cn(
+                        "w-full h-12 px-4 rounded-xl bg-white border-2 border-neutral-border",
+                        "text-neutral-text text-sm font-medium",
+                        "focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire",
+                        "transition-all"
+                      )}
+                    />
+                  </div>
                 </div>
 
                         <div>
@@ -777,11 +830,17 @@ export function LinkCreationPage({
                   <input
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
+                    onChange={(e) => {
+                      if (!isPremium) return;
+                      setPassword(e.target.value);
+                    }}
+                    placeholder={isPremium ? "Enter password" : "Premium feature"}
+                    disabled={!isPremium}
                     className={cn(
                       "h-10 px-3 rounded-xl border-2 text-xs font-medium transition-all w-48",
-                      "bg-white border-neutral-border text-neutral-text focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
+                      isPremium
+                        ? "bg-white border-neutral-border text-neutral-text focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
+                        : "bg-neutral-bg border-neutral-border text-neutral-muted cursor-not-allowed opacity-50"
                     )}
                   />
                 </div>
@@ -1360,6 +1419,16 @@ export function LinkCreationPage({
           onCreateAnother={handleCreateAnother}
         />
       )}
+
+      <BulkImportModal
+        open={showBulkModal}
+        onClose={() => setShowBulkModal(false)}
+        onComplete={(summary) => {
+          if (summary.created > 0) {
+            refreshUserData();
+          }
+        }}
+      />
     </div>
   );
 }

@@ -149,9 +149,21 @@ export function QRAnalyticsClient({
                     </div>
                   </div>
                   {qrCode.link_id && (
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-neutral-bg border border-neutral-border">
-                      <span className="text-sm font-semibold text-neutral-muted">Linked to</span>
-                      <Link2 className="h-4 w-4 text-electric-sapphire" />
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-neutral-bg border border-neutral-border">
+                        <span className="text-sm font-semibold text-neutral-muted">Linked to</span>
+                        <Link
+                          href={`/dashboard/links/${qrCode.link_id}/edit`}
+                          className="text-sm font-semibold text-electric-sapphire hover:underline flex items-center gap-1"
+                        >
+                          Edit short link
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
+                      </div>
+                      <p className="text-xs text-neutral-muted px-1">
+                        Change destination by editing the linked short link. QR scans encode the short URL (with{" "}
+                        <code className="text-[10px]">utm_medium=qr</code>) so analytics stay attributable.
+                      </p>
                     </div>
                   )}
                   <div className="flex items-center gap-2 pt-2">

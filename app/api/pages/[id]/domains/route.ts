@@ -78,6 +78,16 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Custom domains require Business+
+    const { PlanService } = await import("@/lib/services/plan.service");
+    const planService = new PlanService(supabase);
+    if (!(await planService.canUseCustomDomains(user.id))) {
+      return NextResponse.json(
+        { error: "Custom domains are available on Business and Enterprise plans. Upgrade to connect a domain." },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { domain } = body;
 

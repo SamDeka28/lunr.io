@@ -67,7 +67,8 @@ export async function PUT(
       campaign_type,
       tags,
       target_clicks,
-      budget
+      budget,
+      utm_defaults,
     } = body;
 
     const campaignService = new CampaignService(supabase);
@@ -80,6 +81,7 @@ export async function PUT(
       tags,
       target_clicks,
       budget,
+      utm_defaults,
     });
 
     return NextResponse.json(campaign);

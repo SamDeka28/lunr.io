@@ -73,7 +73,7 @@ export function PricingPageClient({ plans, isAuthenticated }: PricingPageClientP
     
     // Additional features from the features object
     if (plan.features) {
-      if (plan.features.custom_domains) features.push("Custom Domains");
+      if (plan.features.custom_domains) features.push("Custom Domains for Pages");
       if (plan.features.api_access) features.push("API Access");
       if (plan.features.team_collaboration) features.push("Team Collaboration");
       if (plan.features.priority_support) features.push("Priority Support");

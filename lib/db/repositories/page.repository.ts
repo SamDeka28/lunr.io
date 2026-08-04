@@ -193,5 +193,54 @@ export class PageRepository {
       }
     }
   }
+
+  /**
+   * Insert a page_analytics event (view or click)
+   */
+  async insertAnalyticsEvent(input: {
+    pageId: string;
+    eventType: "view" | "click";
+    linkId?: string | null;
+    referrer?: string | null;
+    userAgent?: string | null;
+    country?: string | null;
+  }): Promise<void> {
+    const { error } = await this.supabase.from("page_analytics").insert({
+      page_id: input.pageId,
+      event_type: input.eventType,
+      link_id: input.linkId || null,
+      referrer: input.referrer || null,
+      user_agent: input.userAgent || null,
+      country: input.country || null,
+    });
+
+    if (error) {
+      // Soft-fail: counter increments still succeed even if analytics table
+      // is not yet migrated.
+      console.error("Failed to insert page analytics:", error.message);
+    }
+  }
+
+  /**
+   * Fetch analytics rows for a page
+   */
+  async getAnalytics(pageId: string, days = 30): Promise<any[]> {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const { data, error } = await this.supabase
+      .from("page_analytics")
+      .select("id, page_id, link_id, event_type, referrer, country, user_agent, created_at")
+      .eq("page_id", pageId)
+      .gte("created_at", since.toISOString())
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Failed to fetch page analytics:", error.message);
+      return [];
+    }
+
+    return data || [];
+  }
 }
 

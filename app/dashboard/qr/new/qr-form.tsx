@@ -127,11 +127,33 @@ export default function QRCodeForm({
     });
   }, [qrColor, qrBgColor]);
 
+  // Preview always encodes the short URL (or the raw URL until a short link is created)
+  const getPreviewTarget = useCallback(() => {
+    let target = "";
+    if (linkId) {
+      const selected = links.find((l) => l.id === linkId);
+      if (selected) {
+        const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+        target = `${baseUrl}/${selected.short_code}`;
+      }
+    } else {
+      target = url;
+    }
+    if (!target) return "";
+    try {
+      const u = new URL(target);
+      if (!u.searchParams.has("utm_medium")) u.searchParams.set("utm_medium", "qr");
+      if (!u.searchParams.has("utm_source")) u.searchParams.set("utm_source", "qr");
+      return u.toString();
+    } catch {
+      const sep = target.includes("?") ? "&" : "?";
+      return `${target}${sep}utm_medium=qr&utm_source=qr`;
+    }
+  }, [linkId, links, url]);
+
   // Update QR preview when settings change
   useEffect(() => {
-    const targetUrl = linkId 
-      ? links.find(l => l.id === linkId)?.original_url || url
-      : url;
+    const targetUrl = getPreviewTarget();
 
     if (!targetUrl) {
       setPreviewQR("");
@@ -159,7 +181,7 @@ export default function QRCodeForm({
     
     generateQR();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [linkId, url, qrColor, qrBgColor, addLogo, previewImageUrl, generateQRWithLogo]);
+  }, [getPreviewTarget, qrColor, qrBgColor, addLogo, previewImageUrl, generateQRWithLogo]);
 
   // Handle image selection
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,6 +238,32 @@ export default function QRCodeForm({
     setLoading(true);
 
     try {
+      // Build the trackable short URL for an existing link; for raw URLs the
+      // API will auto-create a short link and encode that instead.
+      const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+      const selected = linkId ? links.find((l) => l.id === linkId) : null;
+      const shortUrl = selected
+        ? `${baseUrl}/${selected.short_code}?utm_medium=qr&utm_source=qr`
+        : undefined;
+
+      const sizeMap: Record<string, number> = { small: 200, medium: 300, large: 500 };
+      const finalWidth = sizeMap[qrSize] || 300;
+
+      // Precompose with logo/colors so the persisted image matches the preview
+      let precomposed: string | undefined;
+      const encodeTarget = getPreviewTarget() || shortUrl || url;
+      if (encodeTarget) {
+        precomposed = await generateQRWithLogo(
+          encodeTarget,
+          {
+            width: finalWidth,
+            color: { dark: qrColor, light: qrBgColor },
+          },
+          previewImageUrl || null,
+          addLogo
+        );
+      }
+
       const response = await fetch("/api/qr", {
         method: "POST",
         headers: {
@@ -224,6 +272,11 @@ export default function QRCodeForm({
         body: JSON.stringify({
           link_id: linkId || undefined,
           url: url || undefined,
+          fg_color: qrColor,
+          bg_color: qrBgColor,
+          size: qrSize,
+          logo_data_url: addLogo ? previewImageUrl : undefined,
+          qr_data: precomposed,
         }),
       });
 
@@ -234,28 +287,7 @@ export default function QRCodeForm({
 
       const qrData = await response.json();
       setCreatedQR(qrData);
-
-      // Generate final QR code with current design settings
-      const targetUrl = linkId 
-        ? links.find(l => l.id === linkId)?.original_url || url
-        : url;
-
-      if (targetUrl) {
-        try {
-          const finalQR = await generateQRWithLogo(
-            targetUrl,
-            {
-              width: 300,
-              color: { dark: qrColor, light: qrBgColor },
-            },
-            previewImageUrl || null,
-            addLogo
-          );
-          setCreatedQRCode(finalQR);
-        } catch (qrErr) {
-          console.error("Failed to generate QR for success modal:", qrErr);
-        }
-      }
+      setCreatedQRCode(qrData.qr_data || precomposed || "");
 
       // Show success modal instead of redirecting
       setShowSuccessModal(true);
@@ -299,9 +331,7 @@ export default function QRCodeForm({
   };
 
   const handleCopyCode = () => {
-    const targetUrl = linkId 
-      ? links.find(l => l.id === linkId)?.original_url || url
-      : url;
+    const targetUrl = createdQR?.short_url || getPreviewTarget();
     if (targetUrl) {
       navigator.clipboard.writeText(targetUrl);
       toast.success("URL copied to clipboard!");

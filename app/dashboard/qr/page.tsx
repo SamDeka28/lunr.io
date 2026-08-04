@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCachedUser } from "@/lib/supabase/auth";
 import { QRPageWrapper } from "./qr-page-wrapper";
 import Link from "next/link";
 
@@ -9,9 +10,7 @@ export default async function QRCodePage({
   searchParams: { search?: string; filter?: string; view?: string; status?: string; dateFilter?: string };
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   if (!user) {
     redirect("/login");
@@ -23,7 +22,9 @@ export default async function QRCodePage({
   // Get user's QR codes
   let query = supabase
     .from("qr_codes")
-    .select("*, links(*)")
+    // The QR list only reads `short_code` and `original_url` from the joined link
+    // (and the search filters on them), so avoid selecting every link column.
+    .select("*, links(short_code, original_url)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 

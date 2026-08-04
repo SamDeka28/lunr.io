@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCachedUser } from "@/lib/supabase/auth";
 import { CampaignForm } from "../../campaign-form";
 
 export default async function EditCampaignPage({
@@ -8,9 +9,7 @@ export default async function EditCampaignPage({
   params: Promise<{ id: string }>;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   if (!user) {
     redirect("/login");

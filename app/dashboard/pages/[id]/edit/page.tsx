@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCachedUser } from "@/lib/supabase/auth";
 import EditStudio from "./edit-studio";
 
 export default async function EditPagePage({
@@ -8,9 +9,7 @@ export default async function EditPagePage({
   params: Promise<{ id: string }>;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   if (!user) {
     redirect("/login");

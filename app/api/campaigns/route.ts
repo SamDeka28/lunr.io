@@ -17,6 +17,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Campaigns are a paid feature (pro+)
+    const { PlanService } = await import("@/lib/services/plan.service");
+    const planService = new PlanService(supabase);
+    const profile = await planService.getUserPlan(user.id);
+    const planName = profile?.plan?.name || "free";
+    if (planName === "free") {
+      return NextResponse.json(
+        { error: "Campaigns are available on Pro and higher plans. Upgrade to create campaigns." },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { 
       name, 
@@ -26,7 +38,8 @@ export async function POST(request: NextRequest) {
       campaign_type,
       tags,
       target_clicks,
-      budget
+      budget,
+      utm_defaults,
     } = body;
 
     if (!name || name.trim().length === 0) {
@@ -46,6 +59,7 @@ export async function POST(request: NextRequest) {
       tags: tags || null,
       target_clicks: target_clicks || 0,
       budget: budget || 0,
+      utm_defaults: utm_defaults || null,
       user_id: user.id,
     });
 
@@ -55,6 +69,7 @@ export async function POST(request: NextRequest) {
       description: campaign.description,
       start_date: campaign.start_date,
       end_date: campaign.end_date,
+      utm_defaults: campaign.utm_defaults,
       is_active: campaign.is_active,
       created_at: campaign.created_at,
     });

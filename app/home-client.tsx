@@ -126,7 +126,7 @@ export default function HomePageClient() {
     {
       step: "03",
       title: "Analyze & Optimize",
-      description: "Track clicks in real-time, view detailed analytics including geographic data and referrers, and measure the performance of your campaigns.",
+      description: "Track clicks in real-time, view referrers and campaign performance, and measure what matters today. Geographic breakdowns are coming soon.",
       icon: BarChart3,
     },
   ];
@@ -138,11 +138,11 @@ export default function HomePageClient() {
     },
     {
       question: "Can I use my own domain?",
-      answer: "Yes! Our Business and Enterprise plans include custom domain support. You can connect your own domain, verify ownership via DNS, and use branded short links like yourdomain.com/yourlink.",
+      answer: "Yes! Our Business and Enterprise plans include custom domain support for bio pages. You can connect your own domain, verify ownership via DNS, and serve pages on your brand. Branded short links on custom domains (yourdomain.com/yourlink) are coming soon.",
     },
     {
       question: "What analytics do you provide?",
-      answer: "We provide comprehensive analytics including total clicks, unique visitors, geographic data, device types, referrers, browser information, and time-series data. You can also track UTM parameters for campaign attribution.",
+      answer: "We provide analytics including total clicks, unique visitors, device types, referrers, browser information, and time-series data. You can also track UTM parameters for campaign attribution. Geographic data is coming soon.",
     },
     {
       question: "Are there any limits on the free plan?",
@@ -154,7 +154,7 @@ export default function HomePageClient() {
     },
     {
       question: "Can I export my analytics data?",
-      answer: "Yes, you can export your analytics data in various formats. Enterprise plans include API access for programmatic data retrieval and integration with your existing tools.",
+      answer: "CSV and bulk export are coming soon. Enterprise plans include API access for programmatic data retrieval and integration with your existing tools.",
     },
     {
       question: "Do you offer API access?",
@@ -494,7 +494,7 @@ export default function HomePageClient() {
                 </span>
               </h3>
               <p className="text-lg text-neutral-muted mb-6 leading-relaxed">
-                Enterprise-grade URL shortening infrastructure. Create branded short links at scale with custom domains, expiration controls, and programmatic access via API.
+                Enterprise-grade URL shortening infrastructure. Create short links at scale with custom back-halves, expiration controls, and programmatic access via API. Custom domains for short links are coming soon.
               </p>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3 group">
@@ -646,7 +646,7 @@ export default function HomePageClient() {
                   <div className="p-1 rounded-lg bg-vivid-royal/10 group-hover:bg-vivid-royal/20 group-hover:-rotate-12 transition-all duration-300">
                     <Check className="h-4 w-4 text-vivid-royal" />
                   </div>
-                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Geographic data and device breakdowns</span>
+                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Device breakdowns · Geographic data coming soon</span>
                 </li>
                 <li className="flex items-start gap-3 group">
                   <div className="p-1 rounded-lg bg-vivid-royal/10 group-hover:bg-vivid-royal/20 group-hover:-rotate-12 transition-all duration-300">
@@ -783,7 +783,7 @@ export default function HomePageClient() {
                   <div className="p-1 rounded-lg bg-bright-indigo/10 group-hover:bg-bright-indigo/20 transition-colors">
                     <Check className="h-4 w-4 text-bright-indigo" />
                   </div>
-                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Rate limiting and usage analytics</span>
+                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Usage analytics and API rate limiting</span>
                 </li>
               </ul>
             </div>
@@ -1224,13 +1224,21 @@ export default function HomePageClient() {
                       Manage campaigns, track UTM parameters, measure ROI, and optimize your marketing efforts.
                     </p>
                     <div className="flex flex-wrap gap-2 justify-center md:justify-end">
-                      {["Campaign management", "UTM tracking", "A/B testing", "Custom domains"].map((feature, idx) => (
+                      {[
+                        { label: "Campaign management" },
+                        { label: "UTM tracking" },
+                        { label: "A/B testing", comingSoon: true },
+                        { label: "Custom domains" },
+                      ].map((feature, idx) => (
                         <span 
                           key={idx} 
                           className="px-3 py-1 bg-bright-indigo/10 text-bright-indigo rounded-full text-sm font-medium group-hover:bg-bright-indigo/20 group-hover:scale-110 transition-all duration-300"
                           style={{ transitionDelay: `${idx * 50}ms` }}
                         >
-                          {feature}
+                          {feature.label}
+                          {feature.comingSoon && (
+                            <span className="ml-1.5 text-[10px] uppercase tracking-wide opacity-70">Coming soon</span>
+                          )}
                         </span>
                       ))}
                     </div>
@@ -1596,7 +1604,7 @@ export default function HomePageClient() {
                 "1,000 Links",
                 "1,000 QR Codes",
                 "50 Custom Pages",
-                "Custom Domains",
+                "Custom Domains for Pages",
                 "Team Collaboration",
                 "Advanced Analytics",
                 "Priority Support",
@@ -1613,7 +1621,7 @@ export default function HomePageClient() {
                 "Unlimited Links",
                 "Unlimited QR Codes",
                 "Unlimited Pages",
-                "Custom Domains",
+                "Custom Domains for Pages",
                 "API Access",
                 "Team Collaboration",
                 "Priority Support",

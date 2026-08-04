@@ -25,6 +25,7 @@ export class CampaignRepository {
         tags: data.tags || null,
         target_clicks: data.target_clicks || 0,
         budget: data.budget || 0,
+        utm_defaults: data.utm_defaults || {},
         user_id: data.user_id,
         is_active: true,
       })
@@ -151,6 +152,9 @@ export class CampaignRepository {
     }
     if (data.budget !== undefined) {
       updateData.budget = data.budget || 0;
+    }
+    if (data.utm_defaults !== undefined) {
+      updateData.utm_defaults = data.utm_defaults || {};
     }
 
     const { data: campaign, error } = await this.supabase

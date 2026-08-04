@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCachedUser } from "@/lib/supabase/auth";
+import { AnalyticsService } from "@/lib/services/analytics.service";
+import { PlanService } from "@/lib/services/plan.service";
 import { LinkAnalyticsClient } from "./analytics-client";
 
 export default async function LinkAnalyticsPage({
@@ -9,9 +12,7 @@ export default async function LinkAnalyticsPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   if (!user) {
     redirect("/login");
@@ -29,13 +30,16 @@ export default async function LinkAnalyticsPage({
     redirect("/dashboard/links");
   }
 
-  // Fetch analytics stats
-  const statsResponse = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/links/${id}/stats`,
-    { cache: "no-store" }
-  );
-  const stats = statsResponse.ok ? await statsResponse.json() : null;
+  const planService = new PlanService(supabase);
+  const retentionDays = await planService.getUserAnalyticsRetentionDays(user.id);
+
+  const analyticsService = new AnalyticsService(supabase);
+  let stats = null;
+  try {
+    stats = await analyticsService.getStats(id, { days: retentionDays });
+  } catch (error) {
+    console.error("Failed to load link analytics stats:", error);
+  }
 
   return <LinkAnalyticsClient link={link} stats={stats} />;
 }
-

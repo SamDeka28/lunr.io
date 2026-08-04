@@ -67,7 +67,6 @@ export function PageLinks({
               onClick={(e) => {
                 e.preventDefault();
                 onLinkClick(link.id, link.url);
-                window.open(link.url, "_blank", "noopener,noreferrer");
               }}
               className={cn(
                 "w-full transition-all hover:opacity-90 active:scale-[0.98] shadow-soft block",

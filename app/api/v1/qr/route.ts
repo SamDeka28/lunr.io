@@ -1,24 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withApiAuth, type AuthenticatedApiRequest } from "@/lib/middleware/api-auth";
 import { PlanService } from "@/lib/services/plan.service";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/admin";
 import QRCode from "qrcode";
 
 // GET /api/v1/qr - List all QR codes for the authenticated API user
 async function handleGet(request: AuthenticatedApiRequest) {
   try {
-    // Use service role client to bypass RLS for API key authentication
-    const { createClient: createServiceClient } = await import("@supabase/supabase-js");
-    const serviceSupabase = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const serviceSupabase = createServiceClient();
 
     const userId = request.apiKey!.user_id;
 
@@ -53,18 +42,7 @@ async function handleGet(request: AuthenticatedApiRequest) {
 // POST /api/v1/qr - Create a new QR code
 async function handlePost(request: AuthenticatedApiRequest) {
   try {
-    // Use service role client to bypass RLS for API key authentication
-    const { createClient: createServiceClient } = await import("@supabase/supabase-js");
-    const serviceSupabase = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const serviceSupabase = createServiceClient();
 
     const userId = request.apiKey!.user_id;
     const body = await request.json();
@@ -152,4 +130,3 @@ async function handlePost(request: AuthenticatedApiRequest) {
 
 export const GET = withApiAuth(handleGet);
 export const POST = withApiAuth(handlePost);
-

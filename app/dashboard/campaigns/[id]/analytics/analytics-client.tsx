@@ -409,42 +409,92 @@ export function CampaignAnalyticsClient({
           </div>
         </div>
 
-        {/* Campaign Goal Progress */}
-        {campaign.target_clicks > 0 && (
-          <div className="bg-white rounded-2xl border border-neutral-border p-6 shadow-soft mb-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-vivid-royal/10 to-indigo-bloom/10 flex items-center justify-center">
-                <Target className="h-5 w-5 text-vivid-royal" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-neutral-text">Campaign Goal</h3>
-                <p className="text-xs text-neutral-muted">Target: {formatNumber(campaign.target_clicks)} clicks</p>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-neutral-muted">Progress</span>
-                <span className="font-semibold text-neutral-text">
-                  {formatNumber(campaign.total_clicks)} / {formatNumber(campaign.target_clicks)} clicks
-                </span>
-              </div>
-              <div className="w-full h-3 bg-neutral-bg rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-vivid-royal to-indigo-bloom transition-all duration-500 rounded-full"
-                  style={{
-                    width: `${Math.min((campaign.total_clicks / campaign.target_clicks) * 100, 100)}%`,
-                  }}
-                />
-              </div>
-              <div className="text-xs text-neutral-muted">
-                {Math.round((campaign.total_clicks / campaign.target_clicks) * 100)}% complete
-                {campaign.total_clicks < campaign.target_clicks && (
-                  <span className="ml-2">
-                    ({formatNumber(campaign.target_clicks - campaign.total_clicks)} clicks remaining)
-                  </span>
+        {/* Budget CPC + Campaign Goal Progress */}
+        {(Number(campaign.budget) > 0 || campaign.target_clicks > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            {Number(campaign.budget) > 0 && (
+              <div className="bg-white rounded-2xl border border-neutral-border p-6 shadow-soft">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-neutral-surface flex items-center justify-center">
+                    <Zap className="h-5 w-5 text-neutral-muted" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-neutral-text">Budget & CPC</h3>
+                    <p className="text-xs text-neutral-muted">
+                      Budget ÷ clicks = cost per click
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-neutral-muted mb-1">Budget</p>
+                    <p className="text-2xl font-semibold text-neutral-text tabular-nums">
+                      ${Number(campaign.budget).toLocaleString(undefined, {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-neutral-muted mb-1">Cost per click</p>
+                    <p className="text-2xl font-semibold text-neutral-text tabular-nums">
+                      {campaign.total_clicks > 0
+                        ? `$${(Number(campaign.budget) / campaign.total_clicks).toFixed(2)}`
+                        : "—"}
+                    </p>
+                  </div>
+                </div>
+                {campaign.total_clicks === 0 && (
+                  <p className="mt-3 text-xs text-neutral-muted">
+                    CPC appears once this campaign has clicks.
+                  </p>
                 )}
               </div>
-            </div>
+            )}
+
+            {campaign.target_clicks > 0 && (
+              <div className="bg-white rounded-2xl border border-neutral-border p-6 shadow-soft">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-neutral-surface flex items-center justify-center">
+                    <Target className="h-5 w-5 text-neutral-muted" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-neutral-text">Campaign Goal</h3>
+                    <p className="text-xs text-neutral-muted">
+                      Target: {formatNumber(campaign.target_clicks)} clicks
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-neutral-muted">Progress</span>
+                    <span className="font-semibold text-neutral-text">
+                      {formatNumber(campaign.total_clicks)} / {formatNumber(campaign.target_clicks)}{" "}
+                      clicks
+                    </span>
+                  </div>
+                  <div className="w-full h-3 bg-neutral-surface rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary transition-all duration-500 rounded-full"
+                      style={{
+                        width: `${Math.min(
+                          (campaign.total_clicks / campaign.target_clicks) * 100,
+                          100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="text-xs text-neutral-muted">
+                    {Math.round((campaign.total_clicks / campaign.target_clicks) * 100)}% complete
+                    {campaign.total_clicks < campaign.target_clicks && (
+                      <span className="ml-2">
+                        ({formatNumber(campaign.target_clicks - campaign.total_clicks)} remaining)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

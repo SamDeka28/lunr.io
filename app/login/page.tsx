@@ -15,19 +15,48 @@ function LoginPageContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const { setUser, refreshUserData } = useUserStore();
 
   const redirect = searchParams.get("redirect") || "/dashboard";
 
-  // Check for OAuth errors in URL
+  // Check for auth errors in URL
   useEffect(() => {
-    const oauthError = searchParams.get("error");
-    if (oauthError === "oauth_error") {
+    const authError = searchParams.get("error");
+    if (authError === "oauth_error") {
       setError("Failed to authenticate with Google. Please try again.");
+    } else if (authError === "email_unconfirmed") {
+      setError("Please confirm your email before accessing the dashboard. Check your inbox for a verification link.");
     }
   }, [searchParams]);
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      toast.error("Please enter your email address first");
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        {
+          redirectTo: `${window.location.origin}/auth/reset-password/confirm`,
+        }
+      );
+
+      if (resetError) throw resetError;
+
+      toast.success("Password reset email sent! Check your inbox.");
+    } catch (err: any) {
+      const message = err?.message || "Failed to send password reset email";
+      toast.error(message);
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     setError("");
@@ -260,9 +289,11 @@ function LoginPageContent() {
                 <div className="mt-2 text-right">
                   <button
                     type="button"
-                    className="text-xs text-electric-sapphire hover:text-bright-indigo font-semibold"
+                    onClick={handleForgotPassword}
+                    disabled={loading || resetLoading}
+                    className="text-xs text-electric-sapphire hover:text-bright-indigo font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Forgot password?
+                    {resetLoading ? "Sending..." : "Forgot password?"}
                   </button>
                 </div>
               )}

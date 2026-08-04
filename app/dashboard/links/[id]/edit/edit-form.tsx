@@ -19,6 +19,7 @@ export default function LinkEditForm({
   const {
     canSetExpiration,
     canUseUTMParameters,
+    canUseCustomBackHalf,
     planName,
     planDisplayName,
     isPremium,
@@ -49,6 +50,11 @@ export default function LinkEditForm({
   const [mode, setMode] = useState<"configure" | "design">("configure");
   const [url, setUrl] = useState(link.original_url);
   const [title, setTitle] = useState(link.title || "");
+  const [shortCode, setShortCode] = useState(link.short_code || "");
+  const [tags, setTags] = useState(
+    Array.isArray(link.tags) ? link.tags.join(", ") : ""
+  );
+  const [folder, setFolder] = useState(link.folder || "");
   const [expiresAt, setExpiresAt] = useState(
     link.expires_at ? new Date(link.expires_at).toISOString().split("T")[0] : ""
   );
@@ -257,7 +263,7 @@ export default function LinkEditForm({
   // Function to update QR preview
   const updateQRPreview = async () => {
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-    const shortUrl = `${baseUrl}/${link.short_code}`;
+    const shortUrl = `${baseUrl}/${shortCode || link.short_code}?utm_medium=qr&utm_source=qr`;
 
     try {
       const qrData = await generateQRWithLogo(
@@ -286,8 +292,8 @@ export default function LinkEditForm({
   // Update preview when settings change (only if generateQR is enabled)
   useEffect(() => {
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-    const shortUrl = `${baseUrl}/${link.short_code}`;
-    setPreviewUrl(shortUrl);
+    const shortUrl = `${baseUrl}/${shortCode || link.short_code}?utm_medium=qr&utm_source=qr`;
+    setPreviewUrl(`${baseUrl}/${shortCode || link.short_code}`);
     
     if (!generateQR) {
       setPreviewQR("");
@@ -324,7 +330,7 @@ export default function LinkEditForm({
     
     generateQRCode();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [link.short_code, qrColor, qrBgColor, addLogo, previewImageUrl, generateQR, existingQRCode]);
+  }, [shortCode, link.short_code, qrColor, qrBgColor, addLogo, previewImageUrl, generateQR, existingQRCode]);
 
   const handleUrlChange = (newUrl: string) => {
     setUrl(newUrl);
@@ -343,10 +349,15 @@ export default function LinkEditForm({
         },
         body: JSON.stringify({
           original_url: url,
+          short_code: shortCode !== link.short_code ? shortCode : undefined,
           expires_at: expiresAt || null,
           password: password || undefined,
           title: title || undefined,
           campaign_id: selectedCampaignId || null,
+          tags: tags.trim()
+            ? tags.split(",").map((t) => t.trim()).filter(Boolean)
+            : [],
+          folder: folder.trim() || null,
           utm_parameters: utmEnabled && canUseUTMParameters() && (utmSource || utmMedium) ? {
             utm_source: utmSource || undefined,
             utm_medium: utmMedium || undefined,
@@ -364,10 +375,7 @@ export default function LinkEditForm({
 
       // Generate and save QR code only if toggle is enabled
       if (generateQR) {
-        const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-        const shortUrl = `${baseUrl}/${link.short_code}`;
-        
-        // Create new QR code
+        // Create new QR code (API appends utm_medium=qr)
         try {
           const qrResponse = await fetch("/api/qr", {
             method: "POST",
@@ -376,7 +384,7 @@ export default function LinkEditForm({
             },
             body: JSON.stringify({
               link_id: link.id,
-              url: shortUrl, // Use short URL so clicks are tracked
+              format: qrFormat,
             }),
           });
 
@@ -401,7 +409,7 @@ export default function LinkEditForm({
     }
   };
 
-  const shortUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/${link.short_code}`;
+  const shortUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/${shortCode || link.short_code}`;
 
   return (
     <div className="flex h-[calc(100vh-73px)]">
@@ -417,10 +425,6 @@ export default function LinkEditForm({
                   Update your link destination and settings
                 </p>
               </div>
-              <button className="px-4 py-2 rounded-xl border-2 border-neutral-border hover:border-electric-sapphire hover:text-electric-sapphire text-sm font-semibold text-neutral-text transition-colors flex items-center gap-2">
-                <Upload className="h-4 w-4" />
-                Bulk upload
-              </button>
             </div>
 
             {/* Mode Selection */}
@@ -463,19 +467,50 @@ export default function LinkEditForm({
                   onToggle={setCodeDetailsOpen}
                 >
               <div className="space-y-4 pt-4">
-                {/* Short Code - Disabled */}
+                {/* Short Code - editable */}
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
                     Short Code
+                    {!canUseCustomBackHalf() && <Crown className="h-3.5 w-3.5 text-neon-pink" />}
                   </label>
-                  <div className="px-4 py-3 rounded-xl bg-neutral-bg border-2 border-neutral-border">
-                    <span className="font-mono text-sm text-neutral-muted">
-                      {shortUrl}
+                  {!canUseCustomBackHalf() && (
+                    <div className="mb-2 p-2 rounded-xl bg-gradient-to-r from-neon-pink/5 to-raspberry-plum/5 border border-neon-pink/10">
+                      <p className="text-xs text-neutral-muted flex items-center gap-2">
+                        <Crown className="h-3.5 w-3.5 text-neon-pink" />
+                        Changing short codes is a premium feature.{" "}
+                        <a href="/dashboard/billing" className="text-neon-pink hover:text-raspberry-plum font-semibold">
+                          Upgrade →
+                        </a>
+                      </p>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-neutral-muted font-mono px-3 py-2 bg-neutral-bg rounded-xl border border-neutral-border">
+                      {typeof window !== "undefined" ? window.location.host : "lunr.to"}/
                     </span>
+                    <input
+                      type="text"
+                      value={shortCode}
+                      onChange={(e) => {
+                        if (!canUseCustomBackHalf()) return;
+                        const value = e.target.value.replace(/[^a-zA-Z0-9_-]/g, "");
+                        setShortCode(value);
+                      }}
+                      disabled={!canUseCustomBackHalf()}
+                      minLength={2}
+                      maxLength={20}
+                      className={cn(
+                        "flex-1 h-12 px-4 rounded-xl border-2",
+                        canUseCustomBackHalf()
+                          ? "bg-white border-neutral-border text-neutral-text"
+                          : "bg-neutral-bg border-neutral-border text-neutral-muted cursor-not-allowed",
+                        "text-sm font-mono font-medium",
+                        canUseCustomBackHalf() &&
+                          "focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire",
+                        "transition-all"
+                      )}
+                    />
                   </div>
-                  <p className="mt-2 text-xs text-neutral-muted">
-                    Short code cannot be changed
-                  </p>
                 </div>
 
                 <div>
@@ -513,6 +548,44 @@ export default function LinkEditForm({
                       "transition-all"
                     )}
                   />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                      Tags (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={tags}
+                      onChange={(e) => setTags(e.target.value)}
+                      placeholder="marketing, launch"
+                      className={cn(
+                        "w-full h-12 px-4 rounded-xl bg-white border-2 border-neutral-border",
+                        "text-neutral-text text-sm font-medium",
+                        "focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire",
+                        "transition-all"
+                      )}
+                    />
+                    <p className="text-xs text-neutral-muted mt-1.5">Comma-separated</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                      Folder (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={folder}
+                      onChange={(e) => setFolder(e.target.value)}
+                      placeholder="e.g. social"
+                      className={cn(
+                        "w-full h-12 px-4 rounded-xl bg-white border-2 border-neutral-border",
+                        "text-neutral-text text-sm font-medium",
+                        "focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire",
+                        "transition-all"
+                      )}
+                    />
+                  </div>
                 </div>
 
                 {/* Campaign Selection */}

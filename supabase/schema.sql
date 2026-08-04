@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   tags TEXT[], -- Array of tags
   target_clicks INTEGER DEFAULT 0,
   budget DECIMAL(10, 2) DEFAULT 0,
+  utm_defaults JSONB DEFAULT '{}'::jsonb,
   is_active BOOLEAN DEFAULT true NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
@@ -141,7 +142,37 @@ CREATE TABLE IF NOT EXISTS analytics (
   user_agent TEXT,
   referrer TEXT,
   country VARCHAR(2),
+  device_type VARCHAR(50),
+  browser VARCHAR(100),
+  os VARCHAR(100),
+  is_bot BOOLEAN DEFAULT false NOT NULL,
+  utm_source VARCHAR(255),
+  utm_medium VARCHAR(255),
+  utm_campaign VARCHAR(255),
+  utm_term VARCHAR(255),
+  utm_content VARCHAR(255),
   CONSTRAINT link_id_fk FOREIGN KEY (link_id) REFERENCES links(id) ON DELETE CASCADE
+);
+
+-- Page analytics (views + per-link clicks)
+CREATE TABLE IF NOT EXISTS page_analytics (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  page_id UUID NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+  link_id TEXT,
+  event_type VARCHAR(20) NOT NULL CHECK (event_type IN ('view', 'click')),
+  referrer TEXT,
+  country VARCHAR(2),
+  user_agent TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+);
+
+-- Email captures from page email_capture blocks
+CREATE TABLE IF NOT EXISTS page_email_captures (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  page_id UUID NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+  email VARCHAR(255) NOT NULL,
+  block_id TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
 -- Create indexes for performance
@@ -158,6 +189,19 @@ CREATE INDEX IF NOT EXISTS idx_pages_slug ON pages(slug);
 CREATE INDEX IF NOT EXISTS idx_pages_created_at ON pages(created_at);
 CREATE INDEX IF NOT EXISTS idx_analytics_link_id ON analytics(link_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_clicked_at ON analytics(clicked_at);
+CREATE INDEX IF NOT EXISTS idx_analytics_is_bot ON analytics(is_bot);
+CREATE INDEX IF NOT EXISTS idx_analytics_device_type ON analytics(device_type);
+CREATE INDEX IF NOT EXISTS idx_analytics_browser ON analytics(browser);
+CREATE INDEX IF NOT EXISTS idx_analytics_os ON analytics(os);
+CREATE INDEX IF NOT EXISTS idx_analytics_link_clicked_at ON analytics(link_id, clicked_at DESC);
+CREATE INDEX IF NOT EXISTS idx_analytics_utm_source ON analytics(utm_source);
+CREATE INDEX IF NOT EXISTS idx_analytics_utm_medium ON analytics(utm_medium);
+CREATE INDEX IF NOT EXISTS idx_analytics_utm_campaign ON analytics(utm_campaign);
+CREATE INDEX IF NOT EXISTS idx_page_analytics_page_id ON page_analytics(page_id);
+CREATE INDEX IF NOT EXISTS idx_page_analytics_created_at ON page_analytics(created_at);
+CREATE INDEX IF NOT EXISTS idx_page_analytics_event_type ON page_analytics(event_type);
+CREATE INDEX IF NOT EXISTS idx_page_email_captures_page_id ON page_email_captures(page_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_page_email_captures_unique ON page_email_captures(page_id, lower(email));
 CREATE INDEX IF NOT EXISTS idx_profiles_plan_id ON profiles(plan_id);
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(email);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
@@ -173,6 +217,158 @@ BEGIN
   WHERE id = link_id;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Aggregated link analytics stats RPC
+-- Unique clicks = distinct IP within a 24h calendar-day window (UTC) per link.
+-- Bot rows are excluded. p_days < 0 means unlimited retention.
+CREATE OR REPLACE FUNCTION get_link_analytics_stats(
+  p_link_id uuid,
+  p_days int DEFAULT 30
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  v_since timestamptz;
+  v_result jsonb;
+BEGIN
+  IF p_days IS NULL OR p_days < 0 THEN
+    v_since := NULL;
+  ELSE
+    v_since := NOW() - make_interval(days => p_days);
+  END IF;
+
+  WITH filtered AS (
+    SELECT *
+    FROM analytics
+    WHERE link_id = p_link_id
+      AND COALESCE(is_bot, false) = false
+      AND (v_since IS NULL OR clicked_at >= v_since)
+  ),
+  totals AS (
+    SELECT
+      COUNT(*)::int AS total_clicks,
+      COUNT(
+        DISTINCT (
+          host(ip_address)::text || '|' ||
+          ((clicked_at AT TIME ZONE 'UTC')::date)::text
+        )
+      ) FILTER (WHERE ip_address IS NOT NULL)::int AS unique_clicks
+    FROM filtered
+  ),
+  by_day AS (
+    SELECT COALESCE(
+      jsonb_agg(
+        jsonb_build_object('date', day, 'count', cnt)
+        ORDER BY day
+      ),
+      '[]'::jsonb
+    ) AS data
+    FROM (
+      SELECT
+        ((clicked_at AT TIME ZONE 'UTC')::date)::text AS day,
+        COUNT(*)::int AS cnt
+      FROM filtered
+      GROUP BY 1
+    ) s
+  ),
+  by_country AS (
+    SELECT COALESCE(
+      jsonb_agg(
+        jsonb_build_object('country', country, 'count', cnt)
+        ORDER BY cnt DESC
+      ),
+      '[]'::jsonb
+    ) AS data
+    FROM (
+      SELECT country, COUNT(*)::int AS cnt
+      FROM filtered
+      WHERE country IS NOT NULL
+      GROUP BY country
+      ORDER BY cnt DESC
+      LIMIT 50
+    ) s
+  ),
+  by_referrer AS (
+    SELECT COALESCE(
+      jsonb_agg(
+        jsonb_build_object('referrer', referrer, 'count', cnt)
+        ORDER BY cnt DESC
+      ),
+      '[]'::jsonb
+    ) AS data
+    FROM (
+      SELECT COALESCE(NULLIF(referrer, ''), 'Direct') AS referrer, COUNT(*)::int AS cnt
+      FROM filtered
+      GROUP BY 1
+      ORDER BY cnt DESC
+      LIMIT 50
+    ) s
+  ),
+  by_device AS (
+    SELECT COALESCE(
+      jsonb_agg(
+        jsonb_build_object('device', device, 'count', cnt)
+        ORDER BY cnt DESC
+      ),
+      '[]'::jsonb
+    ) AS data
+    FROM (
+      SELECT COALESCE(device_type, 'unknown') AS device, COUNT(*)::int AS cnt
+      FROM filtered
+      GROUP BY 1
+      ORDER BY cnt DESC
+      LIMIT 20
+    ) s
+  ),
+  by_browser AS (
+    SELECT COALESCE(
+      jsonb_agg(
+        jsonb_build_object('browser', browser, 'count', cnt)
+        ORDER BY cnt DESC
+      ),
+      '[]'::jsonb
+    ) AS data
+    FROM (
+      SELECT COALESCE(browser, 'unknown') AS browser, COUNT(*)::int AS cnt
+      FROM filtered
+      GROUP BY 1
+      ORDER BY cnt DESC
+      LIMIT 20
+    ) s
+  ),
+  by_os AS (
+    SELECT COALESCE(
+      jsonb_agg(
+        jsonb_build_object('os', os, 'count', cnt)
+        ORDER BY cnt DESC
+      ),
+      '[]'::jsonb
+    ) AS data
+    FROM (
+      SELECT COALESCE(os, 'unknown') AS os, COUNT(*)::int AS cnt
+      FROM filtered
+      GROUP BY 1
+      ORDER BY cnt DESC
+      LIMIT 20
+    ) s
+  )
+  SELECT jsonb_build_object(
+    'total_clicks', (SELECT total_clicks FROM totals),
+    'unique_clicks', (SELECT unique_clicks FROM totals),
+    'clicks_by_day', (SELECT data FROM by_day),
+    'clicks_by_country', (SELECT data FROM by_country),
+    'clicks_by_referrer', (SELECT data FROM by_referrer),
+    'clicks_by_device', (SELECT data FROM by_device),
+    'clicks_by_browser', (SELECT data FROM by_browser),
+    'clicks_by_os', (SELECT data FROM by_os)
+  )
+  INTO v_result;
+
+  RETURN COALESCE(v_result, '{}'::jsonb);
+END;
+$$;
 
 -- Create function to update usage when link is created
 CREATE OR REPLACE FUNCTION update_link_usage()
@@ -341,6 +537,11 @@ CREATE POLICY "Allow users to read their own profile"
   TO authenticated
   USING (auth.uid() = id);
 
+CREATE POLICY "Allow users to insert their own profile"
+  ON profiles FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = id);
+
 CREATE POLICY "Allow users to update their own profile"
   ON profiles FOR UPDATE
   TO authenticated
@@ -387,10 +588,6 @@ CREATE POLICY "Allow authenticated users to insert links"
   ON links FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Allow public insert to links"
-  ON links FOR INSERT
-  WITH CHECK (user_id IS NULL);
 
 CREATE POLICY "Allow users to read their own links"
   ON links FOR SELECT
@@ -447,20 +644,33 @@ CREATE POLICY "Allow users to update their own pages"
   WITH CHECK (auth.uid() = user_id);
 
 -- RLS Policies for analytics
-CREATE POLICY "Allow public insert to analytics"
-  ON analytics FOR INSERT
-  WITH CHECK (true);
-
-CREATE POLICY "Allow public read access to analytics"
+CREATE POLICY "Allow users to read analytics for their links"
   ON analytics FOR SELECT
-  USING (true);
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM links
+      WHERE links.id = analytics.link_id
+        AND links.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Allow insert analytics for active links"
+  ON analytics FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM links
+      WHERE links.id = analytics.link_id
+        AND links.is_active = true
+    )
+  );
 
 -- Insert default plans
 INSERT INTO plans (name, display_name, description, price_monthly, price_yearly, max_links, max_qr_codes, max_pages, features) VALUES
-  ('free', 'Free', 'Perfect for getting started', 0, 0, 2, 2, 0, '{"custom_back_half": false, "analytics": true, "qr_codes": true, "expiration": false, "pages": false}'::jsonb),
-  ('pro', 'Pro', 'For professionals and small teams', 9.99, 99.99, 100, 100, 5, '{"custom_back_half": true, "analytics": true, "qr_codes": true, "expiration": true, "utm_parameters": true, "custom_domains": false, "pages": true}'::jsonb),
-  ('business', 'Business', 'For growing businesses', 29.99, 299.99, 1000, 1000, 50, '{"custom_back_half": true, "analytics": true, "qr_codes": true, "expiration": true, "utm_parameters": true, "custom_domains": true, "team_collaboration": true, "pages": true}'::jsonb),
-  ('enterprise', 'Enterprise', 'For large organizations', 99.99, 999.99, -1, -1, -1, '{"custom_back_half": true, "analytics": true, "qr_codes": true, "expiration": true, "utm_parameters": true, "custom_domains": true, "team_collaboration": true, "api_access": true, "priority_support": true, "pages": true}'::jsonb)
+  ('free', 'Free', 'Perfect for getting started', 0, 0, 2, 2, 0, '{"custom_back_half": false, "analytics": true, "qr_codes": true, "expiration": false, "pages": false, "password_protection": false}'::jsonb),
+  ('pro', 'Pro', 'For professionals and small teams', 9.99, 99.99, 100, 100, 5, '{"custom_back_half": true, "analytics": true, "qr_codes": true, "expiration": true, "utm_parameters": true, "custom_domains": false, "pages": true, "password_protection": true}'::jsonb),
+  ('business', 'Business', 'For growing businesses', 29.99, 299.99, 1000, 1000, 50, '{"custom_back_half": true, "analytics": true, "qr_codes": true, "expiration": true, "utm_parameters": true, "custom_domains": true, "team_collaboration": true, "pages": true, "password_protection": true}'::jsonb),
+  ('enterprise', 'Enterprise', 'For large organizations', 99.99, 999.99, -1, -1, -1, '{"custom_back_half": true, "analytics": true, "qr_codes": true, "expiration": true, "utm_parameters": true, "custom_domains": true, "team_collaboration": true, "api_access": true, "priority_support": true, "pages": true, "password_protection": true}'::jsonb)
 ON CONFLICT (name) DO UPDATE SET
   max_pages = EXCLUDED.max_pages,
   features = EXCLUDED.features;

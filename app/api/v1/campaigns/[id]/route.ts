@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withApiAuth, type AuthenticatedApiRequest } from "@/lib/middleware/api-auth";
 import { CampaignService } from "@/lib/services/campaign.service";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/admin";
 
 // GET /api/v1/campaigns/[id] - Get a specific campaign
 async function handleGet(
@@ -10,7 +10,7 @@ async function handleGet(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const userId = request.apiKey!.user_id;
 
     const campaignService = new CampaignService(supabase);
@@ -36,7 +36,7 @@ async function handlePatch(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const userId = request.apiKey!.user_id;
     const body = await request.json();
 
@@ -62,6 +62,7 @@ async function handlePatch(
     if (body.tags !== undefined) updates.tags = body.tags;
     if (body.target_clicks !== undefined) updates.target_clicks = body.target_clicks;
     if (body.budget !== undefined) updates.budget = body.budget;
+    if (body.utm_defaults !== undefined) updates.utm_defaults = body.utm_defaults;
     if (body.is_active !== undefined) updates.is_active = body.is_active;
 
     const { data: campaign, error } = await supabase
@@ -94,7 +95,7 @@ async function handleDelete(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const userId = request.apiKey!.user_id;
 
     // Verify ownership

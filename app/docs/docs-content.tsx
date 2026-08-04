@@ -19,9 +19,9 @@ lunr.to is an all-in-one solution for link management, designed for individuals,
 - **Link Shortening**: Create short, memorable links instantly
 - **QR Code Generation**: Generate QR codes for offline sharing
 - **Custom Pages**: Create beautiful, customizable landing pages
-- **Advanced Analytics**: Track clicks, referrers, geographic data, and more
+- **Advanced Analytics**: Track clicks, referrers, devices, and campaign performance (geographic data coming soon)
 - **Campaign Management**: Organize links into campaigns and track performance
-- **Custom Domains**: Use your own domain for branded links
+- **Custom Domains**: Use your own domain for branded bio pages (branded short links coming soon)
 - **Real-time Tracking**: See click counts and analytics update in real-time`,
       },
       {
@@ -220,7 +220,7 @@ Currently, you can select multiple links for future bulk operations. Individual 
 - **Total Scans**: Number of times the QR code was scanned
 - **Unique Scans**: Number of unique devices that scanned
 - **Click-through Rate**: Percentage of scans that resulted in clicks
-- **Geographic Data**: Where scans originated
+- **Geographic Data**: Where scans originated *(coming soon)*
 - **Device Types**: Mobile vs desktop usage
 - **Time-based Data**: When scans occurred
 
@@ -334,7 +334,7 @@ Choose from professional layouts:
 - **Link Clicks**: Clicks on individual links
 - **Click-through Rate**: Percentage of visitors who clicked links
 - **Top Links**: Most clicked links on the page
-- **Geographic Data**: Visitor locations
+- **Geographic Data**: Visitor locations *(coming soon)*
 - **Device Types**: Mobile vs desktop visitors
 - **Time-based Data**: Traffic patterns over time
 
@@ -373,10 +373,10 @@ Choose from professional layouts:
 - **Click-through Rate**: Percentage of unique vs total clicks
 
 ### Geographic Data
-- **Countries**: Top countries by clicks
-- Geographic distribution charts
+- **Countries**: Top countries by clicks *(coming soon)*
+- Geographic distribution charts *(coming soon)*
 
-*Note: City-level data and map visualizations are coming soon.*
+*Note: Geographic data (including country breakdowns) is coming soon. City-level data and map visualizations will follow.*
 
 ### Referrer Data
 - **Top Referrers**: Where your traffic is coming from
@@ -416,8 +416,8 @@ The main analytics page shows:
 ## Charts & Visualizations
 
 - **Line Charts**: Time-series click data
-- **Bar Charts**: Top referrers, countries
-- **Doughnut Charts**: Country and device distribution
+- **Bar Charts**: Top referrers (country charts coming soon)
+- **Doughnut Charts**: Device distribution (country charts coming soon)
 - **UTM Tracking**: UTM source, medium, and campaign breakdowns
 
 *Note: Custom date range filtering and CSV export are coming soon.*`,
@@ -495,7 +495,7 @@ View comprehensive campaign statistics:
 - Average clicks per link
 - Click-through rates
 - Campaign performance over time
-- Geographic and referrer data
+- Referrer data (geographic data coming soon)
 
 *Note: Report generation and sharing are coming soon.*`,
       },
@@ -505,12 +505,12 @@ View comprehensive campaign statistics:
     id: "custom-domains",
     title: "Custom Domains",
     icon: "Globe",
-    description: "Use your own domain for branded links",
+    description: "Use your own domain for branded bio pages",
     articles: [
       {
         id: "setting-up-domains",
         title: "Setting Up Custom Domains",
-        content: `Use your own domain for branded short links.
+        content: `Use your own domain for branded bio pages. Branded short links on custom domains are coming soon.
 
 ## Domain Requirements
 
@@ -524,7 +524,7 @@ Custom domains are available on:
 2. **Click "Add Domain"**: Enter your domain name
 3. **Configure DNS**: Follow the DNS setup instructions
 4. **Verify Domain**: Click "Verify" to check DNS configuration
-5. **Wait for SSL**: SSL certificate is provisioned automatically
+5. **Serve over HTTPS**: Point your domain at lunr.to and terminate TLS at your DNS/CDN provider. Automatic SSL provisioning is coming soon.
 
 ## DNS Configuration
 
@@ -546,15 +546,15 @@ You'll need to add two DNS records:
 2. Wait for DNS propagation (can take up to 48 hours)
 3. Click "Verify" in lunr.to
 4. System checks both CNAME and TXT records
-5. Once verified, domain is active
+5. Once verified, domain is active for bio pages
 
 ## Using Custom Domains
 
 After verification:
-- Create links using your custom domain
-- All links will use your branded domain
-- SSL certificate is automatically provisioned
-- Works with all link features`,
+- Serve bio pages on your custom domain
+- Branded short links on custom domains are coming soon
+- Automatic SSL provisioning is coming soon — use your DNS/CDN provider for TLS today
+- Works with page features available on your plan`,
       },
       {
         id: "domain-troubleshooting",
@@ -570,12 +570,12 @@ After verification:
 - Use online DNS checker tools
 - Contact your domain provider
 
-## SSL Certificate Issues
+## SSL / HTTPS Issues
 
-**Issue**: SSL certificate not provisioning
+**Issue**: HTTPS not working on your custom domain
 **Solutions**:
 - Ensure domain is verified
-- Wait for automatic SSL provisioning (can take up to 24 hours)
+- Configure TLS at your DNS/CDN provider (automatic SSL provisioning is coming soon)
 - Check domain DNS is correctly configured
 - Contact support if issues persist
 
@@ -635,7 +635,7 @@ After verification:
   - 1,000 links
   - 1,000 QR codes
   - 50 custom pages
-  - Custom domains
+  - Custom domains for bio pages
   - Team collaboration
   - Advanced analytics
   - Priority support
@@ -647,7 +647,7 @@ After verification:
   - Unlimited links
   - Unlimited QR codes
   - Unlimited pages
-  - Custom domains
+  - Custom domains for bio pages
   - API access
   - Team collaboration
   - Priority support
@@ -777,9 +777,7 @@ The API Reference includes:
 
 ## Rate Limits
 
-- **Enterprise Plans**: 10,000 requests per hour per API key
-- Rate limit headers are included in responses
-- Contact support for higher limits
+*Rate limits are enforced.* Enterprise plans are limited to **1,000 requests per hour** per API key by default (higher limits available on request). Rate limit headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`) are included in API responses.
 
 ## Response Format
 
@@ -899,7 +897,7 @@ A: You'll receive email notifications when approaching limits. Upgrade your plan
 A: We use enterprise-grade security with Row Level Security (RLS), encrypted data storage, and secure authentication. Your data is private and only accessible by you.
 
 **Q: Do you store click data?**
-A: Yes, we store click analytics data including IP addresses (anonymized), referrers, device types, and geographic data. This data is used only for analytics and is never shared.
+A: Yes, we store click analytics data including IP addresses (anonymized), referrers, and device types. Geographic data is coming soon. This data is used only for analytics and is never shared.
 
 **Q: Can I export my data?**
 A: Data export features are coming soon. Enterprise plans will include API access for programmatic data retrieval.
@@ -935,7 +933,7 @@ A: lunr.to works on all modern browsers including Chrome, Firefox, Safari, and E
 
 **Missing data:**
 - Some data may take time to process
-- Geographic data requires IP geolocation
+- Geographic data is coming soon (requires IP geolocation)
 - Some referrers may be blocked by privacy tools
 
 ## Account Issues

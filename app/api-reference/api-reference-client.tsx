@@ -354,7 +354,7 @@ const apiCategories: EndpointCategory[] = [
         method: "GET",
         path: "/api/v1/links/{id}/analytics",
         title: "Get link analytics",
-        description: "Retrieve comprehensive analytics data for a specific link, including click counts, geographic data, referrers, and time-based statistics.",
+        description: "Retrieve analytics data for a specific link, including click counts, referrers, and time-based statistics. Geographic breakdowns are coming soon.",
         parameters: [
           {
             name: "id",
@@ -381,16 +381,12 @@ const apiCategories: EndpointCategory[] = [
                 { referrer: "https://facebook.com", count: 180 },
                 { referrer: "Direct", count: 150 },
               ],
-              clicks_by_country: [
-                { country: "US", count: 450 },
-                { country: "GB", count: 230 },
-                { country: "CA", count: 120 },
-              ],
+              clicks_by_country: [],
               recent_clicks: [
                 {
                   clicked_at: "2024-01-17T14:30:00Z",
                   referrer: "https://twitter.com",
-                  country: "US",
+                  country: null,
                   user_agent: "Mozilla/5.0...",
                 },
               ],
@@ -1266,7 +1262,8 @@ export function ApiReferenceClient() {
                   <div className="pt-4 border-t border-neutral-border">
                     <h2 className="text-xl font-semibold text-neutral-text mb-3">Rate Limits</h2>
                     <p className="text-sm text-neutral-muted">
-                      Enterprise plans include <strong className="text-neutral-text">10,000 requests per hour</strong> per API key. Rate limit headers are included in all responses.
+                      API requests are rate limited. Default limit is <strong className="text-neutral-text">1,000 requests per hour</strong> per API key.
+                      Responses include <code className="text-xs">X-RateLimit-Limit</code>, <code className="text-xs">X-RateLimit-Remaining</code>, and <code className="text-xs">X-RateLimit-Reset</code> headers.
                     </p>
                   </div>
 

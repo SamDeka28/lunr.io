@@ -264,6 +264,11 @@ export function CustomDomains({ pageId }: CustomDomainsProps) {
                       SSL Active
                     </span>
                   )}
+                  {domain.verification_status === "verified" && domain.ssl_status !== "active" && (
+                    <p className="text-xs text-neutral-muted mt-1">
+                      Terminate TLS at your DNS/CDN (Vercel, Cloudflare). For apex domains use CNAME flattening or an ALIAS record. Auto-SSL provisioning is coming later.
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={() => handleDeleteDomain(domain.id)}

@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { LinkService } from "@/lib/services/link.service";
 import { AnalyticsService } from "@/lib/services/analytics.service";
+import { getCountryFromRequest } from "@/lib/utils/geo";
+import { parseUserAgent } from "@/lib/utils/ua";
 
 function getClientIp(request: NextRequest): string | null {
   // Try various headers for IP address
@@ -10,7 +12,7 @@ function getClientIp(request: NextRequest): string | null {
   if (forwarded) {
     return forwarded.split(",")[0].trim();
   }
-  
+
   const realIp = request.headers.get("x-real-ip");
   if (realIp) {
     return realIp;
@@ -25,10 +27,28 @@ export async function GET(
 ) {
   try {
     const { shortCode } = await params;
-    
+
+    // Rate limit redirects per IP
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const { rateLimit, RateLimitPresets } = await import("@/lib/utils/rate-limit");
+    const rl = await rateLimit(
+      `redirect:${ip}`,
+      RateLimitPresets.redirect.limit,
+      RateLimitPresets.redirect.windowMs
+    );
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+
     // Extract UTM parameters from the request URL (prioritize these for dynamic tracking)
     const requestUrl = new URL(request.url);
-    
+
     // Create server-side Supabase client
     const supabase = await createClient();
     const linkService = new LinkService(supabase);
@@ -41,24 +61,38 @@ export async function GET(
       );
     }
 
-    // Check if link requires password
-    if (link.password_hash) {
-      const password = requestUrl.searchParams.get("password");
-      if (!password) {
-        // Redirect to password prompt page
-        const passwordUrl = new URL(`/${shortCode}/password`, requestUrl.origin);
-        return NextResponse.redirect(passwordUrl.toString(), { status: 302 });
-      }
+    // Enforce campaign date window when link is assigned to a campaign
+    if (link.campaign_id) {
+      const { data: campaign } = await supabase
+        .from("campaigns")
+        .select("id, name, start_date, end_date, is_active")
+        .eq("id", link.campaign_id)
+        .maybeSingle();
 
-      // Verify password
-      const { LinkRepository } = await import("@/lib/db/repositories/link.repository");
-      const linkRepo = new LinkRepository(supabase);
-      const isValid = await linkRepo.verifyPassword(password, link.password_hash);
-      
-      if (!isValid) {
-        // Redirect to password prompt page with error
+      if (campaign) {
+        const { CampaignService } = await import("@/lib/services/campaign.service");
+        const window = CampaignService.isWithinDateWindow(campaign);
+        if (!window.active) {
+          const inactiveUrl = new URL(`/${shortCode}/inactive`, requestUrl.origin);
+          inactiveUrl.searchParams.set("reason", window.reason || "ended");
+          if (campaign.name) {
+            inactiveUrl.searchParams.set("campaign", campaign.name);
+          }
+          return NextResponse.redirect(inactiveUrl.toString(), { status: 302 });
+        }
+      }
+    }
+
+    // Check if link requires password (cookie-based access, never query string)
+    if (link.password_hash) {
+      const {
+        getAccessCookieName,
+        verifyLinkAccessCookie,
+      } = await import("@/lib/utils/password");
+      const accessCookie = request.cookies.get(getAccessCookieName(shortCode))?.value;
+
+      if (!verifyLinkAccessCookie(accessCookie, link.id, link.password_hash)) {
         const passwordUrl = new URL(`/${shortCode}/password`, requestUrl.origin);
-        passwordUrl.searchParams.set("error", "invalid");
         return NextResponse.redirect(passwordUrl.toString(), { status: 302 });
       }
     }
@@ -68,6 +102,8 @@ export async function GET(
     const ipAddress = getClientIp(request);
     const userAgent = request.headers.get("user-agent");
     const referrer = request.headers.get("referer") || request.headers.get("referrer");
+    const country = getCountryFromRequest(request);
+    const parsedUa = parseUserAgent(userAgent);
     const requestUtmSource = requestUrl.searchParams.get("utm_source");
     const requestUtmMedium = requestUrl.searchParams.get("utm_medium");
     const requestUtmCampaign = requestUrl.searchParams.get("utm_campaign");
@@ -84,85 +120,86 @@ export async function GET(
     const finalUtmTerm = requestUtmTerm || linkUtmParams.utm_term || null;
     const finalUtmContent = requestUtmContent || linkUtmParams.utm_content || null;
 
-    // Increment click count first (synchronous)
-    const { LinkRepository } = await import("@/lib/db/repositories/link.repository");
-    const linkRepo = new LinkRepository(supabase);
-    
-    try {
-      await linkRepo.incrementClickCount(link.id);
-    } catch (error: any) {
-      console.error("Failed to increment click count:", error);
-      // Don't fail the redirect if click tracking fails
+    // Increment click_count only for non-bot traffic; still record bots in analytics
+    if (!parsedUa.isBot) {
+      const { LinkRepository } = await import("@/lib/db/repositories/link.repository");
+      const linkRepo = new LinkRepository(supabase);
+
+      try {
+        await linkRepo.incrementClickCount(link.id);
+      } catch (error: any) {
+        console.error("Failed to increment click count:", error);
+        // Don't fail the redirect if click tracking fails
+      }
     }
 
-    // Record detailed analytics with UTM parameters (async, don't wait)
-    analyticsService.trackClick({
-      link_id: link.id,
-      ip_address: ipAddress,
-      user_agent: userAgent,
-      referrer: referrer || null,
-      country: null, // Could be added with geolocation service
-      utm_source: finalUtmSource,
-      utm_medium: finalUtmMedium,
-      utm_campaign: finalUtmCampaign,
-      utm_term: finalUtmTerm,
-      utm_content: finalUtmContent,
-    }).catch((err) => {
-      console.error("Failed to track analytics:", err);
-    });
+    // Record detailed analytics with UTM + device fields (async, don't wait)
+    analyticsService
+      .trackClick({
+        link_id: link.id,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        referrer: referrer || null,
+        country,
+        device_type: parsedUa.deviceType,
+        browser: parsedUa.browser,
+        os: parsedUa.os,
+        is_bot: parsedUa.isBot,
+        utm_source: finalUtmSource,
+        utm_medium: finalUtmMedium,
+        utm_campaign: finalUtmCampaign,
+        utm_term: finalUtmTerm,
+        utm_content: finalUtmContent,
+      })
+      .catch((err) => {
+        console.error("Failed to track analytics:", err);
+      });
 
-    // Trigger webhook for link.clicked (async, don't wait)
-    if (link.user_id) {
+    // Trigger webhook for link.clicked only for human clicks (async, don't wait)
+    if (link.user_id && !parsedUa.isBot) {
       try {
         const { WebhookService } = await import("@/lib/services/webhook.service");
         const webhookService = new WebhookService(supabase);
-        // Get updated link with new click count
         const updatedLink = await linkService.getLinkByShortCode(shortCode);
         if (updatedLink) {
           await webhookService.triggerWebhooks(link.user_id, "link.clicked", updatedLink);
         }
       } catch (error) {
         console.error("Failed to trigger webhook for link.clicked:", error);
-        // Don't fail the redirect if webhook fails
       }
     }
 
     // Build redirect URL with UTM parameters appended
     let redirectUrl = link.original_url;
-    
+
     // Only append UTM parameters if we have at least source or medium
     if (finalUtmSource || finalUtmMedium) {
       try {
-        // Ensure URL is absolute
         let url: URL;
         try {
           url = new URL(redirectUrl);
         } catch {
-          // If not absolute, try to make it absolute by adding https://
-          if (!redirectUrl.includes('://')) {
+          if (!redirectUrl.includes("://")) {
             url = new URL(`https://${redirectUrl}`);
           } else {
             throw new Error("Invalid URL format");
           }
         }
-        
-        // Add UTM parameters to the destination URL (request params take priority)
-        if (finalUtmSource) url.searchParams.set('utm_source', finalUtmSource);
-        if (finalUtmMedium) url.searchParams.set('utm_medium', finalUtmMedium);
-        if (finalUtmCampaign) url.searchParams.set('utm_campaign', finalUtmCampaign);
-        if (finalUtmTerm) url.searchParams.set('utm_term', finalUtmTerm);
-        if (finalUtmContent) url.searchParams.set('utm_content', finalUtmContent);
-        
+
+        if (finalUtmSource) url.searchParams.set("utm_source", finalUtmSource);
+        if (finalUtmMedium) url.searchParams.set("utm_medium", finalUtmMedium);
+        if (finalUtmCampaign) url.searchParams.set("utm_campaign", finalUtmCampaign);
+        if (finalUtmTerm) url.searchParams.set("utm_term", finalUtmTerm);
+        if (finalUtmContent) url.searchParams.set("utm_content", finalUtmContent);
+
         redirectUrl = url.toString();
       } catch (error) {
-        // If URL parsing fails, log error but still redirect to original URL
         console.error("Failed to append UTM parameters to URL:", redirectUrl, error);
-        // Continue with original URL without UTM params
       }
     }
 
-    // Redirect to original URL with UTM parameters (301 permanent redirect)
-    return NextResponse.redirect(redirectUrl, { status: 301 });
+    // Temporary redirect (302) so destination edits propagate; browsers won't permanently cache
+    return NextResponse.redirect(redirectUrl, { status: 302 });
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Failed to redirect" },
@@ -170,4 +207,3 @@ export async function GET(
     );
   }
 }
-

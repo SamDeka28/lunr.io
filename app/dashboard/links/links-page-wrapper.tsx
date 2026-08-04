@@ -15,6 +15,8 @@ interface LinksPageWrapperProps {
   initialView?: "list" | "grid" | "card";
   initialStatus?: "active" | "all" | "archived";
   initialDateFilter?: string | null;
+  initialTag?: string;
+  initialFolder?: string;
 }
 
 export function LinksPageWrapper({
@@ -25,6 +27,8 @@ export function LinksPageWrapper({
   initialView,
   initialStatus,
   initialDateFilter,
+  initialTag,
+  initialFolder,
 }: LinksPageWrapperProps) {
   const [selectedCount, setSelectedCount] = useState(0);
   const [viewType, setViewType] = useState<"list" | "grid" | "card">(initialView || "list");
@@ -37,6 +41,8 @@ export function LinksPageWrapper({
         initialView={viewType}
         initialStatus={initialStatus}
         initialDateFilter={initialDateFilter}
+        initialTag={initialTag}
+        initialFolder={initialFolder}
         selectedCount={selectedCount}
         onViewChange={setViewType}
       />

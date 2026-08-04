@@ -15,6 +15,8 @@ interface LinksControlsProps {
   initialView?: ViewType;
   initialStatus?: StatusFilter;
   initialDateFilter?: string | null;
+  initialTag?: string;
+  initialFolder?: string;
   selectedCount: number;
   onViewChange?: (view: ViewType) => void;
 }
@@ -24,6 +26,8 @@ export function LinksControls({
   initialView = "list",
   initialStatus = "active",
   initialDateFilter,
+  initialTag = "",
+  initialFolder = "",
   selectedCount,
   onViewChange,
 }: LinksControlsProps) {
@@ -33,6 +37,8 @@ export function LinksControls({
   const [viewType, setViewType] = useState<ViewType>(initialView);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatus);
   const [dateFilter, setDateFilter] = useState<DateFilter>((initialDateFilter || searchParams.get("dateFilter")) as DateFilter || null);
+  const [tagFilter, setTagFilter] = useState(initialTag || searchParams.get("tag") || "");
+  const [folderFilter, setFolderFilter] = useState(initialFolder || searchParams.get("folder") || "");
   const [showDateMenu, setShowDateMenu] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [isFiltering, setIsFiltering] = useState(false);
@@ -258,29 +264,60 @@ export function LinksControls({
             Add filters
           </button>
           {showFilterMenu && (
-            <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-xl border border-neutral-border shadow-lg z-50 py-2">
+            <div className="absolute top-full right-0 mt-2 w-72 bg-white rounded-xl border border-neutral-border shadow-lg z-50 py-2">
               <div className="px-4 py-2 text-xs font-semibold text-neutral-muted uppercase">Filter by</div>
-              <div className="px-4 py-2 space-y-2">
-                <label className="flex items-center gap-2 text-sm text-neutral-text">
-                  <input type="checkbox" className="w-4 h-4 rounded border-neutral-border text-electric-sapphire focus:ring-electric-sapphire/40" />
-                  <span>Has tags</span>
-                </label>
-                <label className="flex items-center gap-2 text-sm text-neutral-text">
-                  <input type="checkbox" className="w-4 h-4 rounded border-neutral-border text-electric-sapphire focus:ring-electric-sapphire/40" />
-                  <span>No tags</span>
-                </label>
-                <label className="flex items-center gap-2 text-sm text-neutral-text">
-                  <input type="checkbox" className="w-4 h-4 rounded border-neutral-border text-electric-sapphire focus:ring-electric-sapphire/40" />
-                  <span>High clicks (&gt;100)</span>
-                </label>
-                <label className="flex items-center gap-2 text-sm text-neutral-text">
-                  <input type="checkbox" className="w-4 h-4 rounded border-neutral-border text-electric-sapphire focus:ring-electric-sapphire/40" />
-                  <span>No clicks</span>
-                </label>
+              <div className="px-4 py-2 space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-neutral-muted mb-1">Tag</label>
+                  <input
+                    type="text"
+                    value={tagFilter}
+                    onChange={(e) => setTagFilter(e.target.value)}
+                    placeholder="e.g. marketing"
+                    className="w-full px-3 py-2 rounded-lg border border-neutral-border text-sm focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-muted mb-1">Folder</label>
+                  <input
+                    type="text"
+                    value={folderFilter}
+                    onChange={(e) => setFolderFilter(e.target.value)}
+                    placeholder="e.g. social"
+                    className="w-full px-3 py-2 rounded-lg border border-neutral-border text-sm focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40"
+                  />
+                </div>
               </div>
               <div className="border-t border-neutral-border my-1" />
-              <div className="px-4 py-2">
-                <button className="w-full px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white hover:from-bright-indigo hover:to-vivid-royal transition-all">
+              <div className="px-4 py-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTagFilter("");
+                    setFolderFilter("");
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.delete("tag");
+                    params.delete("folder");
+                    router.push(`/dashboard/links?${params.toString()}`);
+                    setShowFilterMenu(false);
+                  }}
+                  className="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-neutral-border text-neutral-muted hover:text-neutral-text"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    if (tagFilter.trim()) params.set("tag", tagFilter.trim());
+                    else params.delete("tag");
+                    if (folderFilter.trim()) params.set("folder", folderFilter.trim());
+                    else params.delete("folder");
+                    router.push(`/dashboard/links?${params.toString()}`);
+                    setShowFilterMenu(false);
+                  }}
+                  className="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white hover:from-bright-indigo hover:to-vivid-royal transition-all"
+                >
                   Apply filters
                 </button>
               </div>
@@ -290,7 +327,7 @@ export function LinksControls({
       </div>
 
       {/* Active Filters Display */}
-      {(dateFilter || isFiltering) && (
+      {(dateFilter || tagFilter || folderFilter || isFiltering) && (
         <div className="mb-3 flex items-center gap-2 flex-wrap">
           {dateFilter && (
             <div className="px-3 py-1.5 rounded-lg bg-electric-sapphire/10 border border-electric-sapphire/20 flex items-center gap-2">
@@ -299,6 +336,42 @@ export function LinksControls({
               </span>
               <button
                 onClick={() => handleDateFilter(null)}
+                className="hover:bg-electric-sapphire/20 rounded p-0.5"
+              >
+                <X className="h-3 w-3 text-electric-sapphire" />
+              </button>
+            </div>
+          )}
+          {tagFilter && (
+            <div className="px-3 py-1.5 rounded-lg bg-electric-sapphire/10 border border-electric-sapphire/20 flex items-center gap-2">
+              <span className="text-xs font-semibold text-electric-sapphire">
+                Tag: {tagFilter}
+              </span>
+              <button
+                onClick={() => {
+                  setTagFilter("");
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.delete("tag");
+                  router.push(`/dashboard/links?${params.toString()}`);
+                }}
+                className="hover:bg-electric-sapphire/20 rounded p-0.5"
+              >
+                <X className="h-3 w-3 text-electric-sapphire" />
+              </button>
+            </div>
+          )}
+          {folderFilter && (
+            <div className="px-3 py-1.5 rounded-lg bg-electric-sapphire/10 border border-electric-sapphire/20 flex items-center gap-2">
+              <span className="text-xs font-semibold text-electric-sapphire">
+                Folder: {folderFilter}
+              </span>
+              <button
+                onClick={() => {
+                  setFolderFilter("");
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.delete("folder");
+                  router.push(`/dashboard/links?${params.toString()}`);
+                }}
                 className="hover:bg-electric-sapphire/20 rounded p-0.5"
               >
                 <X className="h-3 w-3 text-electric-sapphire" />

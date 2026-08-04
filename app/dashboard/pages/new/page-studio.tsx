@@ -19,6 +19,10 @@ import { GradientTemplates } from "@/components/gradient-templates";
 import { PageThemes, PageTheme } from "@/components/page-themes";
 import { LayoutTemplates } from "@/components/layout-templates";
 import { PageLayoutRenderer } from "@/components/page-layouts";
+import { ImageUpload } from "@/components/ui/image-upload";
+import { ContentBlocksEditor } from "@/components/page-layouts/content-blocks-editor";
+import { PageContentBlocks } from "@/components/page-layouts/page-content-blocks";
+import type { PageBlock } from "@/lib/utils/page-blocks";
 
 interface LinkItem {
   id: string;
@@ -67,6 +71,7 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [showAddLink, setShowAddLink] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [contentBlocks, setContentBlocks] = useState<PageBlock[]>([]);
 
   // Social links state
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
@@ -302,6 +307,7 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
             socialIconGap,
             backgroundImageUrl,
             backgroundImageOpacity,
+            blocks: contentBlocks,
           },
           links: pageLinks.map(link => ({
             id: link.id,
@@ -568,6 +574,8 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
                   </div>
                 </div>
 
+                <ContentBlocksEditor blocks={contentBlocks} onChange={setContentBlocks} />
+
                 {/* Social Links */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -709,21 +717,12 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
                         </div>
                       ) : (
                         <div className="space-y-4">
-                          <div>
-                            <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
-                              Background Image URL
-                            </label>
-                            <input
-                              type="url"
-                              value={backgroundImageUrl}
-                              onChange={(e) => setBackgroundImageUrl(e.target.value)}
-                              placeholder="https://example.com/image.jpg"
-                              className="w-full h-9 px-3 rounded-lg border-2 border-neutral-border bg-white text-neutral-text text-sm font-medium focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
-                            />
-                            <p className="text-xs text-neutral-muted mt-1">
-                              Enter the URL of your background image
-                            </p>
-                          </div>
+                          <ImageUpload
+                            label="Background Image"
+                            value={backgroundImageUrl}
+                            onChange={setBackgroundImageUrl}
+                            pathPrefix="pages"
+                          />
                           <SliderWithInput
                             label="Image Opacity"
                             value={backgroundImageOpacity}
@@ -1085,12 +1084,11 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
                     </button>
                   </div>
                   {showProfileImage && (
-                    <input
-                      type="url"
+                    <ImageUpload
                       value={profileImageUrl}
-                      onChange={(e) => setProfileImageUrl(e.target.value)}
-                      placeholder="https://example.com/image.jpg"
-                      className="w-full h-9 px-3 rounded-lg border-2 border-neutral-border bg-white text-sm"
+                      onChange={setProfileImageUrl}
+                      pathPrefix="pages"
+                      aspectClassName="aspect-square max-w-[200px]"
                     />
                   )}
                 </div>
@@ -1175,12 +1173,11 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
                           </div>
                         </>
                       ) : (
-                        <input
-                          type="url"
+                        <ImageUpload
                           value={bannerImageUrl}
-                          onChange={(e) => setBannerImageUrl(e.target.value)}
-                          placeholder="https://example.com/banner-image.jpg"
-                          className="w-full h-9 px-3 rounded-lg border-2 border-neutral-border bg-white text-sm"
+                          onChange={setBannerImageUrl}
+                          pathPrefix="pages"
+                          aspectClassName="aspect-[3/1]"
                         />
                       )}
 
@@ -1332,7 +1329,7 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
         {/* Preview Content */}
         <div className="flex-1 overflow-auto">
           <div
-            className="min-h-full w-full flex flex-col items-center justify-center p-8 relative"
+            className="min-h-full w-full flex flex-col items-stretch justify-start relative overflow-hidden"
             style={{
               background: backgroundType === "image" && backgroundImageUrl
                 ? `url(${backgroundImageUrl})`
@@ -1344,7 +1341,6 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
               backgroundRepeat: backgroundType === "image" ? "no-repeat" : undefined,
               color: textColor,
               fontFamily: `"${fontFamily}", sans-serif`,
-              gap: `${spacing}px`,
             }}
           >
             {backgroundType === "image" && backgroundImageUrl && (
@@ -1404,8 +1400,24 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
               Globe={Globe}
               ExternalLink={ExternalLink}
             />
-            {pageLinks.length === 0 && Object.keys(socialLinks).filter(key => socialLinks[key]).length === 0 && (
-              <p style={{ color: textColor, fontFamily: `"${fontFamily}", sans-serif`, opacity: 0.6 }}>
+            {contentBlocks.length > 0 && (
+              <div className="w-full mx-auto px-5 sm:px-6 pb-8" style={{ maxWidth: `${maxContentWidth}px` }}>
+                <PageContentBlocks
+                  pageId="preview"
+                  blocks={contentBlocks}
+                  textColor={textColor}
+                  buttonColor={buttonColor}
+                  buttonTextColor={buttonTextColor}
+                  fontFamily={fontFamily}
+                  buttonBorderRadius={buttonBorderRadius}
+                  buttonPadding={buttonPadding}
+                  linkGap={linkGap}
+                  interactive={false}
+                />
+              </div>
+            )}
+            {pageLinks.length === 0 && contentBlocks.length === 0 && Object.keys(socialLinks).filter(key => socialLinks[key]).length === 0 && (
+              <p className="text-center py-16 px-6" style={{ color: textColor, fontFamily: `"${fontFamily}", sans-serif`, opacity: 0.6 }}>
                 Add links to see preview
               </p>
             )}

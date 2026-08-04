@@ -1,25 +1,37 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCachedUser } from "@/lib/supabase/auth";
 import { Crown } from "lucide-react";
 import { PlanInfo } from "../plan-info";
 import { SettingsClient } from "./settings-client";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  // Get user's plan and usage
+  // Get user's plan and usage. `getUserPlan` and `getUsageLimits` are independent
+  // reads, so run them in parallel, and derive `hasApiAccess` from the plan we
+  // already fetched instead of issuing a third profile lookup via `hasFeature`.
   const { PlanService } = await import("@/lib/services/plan.service");
   const planService = new PlanService(supabase);
-  const userPlanData = await planService.getUserPlan(user.id);
-  const limits = await planService.getUsageLimits(user.id);
-  const hasApiAccess = await planService.hasFeature(user.id, "api_access");
+  const [userPlanData, limits] = await Promise.all([
+    planService.getUserPlan(user.id),
+    planService.getUsageLimits(user.id),
+  ]);
+
+  let features = userPlanData?.plan?.features || {};
+  if (typeof features === "string") {
+    try {
+      features = JSON.parse(features);
+    } catch {
+      features = {};
+    }
+  }
+  const hasApiAccess = (features as Record<string, boolean>)["api_access"] === true;
 
   return (
     <div className="max-w-7xl mx-auto w-full">

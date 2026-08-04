@@ -1,18 +1,20 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { LinksPageClient } from "./links-page-client";
+import { getCachedUser } from "@/lib/supabase/auth";
 import { LinksPageWrapper } from "./links-page-wrapper";
 import Link from "next/link";
+import { Plus, Link2 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default async function LinksPage({
   searchParams,
 }: {
-  searchParams: { search?: string; filter?: string; view?: string; status?: string; dateFilter?: string };
+  searchParams: { search?: string; filter?: string; view?: string; status?: string; dateFilter?: string; tag?: string; folder?: string };
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   if (!user) {
     redirect("/login");
@@ -20,27 +22,25 @@ export default async function LinksPage({
 
   const statusFilter = searchParams.status || "active";
   const dateFilter = searchParams.dateFilter;
+  const tagFilter = searchParams.tag?.trim();
+  const folderFilter = searchParams.folder?.trim();
 
-  // Get user's links with search, including active QR codes
   let query = supabase
     .from("links")
-    .select("*, qr_codes(*)")
+    .select("*, qr_codes(is_active)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  // Apply status filter
   if (statusFilter === "active") {
     query = query.eq("is_active", true);
   } else if (statusFilter === "archived") {
     query = query.eq("is_active", false);
   }
-  // "all" shows everything, no filter needed
 
-  // Apply date filter
   if (dateFilter) {
     const now = new Date();
-    let startDate: Date;
-    
+    let startDate: Date | null = null;
+
     switch (dateFilter) {
       case "today":
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -54,15 +54,19 @@ export default async function LinksPage({
       case "thismonth":
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
-      case "lastmonth":
+      case "lastmonth": {
         startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        query = query.gte("created_at", startDate.toISOString()).lte("created_at", endDate.toISOString());
+        query = query
+          .gte("created_at", startDate.toISOString())
+          .lte("created_at", endDate.toISOString());
+        startDate = null;
         break;
+      }
       default:
-        startDate = null as any;
+        startDate = null;
     }
-    
+
     if (dateFilter !== "lastmonth" && startDate) {
       query = query.gte("created_at", startDate.toISOString());
     }
@@ -74,38 +78,62 @@ export default async function LinksPage({
     );
   }
 
-  const { data: links, error } = await query;
+  if (tagFilter) {
+    query = query.contains("tags", [tagFilter]);
+  }
 
-      // Check user limits using PlanService
-      const { PlanService } = await import("@/lib/services/plan.service");
-      const planService = new PlanService(supabase);
-      const limits = await planService.getUsageLimits(user.id);
-      
-      const linkCount = links?.length || 0;
-      const canCreateLink = limits.can_create_link;
+  if (folderFilter) {
+    query = query.ilike("folder", folderFilter);
+  }
+
+  const { data: links } = await query;
+
+  const { PlanService } = await import("@/lib/services/plan.service");
+  const planService = new PlanService(supabase);
+  const limits = await planService.getUsageLimits(user.id);
+
+  const linkCount = links?.length || 0;
+  const canCreateLink = limits.can_create_link;
 
   return (
     <div className="max-w-7xl mx-auto w-full">
-      {/* Header Section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-neutral-text mb-2">Your Links</h1>
-            <p className="text-sm text-neutral-muted">
-              {linkCount} / {limits.max_links === -1 ? "∞" : limits.max_links} links used
-            </p>
-          </div>
-          {canCreateLink && (
-            <Link
-              href="/dashboard/links/new"
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold hover:from-bright-indigo hover:to-vivid-royal transition-all active:scale-[0.98] flex items-center gap-2 shadow-button"
-            >
-              <span className="text-lg">+</span>
-              Create link
+      <PageHeader
+        title="Your Links"
+        description={`${linkCount} / ${limits.max_links === -1 ? "∞" : limits.max_links} links used`}
+        actions={
+          canCreateLink ? (
+            <Link href="/dashboard/links/new">
+              <Button>
+                <Plus className="h-4 w-4" />
+                Create link
+              </Button>
             </Link>
-          )}
-        </div>
+          ) : undefined
+        }
+      />
 
+      {linkCount === 0 &&
+      !searchParams.search &&
+      !tagFilter &&
+      !folderFilter &&
+      statusFilter === "active" &&
+      !dateFilter ? (
+        <EmptyState
+          icon={<Link2 className="h-8 w-8" />}
+          title="No links yet"
+          description="Create your first short link to start tracking clicks and sharing anywhere."
+          action={
+            canCreateLink ? (
+              <Link href="/dashboard/links/new">
+                <Button>
+                  <Plus className="h-4 w-4" />
+                  Create link
+                </Button>
+              </Link>
+            ) : undefined
+          }
+        />
+      ) : (
         <LinksPageWrapper
           links={links || []}
           canCreate={canCreateLink}
@@ -114,8 +142,10 @@ export default async function LinksPage({
           initialView={(searchParams.view as any) || "list"}
           initialStatus={(searchParams.status as any) || "active"}
           initialDateFilter={searchParams.dateFilter}
+          initialTag={tagFilter}
+          initialFolder={folderFilter}
         />
-      </div>
+      )}
     </div>
   );
 }

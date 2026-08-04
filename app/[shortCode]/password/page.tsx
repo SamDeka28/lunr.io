@@ -14,13 +14,11 @@ function PasswordPromptForm() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check for error in URL params
     const errorParam = searchParams.get("error");
     if (errorParam === "invalid") {
       setError("Incorrect password. Please try again.");
-      setLoading(false); // Reset loading state when error is detected
-      setPassword(""); // Clear password field
-      // Clean up URL by removing error parameter
+      setLoading(false);
+      setPassword("");
       const newUrl = new URL(window.location.href);
       newUrl.searchParams.delete("error");
       window.history.replaceState({}, "", newUrl.toString());
@@ -33,11 +31,23 @@ function PasswordPromptForm() {
     setLoading(true);
 
     try {
-      // Redirect to the link with password as query parameter
-      const url = new URL(`/${shortCode}`, window.location.origin);
-      url.searchParams.set("password", password);
-      // Use replace instead of push to avoid adding to history
-      router.replace(url.toString());
+      const response = await fetch("/api/links/verify-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ short_code: shortCode, password }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(data.error || "Incorrect password. Please try again.");
+        setLoading(false);
+        setPassword("");
+        return;
+      }
+
+      // Cookie is set by the API; navigate to the short link to complete redirect
+      router.replace(`/${shortCode}`);
     } catch (err) {
       setError("An error occurred. Please try again.");
       setLoading(false);
@@ -117,4 +127,3 @@ export default function PasswordPromptPage() {
     </Suspense>
   );
 }
-

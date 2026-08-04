@@ -1,9 +1,10 @@
 "use client";
 
 import { ExternalLink, Mail, Twitter, Instagram, Linkedin, Github, Youtube, Facebook, Globe } from "lucide-react";
-import { cn } from "@/lib/utils/cn";
 import { useState } from "react";
 import { PageLayoutRenderer } from "@/components/page-layouts";
+import { PageContentBlocks } from "@/components/page-layouts/page-content-blocks";
+import type { PageBlock } from "@/lib/utils/page-blocks";
 
 const socialIcons: Record<string, any> = {
   email: Mail,
@@ -22,11 +23,15 @@ export default function PublicPageViewer({ page }: { page: any }) {
   const handleLinkClick = async (linkId: string, url: string) => {
     if (!clickedLinks.has(linkId)) {
       setClickedLinks(new Set([...clickedLinks, linkId]));
-      // Track click on the page via API
       try {
         await fetch(`/api/pages/${page.id}/track-click`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            link_id: linkId,
+            page_id: page.id,
+            referrer: typeof document !== "undefined" ? document.referrer : null,
+          }),
         });
       } catch (err) {
         console.error("Failed to track click:", err);
@@ -38,8 +43,8 @@ export default function PublicPageViewer({ page }: { page: any }) {
   const links = Array.isArray(page.links) ? page.links : [];
   const socialLinks = page.social_links || {};
   const content = page.content || {};
-  
-  // Extract customization options from content
+  const blocks: PageBlock[] = Array.isArray(content.blocks) ? content.blocks : [];
+
   const fontFamily = content.fontFamily || "Inter";
   const titleFontSize = content.titleFontSize || 48;
   const descriptionFontSize = content.descriptionFontSize || 18;
@@ -72,7 +77,6 @@ export default function PublicPageViewer({ page }: { page: any }) {
   const bannerType = content.bannerType || "text";
   const layoutTemplate = content.layoutTemplate || "centered";
 
-  // Load Google Fonts if needed
   const googleFonts = ["Inter", "Roboto", "Open Sans", "Lato", "Montserrat", "Poppins", "Playfair Display", "Merriweather", "Raleway", "Nunito"];
   const fontName = fontFamily.replace(/\s+/g, "+");
 
@@ -84,27 +88,27 @@ export default function PublicPageViewer({ page }: { page: any }) {
           rel="stylesheet"
         />
       )}
-    <div
-        className="min-h-screen flex flex-col items-center justify-center p-6 relative"
+      <div
+        className="min-h-screen flex flex-col items-stretch justify-start relative overflow-hidden"
         style={{
-          background: backgroundType === "image" && backgroundImageUrl
-            ? `url(${backgroundImageUrl})`
-            : backgroundType === "gradient"
-            ? `linear-gradient(135deg, ${gradientColors.start} 0%, ${gradientColors.end} 100%)`
-            : page.background_color || "#FFFFFF",
+          background:
+            backgroundType === "image" && backgroundImageUrl
+              ? `url(${backgroundImageUrl})`
+              : backgroundType === "gradient"
+                ? `linear-gradient(135deg, ${gradientColors.start} 0%, ${gradientColors.end} 100%)`
+                : page.background_color || "#FFFFFF",
           backgroundSize: backgroundType === "image" ? "cover" : undefined,
           backgroundPosition: backgroundType === "image" ? "center" : undefined,
           backgroundRepeat: backgroundType === "image" ? "no-repeat" : undefined,
           color: page.text_color || "#000000",
           fontFamily: `"${fontFamily}", sans-serif`,
-          gap: `${spacing}px`,
         }}
       >
         {backgroundType === "image" && backgroundImageUrl && (
           <div
             className="absolute inset-0 z-0"
-      style={{
-        backgroundColor: page.background_color || "#FFFFFF",
+            style={{
+              backgroundColor: page.background_color || "#FFFFFF",
               opacity: backgroundImageOpacity,
             }}
           />
@@ -136,7 +140,11 @@ export default function PublicPageViewer({ page }: { page: any }) {
           textAlignment={textAlignment as "left" | "center" | "right"}
           showProfileImage={showProfileImage}
           profileImageUrl={profileImageUrl}
-          showBanner={showBanner && ((bannerType === "text" && bannerText) || (bannerType === "image" && bannerImageUrl))}
+          showBanner={
+            showBanner &&
+            ((bannerType === "text" && bannerText) ||
+              (bannerType === "image" && bannerImageUrl))
+          }
           bannerText={bannerText}
           bannerImageUrl={bannerImageUrl}
           bannerUrl={bannerUrl}
@@ -153,15 +161,39 @@ export default function PublicPageViewer({ page }: { page: any }) {
           ExternalLink={ExternalLink}
           onLinkClick={handleLinkClick}
         />
-        {links.length === 0 && Object.keys(socialLinks).filter(key => socialLinks[key]).length === 0 && (
-          <div className="text-center py-12 opacity-60">
-            <p style={{ color: page.text_color || "#000000", fontFamily: `"${fontFamily}", sans-serif` }}>
-              No links added yet. Edit this page to add links.
-            </p>
+
+        {blocks.length > 0 && (
+          <div className="relative z-10 w-full mx-auto px-5 sm:px-6 pb-8" style={{ maxWidth: `${maxContentWidth}px` }}>
+            <PageContentBlocks
+              pageId={page.id}
+              blocks={blocks}
+              textColor={page.text_color || "#000000"}
+              buttonColor={page.button_color || "#3B82F6"}
+              buttonTextColor={page.button_text_color || "#FFFFFF"}
+              fontFamily={fontFamily}
+              buttonBorderRadius={buttonBorderRadius}
+              buttonPadding={buttonPadding}
+              linkGap={linkGap}
+              interactive
+            />
           </div>
         )}
+
+        {links.length === 0 &&
+          blocks.length === 0 &&
+          Object.keys(socialLinks).filter((key) => socialLinks[key]).length === 0 && (
+            <div className="text-center py-16 px-6 opacity-60">
+              <p
+                style={{
+                  color: page.text_color || "#000000",
+                  fontFamily: `"${fontFamily}", sans-serif`,
+                }}
+              >
+                No links added yet. Edit this page to add links.
+              </p>
+            </div>
+          )}
       </div>
     </>
   );
 }
-

@@ -1,4 +1,13 @@
 // Database Types
+export interface CampaignUtmDefaults {
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_term?: string;
+  utm_content?: string;
+  [key: string]: string | undefined;
+}
+
 export interface Campaign {
   id: string;
   user_id: string;
@@ -10,6 +19,7 @@ export interface Campaign {
   tags: string[] | null;
   target_clicks: number;
   budget: number;
+  utm_defaults: CampaignUtmDefaults | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -19,6 +29,10 @@ export interface CampaignWithStats extends Campaign {
   total_links: number;
   total_clicks: number;
   unique_clicks: number;
+  /** Cost per click when budget > 0: budget / total_clicks */
+  cpc?: number | null;
+  /** Progress toward target_clicks as 0–100 */
+  target_progress?: number | null;
 }
 
 export interface CreateCampaignInput {
@@ -30,7 +44,14 @@ export interface CreateCampaignInput {
   tags?: string[] | null;
   target_clicks?: number;
   budget?: number;
+  utm_defaults?: CampaignUtmDefaults | null;
   user_id: string;
+}
+
+export interface LinkTargeting {
+  countries?: string[];
+  devices?: string[];
+  [key: string]: unknown;
 }
 
 export interface Link {
@@ -46,6 +67,10 @@ export interface Link {
   click_count: number;
   password_hash: string | null;
   utm_parameters: Record<string, string> | null;
+  tags?: string[] | null;
+  folder?: string | null;
+  max_clicks?: number | null;
+  targeting?: LinkTargeting | null;
 }
 
 export interface Analytics {
@@ -56,6 +81,15 @@ export interface Analytics {
   user_agent: string | null;
   referrer: string | null;
   country: string | null;
+  device_type: string | null;
+  browser: string | null;
+  os: string | null;
+  is_bot: boolean;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  utm_term?: string | null;
+  utm_content?: string | null;
 }
 
 export interface QRCode {
@@ -134,17 +168,33 @@ export interface CreateLinkInput {
   user_id?: string | null;
   utm_parameters?: Record<string, string> | null;
   campaign_id?: string | null;
+  tags?: string[] | null;
+  folder?: string | null;
+  max_clicks?: number | null;
+  targeting?: LinkTargeting | null;
 }
 
 export interface LinkStats {
   total_clicks: number;
+  /**
+   * Unique clicks = distinct IP addresses within a 24h calendar-day window
+   * (UTC) per link. Same IP clicking twice on the same UTC day counts once;
+   * the same IP on different days counts again.
+   */
   unique_clicks: number;
   clicks_by_date: Array<{ date: string; count: number }>;
   top_referrers: Array<{ referrer: string; count: number }>;
   clicks_by_country: Array<{ country: string; count: number }>;
+  clicks_by_device?: Array<{ device: string; count: number }>;
+  clicks_by_browser?: Array<{ browser: string; count: number }>;
+  clicks_by_os?: Array<{ os: string; count: number }>;
   utm_sources?: Array<{ source: string; count: number }>;
   utm_mediums?: Array<{ medium: string; count: number }>;
   utm_campaigns?: Array<{ campaign: string; count: number }>;
+  /** Plan retention window in days; -1 = unlimited */
+  retention_days?: number;
+  /** True when older data exists beyond the plan retention window */
+  retention_truncated?: boolean;
 }
 
 export interface Page {

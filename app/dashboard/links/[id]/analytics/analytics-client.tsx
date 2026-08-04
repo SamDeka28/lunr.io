@@ -19,6 +19,8 @@ import {
   Activity,
   BarChart3,
   Target,
+  Download,
+  Monitor,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
@@ -55,6 +57,7 @@ ChartJS.register(
 export function LinkAnalyticsClient({ link, stats }: { link: any; stats: any }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [liveClicks, setLiveClicks] = useState(link.click_count || 0);
 
   const shortUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/${link.short_code}`;
@@ -110,6 +113,38 @@ export function LinkAnalyticsClient({ link, stats }: { link: any; stats: any }) 
       handleCopy();
     }
   };
+
+  const handleExportCsv = async () => {
+    try {
+      setExporting(true);
+      const res = await fetch(`/api/links/${link.id}/analytics/export`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Export failed");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `analytics-${link.short_code}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("CSV exported");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to export CSV");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const retentionLabel =
+    stats?.retention_days == null
+      ? null
+      : stats.retention_days < 0
+        ? "Unlimited history"
+        : `Last ${stats.retention_days} days`;
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
@@ -406,6 +441,7 @@ export function LinkAnalyticsClient({ link, stats }: { link: any; stats: any }) 
                       day: "numeric",
                       year: "numeric",
                     })}
+                    {retentionLabel ? ` · ${retentionLabel}` : ""}
                   </p>
                 </div>
               </div>
@@ -439,7 +475,23 @@ export function LinkAnalyticsClient({ link, stats }: { link: any; stats: any }) 
                 </button>
               </div>
             </div>
+
+            <button
+              onClick={handleExportCsv}
+              disabled={exporting}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-border bg-white text-sm font-semibold text-neutral-text hover:border-electric-sapphire hover:text-electric-sapphire transition-all active:scale-[0.98] disabled:opacity-60 shrink-0"
+            >
+              <Download className="h-4 w-4" />
+              {exporting ? "Exporting…" : "Export CSV"}
+            </button>
           </div>
+
+          {stats?.retention_truncated && (
+            <div className="mt-4 px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
+              Showing the last {stats.retention_days} days of analytics for your plan.
+              Older clicks are retained but not included here — upgrade for a longer window.
+            </div>
+          )}
         </div>
 
         {/* Key Metrics - Professional Cards */}
@@ -528,7 +580,9 @@ export function LinkAnalyticsClient({ link, stats }: { link: any; stats: any }) 
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-neutral-text">Clicks Over Time</h3>
-                  <p className="text-xs text-neutral-muted">Last 30 days</p>
+                  <p className="text-xs text-neutral-muted">
+                    {retentionLabel || "Last 30 days"}
+                  </p>
                 </div>
               </div>
               <div className="px-3 py-1.5 rounded-full bg-electric-sapphire/10 border border-electric-sapphire/20">
@@ -580,6 +634,62 @@ export function LinkAnalyticsClient({ link, stats }: { link: any; stats: any }) 
             )}
           </div>
         </div>
+
+        {/* Device / Browser / OS */}
+        {(stats?.clicks_by_device?.length > 0 ||
+          stats?.clicks_by_browser?.length > 0 ||
+          stats?.clicks_by_os?.length > 0) && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="bg-white rounded-xl border border-neutral-border p-6 shadow-soft">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center">
+                  <Monitor className="h-5 w-5 text-electric-sapphire" />
+                </div>
+                <h3 className="text-lg font-bold text-neutral-text">Devices</h3>
+              </div>
+              <ul className="space-y-2">
+                {(stats.clicks_by_device || []).slice(0, 6).map((row: any) => (
+                  <li key={row.device} className="flex justify-between text-sm">
+                    <span className="text-neutral-muted capitalize">{row.device}</span>
+                    <span className="font-semibold text-neutral-text">{row.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-white rounded-xl border border-neutral-border p-6 shadow-soft">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-neon-pink/10 to-raspberry-plum/10 flex items-center justify-center">
+                  <Globe className="h-5 w-5 text-neon-pink" />
+                </div>
+                <h3 className="text-lg font-bold text-neutral-text">Browsers</h3>
+              </div>
+              <ul className="space-y-2">
+                {(stats.clicks_by_browser || []).slice(0, 6).map((row: any) => (
+                  <li key={row.browser} className="flex justify-between text-sm">
+                    <span className="text-neutral-muted">{row.browser}</span>
+                    <span className="font-semibold text-neutral-text">{row.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-white rounded-xl border border-neutral-border p-6 shadow-soft">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-energy/10 to-sky-aqua/10 flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-blue-energy" />
+                </div>
+                <h3 className="text-lg font-bold text-neutral-text">Operating Systems</h3>
+              </div>
+              <ul className="space-y-2">
+                {(stats.clicks_by_os || []).slice(0, 6).map((row: any) => (
+                  <li key={row.os} className="flex justify-between text-sm">
+                    <span className="text-neutral-muted">{row.os}</span>
+                    <span className="font-semibold text-neutral-text">{row.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
 
         {/* UTM Parameters Info Card - Show configured UTM parameters for this link */}
         {link.utm_parameters && Object.keys(link.utm_parameters).length > 0 && (

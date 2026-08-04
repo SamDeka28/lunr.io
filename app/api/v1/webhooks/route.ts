@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withApiAuth, type AuthenticatedApiRequest } from "@/lib/middleware/api-auth";
 import { WebhookService } from "@/lib/services/webhook.service";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/admin";
 
 // GET /api/v1/webhooks - List all webhooks for the authenticated API user
 async function handleGet(request: AuthenticatedApiRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const userId = request.apiKey!.user_id;
 
     const webhookService = new WebhookService(supabase);
@@ -30,7 +30,7 @@ async function handleGet(request: AuthenticatedApiRequest) {
 // POST /api/v1/webhooks - Create a new webhook
 async function handlePost(request: AuthenticatedApiRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const userId = request.apiKey!.user_id;
     const body = await request.json();
     const { name, url, events } = body;

@@ -1,12 +1,14 @@
 import { PageLayoutProps } from "./types";
-import { Banner } from "./banner";
+import { LayoutShell, avatarOverlapClass } from "./layout-shell";
 import { PageLinks } from "./page-links";
 import { SocialIcons } from "./social-icons";
+import { cn } from "@/lib/utils/cn";
 
 interface HeroLayoutProps extends PageLayoutProps {
   Globe: React.ComponentType<any>;
 }
 
+/** Large avatar + oversized type — title always below the banner */
 export function HeroLayout(props: HeroLayoutProps) {
   const {
     title,
@@ -37,65 +39,75 @@ export function HeroLayout(props: HeroLayoutProps) {
     ...linkProps
   } = props;
 
+  const hasTopImage =
+    showBanner && bannerPosition === "top" && bannerType === "image" && !!bannerImageUrl;
+
   return (
-    <div className="relative z-10 w-full flex flex-col items-center" style={{ gap: `${spacing * 1.5}px`, maxWidth: `${maxContentWidth}px`, width: "100%" }}>
-      {showBanner && bannerPosition === "top" && (
-        <Banner
-          bannerText={bannerText}
-          bannerImageUrl={bannerImageUrl}
-          bannerUrl={bannerUrl}
-          bannerStyle={bannerStyle}
-          bannerType={bannerType}
-          maxContentWidth={maxContentWidth}
-        />
-      )}
+    <LayoutShell
+      showBanner={showBanner}
+      bannerText={bannerText}
+      bannerImageUrl={bannerImageUrl}
+      bannerUrl={bannerUrl}
+      bannerStyle={bannerStyle}
+      bannerPosition={bannerPosition}
+      bannerType={bannerType}
+      maxContentWidth={maxContentWidth}
+      spacing={Math.max(14, spacing * 0.8)}
+      contentClassName="items-center text-center"
+    >
       {showProfileImage && profileImageUrl && (
-        <img
-          src={profileImageUrl}
-          alt="Profile"
-          className="object-cover border-4 rounded-full mx-auto"
-          style={{
-            width: "120px",
-            height: "120px",
-            borderColor: buttonColor,
-          }}
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
-        />
+        <div className={cn("flex justify-center w-full", avatarOverlapClass(hasTopImage, "lg"))}>
+          <img
+            src={profileImageUrl}
+            alt="Profile"
+            className="object-cover rounded-full border-[4px] bg-white shadow-xl"
+            style={{
+              width: 120,
+              height: 120,
+              borderColor: buttonColor,
+            }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        </div>
       )}
-      <div className="flex flex-col items-center text-center" style={{ gap: `${spacing}px`, width: "100%" }}>
-        {title && (
-          <h1
-            style={{
-              fontSize: `${titleFontSize * 1.2}px`,
-              textAlign: "center",
-              fontFamily: `"${fontFamily}", sans-serif`,
-              color: textColor,
-              fontWeight: titleFontWeight,
-              lineHeight: 1.2,
-              width: "100%",
-            }}
-          >
-            {title}
-          </h1>
-        )}
-        {description && (
-          <p
-            style={{
-              fontSize: `${descriptionFontSize * 1.1}px`,
-              textAlign: "center",
-              fontFamily: `"${fontFamily}", sans-serif`,
-              color: textColor,
-              opacity: 0.8,
-              lineHeight: 1.6,
-              fontWeight: descriptionFontWeight,
-              width: "100%",
-            }}
-          >
-            {description}
-          </p>
-        )}
+      {title && (
+        <h1
+          style={{
+            fontSize: `${titleFontSize * 1.25}px`,
+            textAlign: "center",
+            fontFamily: `"${fontFamily}", sans-serif`,
+            color: textColor,
+            fontWeight: Math.max(titleFontWeight, 700),
+            lineHeight: 1.1,
+            width: "100%",
+            letterSpacing: "-0.03em",
+            marginTop: 4,
+          }}
+        >
+          {title}
+        </h1>
+      )}
+      {description && (
+        <p
+          style={{
+            fontSize: `${descriptionFontSize * 1.05}px`,
+            textAlign: "center",
+            fontFamily: `"${fontFamily}", sans-serif`,
+            color: textColor,
+            opacity: 0.72,
+            lineHeight: 1.55,
+            fontWeight: descriptionFontWeight,
+            width: "100%",
+            maxWidth: 340,
+            marginTop: -4,
+          }}
+        >
+          {description}
+        </p>
+      )}
+      <div className="w-full pt-1">
         <PageLinks
           pageLinks={pageLinks}
           textAlignment="center"
@@ -105,27 +117,16 @@ export function HeroLayout(props: HeroLayoutProps) {
           onLinkClick={props.onLinkClick}
           {...linkProps}
         />
-        <SocialIcons
-          socialLinks={socialLinks}
-          socialIcons={socialIcons}
-          textColor={textColor}
-          buttonColor={buttonColor}
-          buttonTextColor={linkProps.buttonTextColor}
-          Globe={Globe}
-          {...linkProps}
-        />
       </div>
-      {showBanner && bannerPosition === "bottom" && (
-        <Banner
-          bannerText={bannerText}
-          bannerImageUrl={bannerImageUrl}
-          bannerUrl={bannerUrl}
-          bannerStyle={bannerStyle}
-          bannerType={bannerType}
-          maxContentWidth={maxContentWidth}
-        />
-      )}
-    </div>
+      <SocialIcons
+        socialLinks={socialLinks}
+        socialIcons={socialIcons}
+        textColor={textColor}
+        buttonColor={buttonColor}
+        buttonTextColor={linkProps.buttonTextColor}
+        Globe={Globe}
+        {...linkProps}
+      />
+    </LayoutShell>
   );
 }
-

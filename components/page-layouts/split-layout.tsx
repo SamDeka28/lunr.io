@@ -1,5 +1,5 @@
 import { PageLayoutProps } from "./types";
-import { Banner } from "./banner";
+import { LayoutShell, avatarOverlapClass } from "./layout-shell";
 import { PageLinks } from "./page-links";
 import { SocialIcons } from "./social-icons";
 import { cn } from "@/lib/utils/cn";
@@ -8,6 +8,7 @@ interface SplitLayoutProps extends PageLayoutProps {
   Globe: React.ComponentType<any>;
 }
 
+/** True two-column: portrait column | content column */
 export function SplitLayout(props: SplitLayoutProps) {
   const {
     title,
@@ -38,38 +39,54 @@ export function SplitLayout(props: SplitLayoutProps) {
     ...linkProps
   } = props;
 
+  const hasTopImage =
+    showBanner && bannerPosition === "top" && bannerType === "image" && !!bannerImageUrl;
+
   return (
-    <div className="relative z-10 w-full flex flex-col items-center" style={{ gap: `${spacing}px`, maxWidth: `${maxContentWidth}px`, width: "100%" }}>
-      {showBanner && bannerPosition === "top" && (
-        <Banner
-          bannerText={bannerText}
-          bannerImageUrl={bannerImageUrl}
-          bannerUrl={bannerUrl}
-          bannerStyle={bannerStyle}
-          bannerType={bannerType}
-          maxContentWidth={maxContentWidth}
-        />
-      )}
-      <div className={cn("w-full", "grid grid-cols-1 md:grid-cols-2 gap-8 items-center")} style={{ 
-        maxWidth: "100%",
-        width: "100%"
-      }}>
-        {showProfileImage && profileImageUrl && (
-          <img
-            src={profileImageUrl}
-            alt="Profile"
-            className={cn("object-cover border-2", "rounded-lg w-full h-64")}
-            style={{
-              width: "100%",
-              height: "100%",
-              borderColor: buttonColor,
-            }}
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
+    <LayoutShell
+      showBanner={showBanner}
+      bannerText={bannerText}
+      bannerImageUrl={bannerImageUrl}
+      bannerUrl={bannerUrl}
+      bannerStyle={bannerStyle}
+      bannerPosition={bannerPosition}
+      bannerType={bannerType}
+      maxContentWidth={Math.max(maxContentWidth, 560)}
+      spacing={spacing}
+    >
+      <div
+        className={cn(
+          "w-full grid gap-6 items-start",
+          showProfileImage && profileImageUrl
+            ? "grid-cols-1 sm:grid-cols-[minmax(140px,38%)_1fr]"
+            : "grid-cols-1"
         )}
-        <div className={cn("flex flex-col", "items-start")} style={{ gap: `${spacing}px` }}>
+      >
+        {showProfileImage && profileImageUrl && (
+          <div className={cn(avatarOverlapClass(hasTopImage, "md"))}>
+            <div
+              className="w-full overflow-hidden rounded-2xl border-[3px] bg-white shadow-lg aspect-square sm:aspect-[4/5]"
+              style={{ borderColor: buttonColor }}
+            >
+              <img
+                src={profileImageUrl}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        <div
+          className="flex flex-col items-start min-w-0"
+          style={{
+            gap: `${Math.max(12, spacing * 0.7)}px`,
+            paddingTop: hasTopImage ? 14 : 0,
+          }}
+        >
           {title && (
             <h1
               style={{
@@ -78,8 +95,9 @@ export function SplitLayout(props: SplitLayoutProps) {
                 fontFamily: `"${fontFamily}", sans-serif`,
                 color: textColor,
                 fontWeight: titleFontWeight,
-                lineHeight: 1.2,
+                lineHeight: 1.15,
                 width: "100%",
+                letterSpacing: "-0.02em",
               }}
             >
               {title}
@@ -92,8 +110,8 @@ export function SplitLayout(props: SplitLayoutProps) {
                 textAlign: "left",
                 fontFamily: `"${fontFamily}", sans-serif`,
                 color: textColor,
-                opacity: 0.8,
-                lineHeight: 1.5,
+                opacity: 0.74,
+                lineHeight: 1.55,
                 fontWeight: descriptionFontWeight,
                 width: "100%",
               }}
@@ -121,17 +139,6 @@ export function SplitLayout(props: SplitLayoutProps) {
           />
         </div>
       </div>
-      {showBanner && bannerPosition === "bottom" && (
-        <Banner
-          bannerText={bannerText}
-          bannerImageUrl={bannerImageUrl}
-          bannerUrl={bannerUrl}
-          bannerStyle={bannerStyle}
-          bannerType={bannerType}
-          maxContentWidth={maxContentWidth}
-        />
-      )}
-    </div>
+    </LayoutShell>
   );
 }
-

@@ -1,6 +1,16 @@
 // API Route for Link Management by ID
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { LinkService } from "@/lib/services/link.service";
+
+function sanitizeLink(link: any) {
+  if (!link) return link;
+  const { password_hash, ...rest } = link;
+  return {
+    ...rest,
+    has_password: !!password_hash,
+  };
+}
 
 export async function GET(
   request: NextRequest,
@@ -8,7 +18,19 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const linkService = new LinkService();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const linkService = new LinkService(supabase);
     const link = await linkService.getLinkById(id);
 
     if (!link) {
@@ -18,7 +40,14 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(link);
+    if (link.user_id && link.user_id !== user.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json(sanitizeLink(link));
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Failed to get link" },
@@ -82,6 +111,53 @@ export async function PATCH(
       body.original_url = validation.normalizedUrl;
     }
 
+    // Validate / normalize short_code update
+    if (body.short_code !== undefined && body.short_code !== null && body.short_code !== "") {
+      const {
+        normalizeShortCode,
+        isValidShortCode,
+        getShortCodeContentError,
+      } = await import("@/lib/utils/shortCodeGenerator");
+      const { PlanService } = await import("@/lib/services/plan.service");
+      const planService = new PlanService(supabase);
+
+      if (!(await planService.canUseCustomBackHalf(user.id))) {
+        return NextResponse.json(
+          { error: "Custom back-half is a premium feature. Upgrade to change short codes." },
+          { status: 403 }
+        );
+      }
+
+      const normalized = normalizeShortCode(String(body.short_code));
+      if (!isValidShortCode(normalized)) {
+        return NextResponse.json(
+          { error: "Invalid short code format (2–20 chars, alphanumeric, hyphens, underscores)" },
+          { status: 400 }
+        );
+      }
+      const contentError = getShortCodeContentError(normalized);
+      if (contentError) {
+        return NextResponse.json({ error: contentError }, { status: 400 });
+      }
+
+      const { data: existing } = await supabase
+        .from("links")
+        .select("id")
+        .eq("short_code", normalized)
+        .neq("id", id)
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        return NextResponse.json(
+          { error: "Short code already exists" },
+          { status: 400 }
+        );
+      }
+
+      body.short_code = normalized;
+    }
+
     // Validate plan features if updating premium features
     if (body.expires_at !== undefined) {
       const { PlanService } = await import("@/lib/services/plan.service");
@@ -112,27 +188,64 @@ export async function PATCH(
     let passwordHash = null;
     if (body.password !== undefined) {
       if (body.password) {
-        // Hash the password
-        const { LinkRepository } = await import("@/lib/db/repositories/link.repository");
-        const linkRepo = new LinkRepository(supabase);
-        // Access private method via type assertion (not ideal but works)
-        const encoder = new TextEncoder();
-        const data = encoder.encode(body.password);
-        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        passwordHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+        const { PlanService } = await import("@/lib/services/plan.service");
+        const planService = new PlanService(supabase);
+        if (!(await planService.canUsePasswordProtection(user.id))) {
+          return NextResponse.json(
+            { error: "Password protection is a premium feature. Upgrade to protect links with a password." },
+            { status: 403 }
+          );
+        }
+        const { hashPassword } = await import("@/lib/utils/password");
+        passwordHash = hashPassword(body.password);
       } else {
         // Empty string means remove password
         passwordHash = null;
       }
     }
 
-    // Update link
-    const updateData: any = {
-      original_url: body.original_url,
-      expires_at: body.expires_at || null,
-      title: body.title || null,
-    };
+    // Fetch current link for UTM merge when assigning a campaign
+    const { data: currentLink } = await supabase
+      .from("links")
+      .select("campaign_id, utm_parameters")
+      .eq("id", id)
+      .single();
+
+    // Update link — only include fields that were explicitly provided
+    const updateData: Record<string, unknown> = {};
+
+    if (body.original_url !== undefined) {
+      updateData.original_url = body.original_url;
+    }
+    if (body.expires_at !== undefined) {
+      updateData.expires_at = body.expires_at || null;
+    }
+    if (body.title !== undefined) {
+      updateData.title = body.title || null;
+    }
+    if (body.short_code) {
+      updateData.short_code = body.short_code;
+    }
+    if (body.tags !== undefined) {
+      updateData.tags = Array.isArray(body.tags)
+        ? body.tags.map((t: string) => String(t).trim()).filter(Boolean)
+        : typeof body.tags === "string"
+        ? body.tags.split(",").map((t: string) => t.trim()).filter(Boolean)
+        : [];
+    }
+    if (body.folder !== undefined) {
+      updateData.folder =
+        typeof body.folder === "string" ? body.folder.trim() || null : null;
+    }
+    if (body.max_clicks !== undefined) {
+      updateData.max_clicks =
+        body.max_clicks != null && body.max_clicks !== ""
+          ? Number(body.max_clicks)
+          : null;
+    }
+    if (body.targeting !== undefined) {
+      updateData.targeting = body.targeting || {};
+    }
 
     if (body.password !== undefined) {
       updateData.password_hash = passwordHash;
@@ -142,8 +255,32 @@ export async function PATCH(
       updateData.campaign_id = body.campaign_id || null;
     }
 
-    if (body.utm_parameters !== undefined) {
-      updateData.utm_parameters = body.utm_parameters || null;
+    // Merge campaign UTM defaults when assigning/updating campaign or UTMs
+    const nextCampaignId =
+      body.campaign_id !== undefined
+        ? body.campaign_id || null
+        : currentLink?.campaign_id || null;
+    const campaignChanged =
+      body.campaign_id !== undefined &&
+      body.campaign_id !== currentLink?.campaign_id;
+
+    if (
+      body.utm_parameters !== undefined ||
+      (campaignChanged && nextCampaignId)
+    ) {
+      const linkService = new LinkService(supabase);
+      updateData.utm_parameters = await linkService.mergeUtmForCampaignAssignment(
+        nextCampaignId,
+        (currentLink?.utm_parameters as Record<string, string>) || null,
+        body.utm_parameters !== undefined ? body.utm_parameters : undefined
+      );
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: "No fields to update" },
+        { status: 400 }
+      );
     }
 
     const { data: updatedLink, error: updateError } = await supabase

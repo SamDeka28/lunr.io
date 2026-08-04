@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCachedUser } from "@/lib/supabase/auth";
 import { PagesPageClient } from "./pages-page-client";
 import Link from "next/link";
 
@@ -9,9 +10,7 @@ export default async function PagesPage({
   searchParams: { search?: string; filter?: string; view?: string; status?: string; dateFilter?: string };
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   if (!user) {
     redirect("/login");

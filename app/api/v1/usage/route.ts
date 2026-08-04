@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withApiAuth, type AuthenticatedApiRequest } from "@/lib/middleware/api-auth";
 import { ApiUsageRepository } from "@/lib/db/repositories/api-usage.repository";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/admin";
 
 // GET /api/v1/usage - Get API usage statistics
 async function handleGet(request: AuthenticatedApiRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const userId = request.apiKey!.user_id;
     const searchParams = request.nextUrl.searchParams;
     const days = parseInt(searchParams.get("days") || "30", 10);

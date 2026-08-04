@@ -9,7 +9,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Premium Purple-Blue Gradient Palette
+        // Brand accents — use sparingly (CTAs, focus, highlights)
         "neon-pink": "#f72585",
         "raspberry-plum": "#b5179e",
         "indigo-bloom": "#7209b7",
@@ -20,26 +20,34 @@ const config: Config = {
         "electric-sapphire": "#4361ee",
         "blue-energy": "#4895ef",
         "sky-aqua": "#4cc9f0",
-        // Semantic color mappings
         primary: {
-          DEFAULT: "#4361ee", // electric-sapphire - Primary actions
-          dark: "#3a0ca3", // vivid-royal - Darker variant
-          light: "#4895ef", // blue-energy - Lighter variant
+          DEFAULT: "#4361ee", // electric-sapphire
+          dark: "#3a0ca3",
+          light: "#4895ef",
         },
         accent: {
-          DEFAULT: "#f72585", // neon-pink - Accent highlights
-          dark: "#b5179e", // raspberry-plum - Darker accent
+          DEFAULT: "#f72585",
+          dark: "#b5179e",
         },
+        // Airbnb-inspired neutrals
         neutral: {
-          bg: "#FAFBFC", // Very light background
-          border: "#E5E7EB", // Light border
-          text: "#111827", // Dark text
-          muted: "#6B7280", // Muted text
-          "zebra": "#F9FAFB", // Zebra stripe
+          bg: "#F7F7F7", // soft page background
+          surface: "#F7F7F7", // muted fill / zebra
+          border: "#EBEBEB", // soft border
+          text: "#222222", // near-black body
+          muted: "#717171", // secondary copy
+          zebra: "#F7F7F7",
         },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
+      },
+      fontSize: {
+        // Friendlier Inter type scale
+        "display": ["2.5rem", { lineHeight: "1.15", letterSpacing: "-0.02em", fontWeight: "600" }],
+        "title": ["1.75rem", { lineHeight: "1.25", letterSpacing: "-0.015em", fontWeight: "600" }],
+        "body": ["1rem", { lineHeight: "1.5", fontWeight: "400" }],
+        "caption": ["0.8125rem", { lineHeight: "1.4", fontWeight: "400" }],
       },
       spacing: {
         "8pt": "8px",
@@ -48,8 +56,8 @@ const config: Config = {
         "32pt": "32px",
       },
       borderRadius: {
-        "input": "8px",
-        "card": "12px",
+        "input": "12px",
+        "card": "16px",
         "special": "16px",
       },
       animation: {
@@ -76,11 +84,12 @@ const config: Config = {
           "100%": { transform: "scale(1)", opacity: "1" },
         },
       },
+      // Soft elevation — prefer shadow-soft for resting cards, shadow-hover for lift
       boxShadow: {
-        "soft": "0 2px 8px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06)",
-        "hover": "0 8px 16px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.06)",
-        "button": "0 2px 4px rgba(67, 97, 238, 0.2)",
-        "premium": "0 4px 20px rgba(67, 97, 238, 0.15)",
+        soft: "0 2px 8px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06)",
+        hover: "0 8px 16px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.06)",
+        button: "0 2px 4px rgba(67, 97, 238, 0.2)",
+        premium: "0 4px 20px rgba(67, 97, 238, 0.15)",
       },
     },
   },

@@ -1,5 +1,5 @@
 import { PageLayoutProps } from "./types";
-import { Banner } from "./banner";
+import { LayoutShell, avatarOverlapClass } from "./layout-shell";
 import { PageLinks } from "./page-links";
 import { SocialIcons } from "./social-icons";
 import { cn } from "@/lib/utils/cn";
@@ -39,79 +39,78 @@ export function CenteredLayout(props: CenteredLayoutProps) {
     ...linkProps
   } = props;
 
+  const hasTopImage =
+    showBanner && bannerPosition === "top" && bannerType === "image" && !!bannerImageUrl;
+
   return (
-    <div className="relative z-10 w-full flex flex-col items-center" style={{ maxWidth: `${maxContentWidth}px`, gap: `${spacing}px`, width: "100%" }}>
-      {showBanner && bannerPosition === "top" && (
-        <Banner
-          bannerText={bannerText}
-          bannerImageUrl={bannerImageUrl}
-          bannerUrl={bannerUrl}
-          bannerStyle={bannerStyle}
-          bannerType={bannerType}
-          maxContentWidth={maxContentWidth}
-        />
-      )}
-      <div className="w-full" style={{ width: "100%" }}>
-        {showProfileImage && profileImageUrl && (
-          <div className="flex justify-center">
-            <img
-              src={profileImageUrl}
-              alt="Profile"
-              className="object-cover border-2 rounded-full"
-              style={{
-                width: "80px",
-                height: "80px",
-                borderColor: buttonColor,
-              }}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
-          </div>
-        )}
-        <div className={cn("flex flex-col", "items-center")} style={{ gap: spacing }}>
-          {title && (
-            <h1
-              style={{
-                fontSize: `${titleFontSize}px`,
-                textAlign: textAlignment as any,
-                fontFamily: `"${fontFamily}", sans-serif`,
-                color: textColor,
-                fontWeight: titleFontWeight,
-                lineHeight: 1.2,
-                width: "100%",
-              }}
-            >
-              {title}
-            </h1>
-          )}
-          {description && (
-            <p
-              style={{
-                fontSize: `${descriptionFontSize}px`,
-                textAlign: textAlignment as any,
-                fontFamily: `"${fontFamily}", sans-serif`,
-                color: textColor,
-                opacity: 0.8,
-                lineHeight: 1.5,
-                fontWeight: descriptionFontWeight,
-                width: "100%",
-              }}
-            >
-              {description}
-            </p>
-          )}
-          <PageLinks
-            pageLinks={pageLinks}
-            textAlignment={textAlignment}
-            ExternalLink={ExternalLink}
-            buttonColor={buttonColor}
-            buttonTextColor={linkProps.buttonTextColor}
-            onLinkClick={props.onLinkClick}
-            {...linkProps}
+    <LayoutShell
+      showBanner={showBanner}
+      bannerText={bannerText}
+      bannerImageUrl={bannerImageUrl}
+      bannerUrl={bannerUrl}
+      bannerStyle={bannerStyle}
+      bannerPosition={bannerPosition}
+      bannerType={bannerType}
+      maxContentWidth={maxContentWidth}
+      spacing={spacing}
+      contentClassName="items-center"
+    >
+      {showProfileImage && profileImageUrl && (
+        <div className={cn("flex justify-center w-full", avatarOverlapClass(hasTopImage))}>
+          <img
+            src={profileImageUrl}
+            alt="Profile"
+            className="object-cover rounded-full border-[3px] bg-white shadow-md"
+            style={{ width: 88, height: 88, borderColor: buttonColor }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
           />
         </div>
-      </div>
+      )}
+      {title && (
+        <h1
+          style={{
+            fontSize: `${titleFontSize}px`,
+            textAlign: textAlignment,
+            fontFamily: `"${fontFamily}", sans-serif`,
+            color: textColor,
+            fontWeight: titleFontWeight,
+            lineHeight: 1.2,
+            width: "100%",
+            letterSpacing: "-0.02em",
+            textShadow: "0 1px 0 rgba(255,255,255,0.35)",
+          }}
+        >
+          {title}
+        </h1>
+      )}
+      {description && (
+        <p
+          style={{
+            fontSize: `${descriptionFontSize}px`,
+            textAlign: textAlignment,
+            fontFamily: `"${fontFamily}", sans-serif`,
+            color: textColor,
+            opacity: 0.78,
+            lineHeight: 1.55,
+            fontWeight: descriptionFontWeight,
+            width: "100%",
+            marginTop: -Math.max(6, spacing * 0.35),
+          }}
+        >
+          {description}
+        </p>
+      )}
+      <PageLinks
+        pageLinks={pageLinks}
+        textAlignment={textAlignment}
+        ExternalLink={ExternalLink}
+        buttonColor={buttonColor}
+        buttonTextColor={linkProps.buttonTextColor}
+        onLinkClick={props.onLinkClick}
+        {...linkProps}
+      />
       <SocialIcons
         socialLinks={socialLinks}
         socialIcons={socialIcons}
@@ -121,17 +120,6 @@ export function CenteredLayout(props: CenteredLayoutProps) {
         Globe={Globe}
         {...linkProps}
       />
-      {showBanner && bannerPosition === "bottom" && (
-        <Banner
-          bannerText={bannerText}
-          bannerImageUrl={bannerImageUrl}
-          bannerUrl={bannerUrl}
-          bannerStyle={bannerStyle}
-          bannerType={bannerType}
-          maxContentWidth={maxContentWidth}
-        />
-      )}
-    </div>
+    </LayoutShell>
   );
 }
-

@@ -209,7 +209,9 @@ export function DomainsPageClient({ domains: initialDomains, pages }: DomainsPag
                     DNS Configuration
                   </h4>
                   <p className="text-xs text-neutral-muted">
-                    Add these DNS records to your domain provider:
+                    Add these DNS records to your domain provider. Point a CNAME to your app host.
+                    Apex domains need CNAME flattening or an ALIAS record. TLS is terminated at your
+                    DNS/CDN (Vercel/Cloudflare) until auto-SSL is available.
                   </p>
                   <div className="space-y-2">
                     {domain.dns_records?.map((record, index) => (
@@ -274,7 +276,7 @@ export function DomainsPageClient({ domains: initialDomains, pages }: DomainsPag
               )}
 
               {domain.verification_status === "verified" && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
                   <p className="text-sm text-green-800">
                     ✓ Domain verified! Your page is now accessible at{" "}
                     <a
@@ -285,6 +287,10 @@ export function DomainsPageClient({ domains: initialDomains, pages }: DomainsPag
                     >
                       https://{domain.domain}
                     </a>
+                  </p>
+                  <p className="text-xs text-green-700/90">
+                    TLS/SSL should be terminated at your DNS or CDN provider (Vercel, Cloudflare, etc.) until auto-SSL ships.
+                    For apex domains, use CNAME flattening or an ALIAS/ANAME record pointing to the same target as your CNAME.
                   </p>
                 </div>
               )}

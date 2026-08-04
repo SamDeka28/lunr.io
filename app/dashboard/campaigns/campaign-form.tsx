@@ -55,6 +55,12 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
   const [targetClicks, setTargetClicks] = useState("");
   const [budget, setBudget] = useState("");
   const [tags, setTags] = useState("");
+  const [utmSource, setUtmSource] = useState("");
+  const [utmMedium, setUtmMedium] = useState("");
+  const [utmCampaign, setUtmCampaign] = useState("");
+  const [utmTerm, setUtmTerm] = useState("");
+  const [utmContent, setUtmContent] = useState("");
+  const [utmCampaignTouched, setUtmCampaignTouched] = useState(false);
   const [loading, setLoading] = useState(false);
   
   // Links state
@@ -118,9 +124,28 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
           console.error("Error parsing end date:", e);
         }
       }
+
+      const defaults = campaign.utm_defaults || {};
+      setUtmSource(defaults.utm_source || "");
+      setUtmMedium(defaults.utm_medium || "");
+      setUtmCampaign(defaults.utm_campaign || "");
+      setUtmTerm(defaults.utm_term || "");
+      setUtmContent(defaults.utm_content || "");
+      setUtmCampaignTouched(!!defaults.utm_campaign);
     }
   }, [campaign]);
 
+  // Auto-fill utm_campaign from name slug until the user edits it
+  useEffect(() => {
+    if (utmCampaignTouched || isEditing) return;
+    const slug = name
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/[\s_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    setUtmCampaign(slug);
+  }, [name, utmCampaignTouched, isEditing]);
   // Fetch all user links and pre-select if editing
   useEffect(() => {
     const fetchLinks = async () => {
@@ -233,6 +258,13 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
           end_date: finalEndDate,
           target_clicks: targetClicks.trim() ? parseInt(targetClicks, 10) : 0,
           budget: budget.trim() ? parseFloat(budget) : 0,
+          utm_defaults: {
+            utm_source: utmSource.trim() || undefined,
+            utm_medium: utmMedium.trim() || undefined,
+            utm_campaign: utmCampaign.trim() || undefined,
+            utm_term: utmTerm.trim() || undefined,
+            utm_content: utmContent.trim() || undefined,
+          },
         }),
       });
 
@@ -507,7 +539,7 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
                   <div>
                     <label className="block text-sm font-semibold text-neutral-text mb-2">
                       <DollarSign className="h-4 w-4 inline mr-1.5" />
-                      Budget (Optional)
+                      Budget (for CPC)
                     </label>
                     <input
                       type="number"
@@ -516,6 +548,87 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
                       placeholder="e.g., 5000"
                       min="0"
                       step="0.01"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                    />
+                    <p className="mt-1.5 text-xs text-neutral-muted">
+                      Used to compute cost-per-click (budget ÷ clicks) on analytics.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Default UTM parameters */}
+              <div className="bg-white rounded-card shadow-soft border border-neutral-border p-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center">
+                    <Tag className="h-5 w-5 text-electric-sapphire" />
+                  </div>
+                  <h3 className="text-lg font-bold text-neutral-text">Default UTM Parameters</h3>
+                </div>
+                <p className="text-sm text-neutral-muted mb-5">
+                  Applied to links assigned to this campaign. Link-specific UTM values always win.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-neutral-text mb-2">
+                      utm_source
+                    </label>
+                    <input
+                      type="text"
+                      value={utmSource}
+                      onChange={(e) => setUtmSource(e.target.value)}
+                      placeholder="e.g., newsletter"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-neutral-text mb-2">
+                      utm_medium
+                    </label>
+                    <input
+                      type="text"
+                      value={utmMedium}
+                      onChange={(e) => setUtmMedium(e.target.value)}
+                      placeholder="e.g., email"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-neutral-text mb-2">
+                      utm_campaign
+                    </label>
+                    <input
+                      type="text"
+                      value={utmCampaign}
+                      onChange={(e) => {
+                        setUtmCampaignTouched(true);
+                        setUtmCampaign(e.target.value);
+                      }}
+                      placeholder="Defaults to campaign name slug"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-neutral-text mb-2">
+                      utm_term
+                    </label>
+                    <input
+                      type="text"
+                      value={utmTerm}
+                      onChange={(e) => setUtmTerm(e.target.value)}
+                      placeholder="Optional"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-semibold text-neutral-text mb-2">
+                      utm_content
+                    </label>
+                    <input
+                      type="text"
+                      value={utmContent}
+                      onChange={(e) => setUtmContent(e.target.value)}
+                      placeholder="Optional"
                       className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
                     />
                   </div>

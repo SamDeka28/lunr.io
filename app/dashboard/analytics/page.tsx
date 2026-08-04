@@ -1,18 +1,24 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { BarChart3, TrendingUp, Globe, Clock, Link2, Activity, Users, MapPin } from "lucide-react";
-import { AnalyticsCharts } from "./analytics-charts";
+import { getCachedUser } from "@/lib/supabase/auth";
+import { TrendingUp, Link2, Activity, Users, BarChart3 } from "lucide-react";
+import { AnalyticsChartsLazy } from "./analytics-charts-lazy";
+import { PlanService } from "@/lib/services/plan.service";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatCard } from "@/components/ui/stat-card";
 
 export default async function AnalyticsPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   if (!user) {
     redirect("/login");
   }
+
+  const planService = new PlanService(supabase);
+  const retentionDays = await planService.getUserAnalyticsRetentionDays(user.id);
+  const retentionTruncated = retentionDays >= 0;
 
   // Get all user's links with stats
   const { data: links } = await supabase
@@ -26,7 +32,7 @@ export default async function AnalyticsPage() {
   const totalClicks = links?.reduce((sum, link) => sum + (link.click_count || 0), 0) || 0;
   const totalLinks = links?.length || 0;
 
-  // Get analytics for all links
+  // Get analytics for all links within plan retention
   const linkIds = links?.map((l) => l.id) || [];
   let totalAnalytics = 0;
   let uniqueClicks = 0;
@@ -36,51 +42,63 @@ export default async function AnalyticsPage() {
   let utmSources: { [key: string]: number } = {};
   let utmMediums: { [key: string]: number } = {};
   let utmCampaigns: { [key: string]: number } = {};
+  let hasOlderData = false;
 
   if (linkIds.length > 0) {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const { data: analytics } = await supabase
+    let query = supabase
       .from("analytics")
-      .select("*")
+      .select("clicked_at, ip_address, referrer, country, utm_source, utm_medium, utm_campaign")
       .in("link_id", linkIds)
-      .gte("clicked_at", thirtyDaysAgo.toISOString())
+      .eq("is_bot", false)
       .order("clicked_at", { ascending: false });
 
-    totalAnalytics = analytics?.length || 0;
-    const uniqueIps = new Set(
-      analytics?.filter((a) => a.ip_address).map((a) => a.ip_address) || []
-    );
-    uniqueClicks = uniqueIps.size;
+    if (retentionDays >= 0) {
+      const since = new Date();
+      since.setUTCDate(since.getUTCDate() - retentionDays);
+      const sinceIso = since.toISOString();
+      query = query.gte("clicked_at", sinceIso);
 
-    // Process clicks by date
+      const { count } = await supabase
+        .from("analytics")
+        .select("*", { count: "exact", head: true })
+        .in("link_id", linkIds)
+        .eq("is_bot", false)
+        .lt("clicked_at", sinceIso);
+      hasOlderData = (count || 0) > 0;
+    }
+
+    const { data: analytics } = await query;
+
+    totalAnalytics = analytics?.length || 0;
+
+    // Unique = distinct IP within a 24h UTC calendar-day window
+    const uniqueKeys = new Set<string>();
+    analytics?.forEach((a) => {
+      if (!a.ip_address) return;
+      const day = new Date(a.clicked_at).toISOString().slice(0, 10);
+      uniqueKeys.add(`${a.ip_address}|${day}`);
+    });
+    uniqueClicks = uniqueKeys.size;
+
     analytics?.forEach((item) => {
       const date = new Date(item.clicked_at).toISOString().split("T")[0];
       clicksByDate[date] = (clicksByDate[date] || 0) + 1;
-    });
 
-    // Process referrers
-    analytics?.forEach((item) => {
       if (item.referrer) {
-        const referrer = item.referrer === "Direct" || !item.referrer
-          ? "Direct"
-          : new URL(item.referrer).hostname.replace("www.", "");
-        topReferrers[referrer] = (topReferrers[referrer] || 0) + 1;
+        try {
+          const referrer = new URL(item.referrer).hostname.replace("www.", "");
+          topReferrers[referrer] = (topReferrers[referrer] || 0) + 1;
+        } catch {
+          topReferrers["Direct"] = (topReferrers["Direct"] || 0) + 1;
+        }
       } else {
         topReferrers["Direct"] = (topReferrers["Direct"] || 0) + 1;
       }
-    });
 
-    // Process countries
-    analytics?.forEach((item) => {
       if (item.country) {
         clicksByCountry[item.country] = (clicksByCountry[item.country] || 0) + 1;
       }
-    });
 
-    // Process UTM parameters (aggregated across all links)
-    analytics?.forEach((item) => {
       if (item.utm_source) {
         utmSources[item.utm_source] = (utmSources[item.utm_source] || 0) + 1;
       }
@@ -95,8 +113,7 @@ export default async function AnalyticsPage() {
 
   const clicksByDateArray = Object.entries(clicksByDate)
     .map(([date, count]) => ({ date, count }))
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-30); // Last 30 days
+    .sort((a, b) => a.date.localeCompare(b.date));
 
   const topReferrersArray = Object.entries(topReferrers)
     .map(([referrer, count]) => ({ referrer, count }))
@@ -124,74 +141,49 @@ export default async function AnalyticsPage() {
     .slice(0, 10);
 
   const avgPerLink = totalLinks > 0 ? Math.round(totalClicks / totalLinks) : 0;
+  const retentionLabel =
+    retentionDays < 0 ? "Unlimited history" : `Last ${retentionDays} days`;
 
   return (
     <div className="max-w-7xl mx-auto w-full">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-neutral-text mb-3">Analytics Overview</h1>
-        <p className="text-lg text-neutral-muted">
-          Track performance across all your links
-        </p>
-      </div>
+      <PageHeader
+        title="Analytics Overview"
+        description={`Track performance across all your links · ${retentionLabel}`}
+      />
+      {retentionTruncated && hasOlderData && (
+        <div className="mb-8 px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
+          Charts show the last {retentionDays} days for your plan. Older analytics exist but
+          are not included — upgrade for a longer window.
+        </div>
+      )}
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-electric-sapphire to-bright-indigo p-6 text-white shadow-premium">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                <Link2 className="h-6 w-6" />
-              </div>
-            </div>
-            <p className="text-sm font-semibold text-white/80 mb-1">Total Links</p>
-            <p className="text-3xl font-bold">{totalLinks.toLocaleString()}</p>
-          </div>
-        </div>
-
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-pink to-raspberry-plum p-6 text-white shadow-premium">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                <Activity className="h-6 w-6" />
-              </div>
-            </div>
-            <p className="text-sm font-semibold text-white/80 mb-1">Total Clicks</p>
-            <p className="text-3xl font-bold">{totalClicks.toLocaleString()}</p>
-          </div>
-        </div>
-
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-energy to-sky-aqua p-6 text-white shadow-premium">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                <Users className="h-6 w-6" />
-              </div>
-            </div>
-            <p className="text-sm font-semibold text-white/80 mb-1">Unique Clicks</p>
-            <p className="text-3xl font-bold">{uniqueClicks.toLocaleString()}</p>
-          </div>
-        </div>
-
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-vivid-royal to-indigo-bloom p-6 text-white shadow-premium">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                <TrendingUp className="h-6 w-6" />
-              </div>
-            </div>
-            <p className="text-sm font-semibold text-white/80 mb-1">Avg. per Link</p>
-            <p className="text-3xl font-bold">{avgPerLink.toLocaleString()}</p>
-          </div>
-        </div>
+        <StatCard
+          label="Total Links"
+          value={totalLinks.toLocaleString()}
+          icon={<Link2 className="h-5 w-5" />}
+          accent="primary"
+        />
+        <StatCard
+          label="Total Clicks"
+          value={totalClicks.toLocaleString()}
+          icon={<Activity className="h-5 w-5" />}
+          hint={`${totalAnalytics.toLocaleString()} in window`}
+        />
+        <StatCard
+          label="Unique Clicks"
+          value={uniqueClicks.toLocaleString()}
+          icon={<Users className="h-5 w-5" />}
+        />
+        <StatCard
+          label="Avg. per Link"
+          value={avgPerLink.toLocaleString()}
+          icon={<TrendingUp className="h-5 w-5" />}
+        />
       </div>
 
       {/* Charts */}
-      <AnalyticsCharts
+      <AnalyticsChartsLazy
         clicksByDate={clicksByDateArray}
         topReferrers={topReferrersArray}
         clicksByCountry={clicksByCountryArray}
@@ -211,7 +203,6 @@ export default async function AnalyticsPage() {
           </div>
           <div className="space-y-3">
             {links.slice(0, 10).map((link, index) => {
-              const shortUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/${link.short_code}`;
               const displayTitle = link.title || (() => {
                 try {
                   if (link.original_url) {

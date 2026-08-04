@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withApiAuth, type AuthenticatedApiRequest } from "@/lib/middleware/api-auth";
 import { LinkService } from "@/lib/services/link.service";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/admin";
 
 // GET /api/v1/links/[id] - Get a specific link
 async function handleGet(
@@ -10,18 +10,7 @@ async function handleGet(
 ) {
   try {
     const { id } = await params;
-    // Use service role client to bypass RLS for API key authentication
-    const { createClient: createServiceClient } = await import("@supabase/supabase-js");
-    const serviceSupabase = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const serviceSupabase = createServiceClient();
     const userId = request.apiKey!.user_id;
 
     // Verify ownership and get link with QR codes
@@ -78,18 +67,7 @@ async function handlePatch(
 ) {
   try {
     const { id } = await params;
-    // Use service role client to bypass RLS for API key authentication
-    const { createClient: createServiceClient } = await import("@supabase/supabase-js");
-    const serviceSupabase = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const serviceSupabase = createServiceClient();
     const userId = request.apiKey!.user_id;
     const body = await request.json();
 
@@ -115,6 +93,57 @@ async function handlePatch(
     if (body.is_active !== undefined) updates.is_active = body.is_active;
     if (body.utm_parameters !== undefined) updates.utm_parameters = body.utm_parameters;
     if (body.campaign_id !== undefined) updates.campaign_id = body.campaign_id;
+    if (body.original_url !== undefined) {
+      const { validateURL } = await import("@/lib/utils/urlValidator");
+      const validation = validateURL(body.original_url);
+      if (!validation.isValid || !validation.normalizedUrl) {
+        return NextResponse.json(
+          { error: validation.error || "Invalid URL" },
+          { status: 400 }
+        );
+      }
+      updates.original_url = validation.normalizedUrl;
+    }
+    if (body.tags !== undefined) {
+      updates.tags = Array.isArray(body.tags)
+        ? body.tags.map((t: string) => String(t).trim()).filter(Boolean)
+        : [];
+    }
+    if (body.folder !== undefined) updates.folder = body.folder?.trim() || null;
+    if (body.max_clicks !== undefined) {
+      updates.max_clicks =
+        body.max_clicks != null && body.max_clicks !== ""
+          ? Number(body.max_clicks)
+          : null;
+    }
+    if (body.targeting !== undefined) updates.targeting = body.targeting || {};
+
+    if (body.short_code !== undefined && body.short_code) {
+      const {
+        normalizeShortCode,
+        isValidShortCode,
+        getShortCodeContentError,
+      } = await import("@/lib/utils/shortCodeGenerator");
+      const normalized = normalizeShortCode(String(body.short_code));
+      if (!isValidShortCode(normalized)) {
+        return NextResponse.json({ error: "Invalid short code format" }, { status: 400 });
+      }
+      const contentError = getShortCodeContentError(normalized);
+      if (contentError) {
+        return NextResponse.json({ error: contentError }, { status: 400 });
+      }
+      const { data: clash } = await serviceSupabase
+        .from("links")
+        .select("id")
+        .eq("short_code", normalized)
+        .neq("id", id)
+        .limit(1)
+        .maybeSingle();
+      if (clash) {
+        return NextResponse.json({ error: "Short code already exists" }, { status: 400 });
+      }
+      updates.short_code = normalized;
+    }
 
     const { data: link, error } = await serviceSupabase
       .from("links")
@@ -184,18 +213,7 @@ async function handleDelete(
 ) {
   try {
     const { id } = await params;
-    // Use service role client to bypass RLS for API key authentication
-    const { createClient: createServiceClient } = await import("@supabase/supabase-js");
-    const serviceSupabase = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const serviceSupabase = createServiceClient();
     const userId = request.apiKey!.user_id;
 
     // Verify ownership and get link data before deletion
@@ -238,4 +256,3 @@ async function handleDelete(
 export const GET = withApiAuth(handleGet);
 export const PATCH = withApiAuth(handlePatch);
 export const DELETE = withApiAuth(handleDelete);
-

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withApiAuth, type AuthenticatedApiRequest } from "@/lib/middleware/api-auth";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/admin";
 
 // GET /api/v1/qr/[id] - Get a specific QR code
 async function handleGet(
@@ -9,18 +9,7 @@ async function handleGet(
 ) {
   try {
     const { id } = await params;
-    // Use service role client to bypass RLS for API key authentication
-    const { createClient: createServiceClient } = await import("@supabase/supabase-js");
-    const serviceSupabase = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const serviceSupabase = createServiceClient();
     const userId = request.apiKey!.user_id;
 
     // Verify ownership
@@ -60,18 +49,7 @@ async function handleDelete(
 ) {
   try {
     const { id } = await params;
-    // Use service role client to bypass RLS for API key authentication
-    const { createClient: createServiceClient } = await import("@supabase/supabase-js");
-    const serviceSupabase = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const serviceSupabase = createServiceClient();
     const userId = request.apiKey!.user_id;
 
     // Verify ownership
@@ -113,4 +91,3 @@ async function handleDelete(
 
 export const GET = withApiAuth(handleGet);
 export const DELETE = withApiAuth(handleDelete);
-

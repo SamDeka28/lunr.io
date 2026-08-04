@@ -7,40 +7,61 @@ interface BannerProps {
   bannerUrl: string;
   bannerStyle: PageLayoutProps["bannerStyle"];
   bannerType: PageLayoutProps["bannerType"];
-  maxContentWidth: number;
+  variant?: "hero" | "inline";
 }
 
-export function Banner({ 
-  bannerText, 
-  bannerImageUrl, 
-  bannerUrl, 
-  bannerStyle, 
+export function Banner({
+  bannerText,
+  bannerImageUrl,
+  bannerUrl,
+  bannerStyle,
   bannerType,
-  maxContentWidth 
+  variant = "inline",
 }: BannerProps) {
   if (bannerType === "image" && bannerImageUrl) {
+    const isHero = variant === "hero";
+    const image = (
+      <img
+        src={bannerImageUrl}
+        alt="Banner"
+        className={cn(
+          "w-full object-cover",
+          isHero
+            ? "h-40 sm:h-48 md:h-56 lg:h-64 rounded-none"
+            : "h-36 rounded-2xl"
+        )}
+        onError={(e) => {
+          (e.target as HTMLImageElement).style.display = "none";
+        }}
+      />
+    );
+
     return (
-      <div className="w-full" style={{ maxWidth: `${maxContentWidth}px` }}>
+      <div
+        className={cn(
+          "w-full shrink-0 overflow-hidden relative",
+          isHero && "self-stretch"
+        )}
+      >
         {bannerUrl ? (
-          <a href={bannerUrl} target="_blank" rel="noopener noreferrer">
-            <img
-              src={bannerImageUrl}
-              alt="Banner"
-              className="w-full h-auto rounded-lg object-cover"
-              style={{ maxHeight: "200px" }}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
+          <a
+            href={bannerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full"
+          >
+            {image}
           </a>
         ) : (
-          <img
-            src={bannerImageUrl}
-            alt="Banner"
-            className="w-full h-auto rounded-lg object-cover"
-            style={{ maxHeight: "200px" }}
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
+          image
+        )}
+        {/* Soft fade into page background so the cut isn't a hard edge */}
+        {isHero && (
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-16"
+            style={{
+              background:
+                "linear-gradient(to top, rgba(0,0,0,0.18), transparent)",
             }}
           />
         )}
@@ -49,28 +70,34 @@ export function Banner({
   }
 
   if (bannerText) {
+    const content = bannerUrl ? (
+      <a
+        href={bannerUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hover:underline"
+      >
+        {bannerText}
+      </a>
+    ) : (
+      bannerText
+    );
+
     return (
       <div
         className={cn(
-          "w-full px-4 py-2 text-sm font-medium text-center rounded-lg",
+          "w-full shrink-0 px-4 py-2.5 text-sm font-medium text-center",
+          variant === "hero" ? "rounded-none" : "rounded-xl",
           bannerStyle === "info" && "bg-blue-100 text-blue-800",
           bannerStyle === "success" && "bg-green-100 text-green-800",
           bannerStyle === "warning" && "bg-yellow-100 text-yellow-800",
           bannerStyle === "error" && "bg-red-100 text-red-800"
         )}
-        style={{ maxWidth: `${maxContentWidth}px` }}
       >
-        {bannerUrl ? (
-          <a href={bannerUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
-            {bannerText}
-          </a>
-        ) : (
-          bannerText
-        )}
+        {content}
       </div>
     );
   }
 
   return null;
 }
-

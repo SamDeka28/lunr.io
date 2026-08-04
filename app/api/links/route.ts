@@ -24,7 +24,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { original_url, short_code, expires_at, password, title, utm_parameters, campaign_id } = body;
+    const {
+      original_url,
+      short_code,
+      expires_at,
+      password,
+      title,
+      utm_parameters,
+      campaign_id,
+      tags,
+      folder,
+      max_clicks,
+      targeting,
+    } = body;
 
     if (!original_url) {
       return NextResponse.json(
@@ -32,6 +44,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const normalizedTags = Array.isArray(tags)
+      ? tags.map((t: string) => String(t).trim()).filter(Boolean)
+      : typeof tags === "string"
+      ? tags.split(",").map((t: string) => t.trim()).filter(Boolean)
+      : null;
 
     // Validate against plan limits and features
     const planService = new PlanService(supabase);
@@ -58,6 +76,10 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       utm_parameters: utm_parameters || null,
       campaign_id: campaign_id || null,
+      tags: normalizedTags,
+      folder: folder?.trim() || null,
+      max_clicks: max_clicks != null && max_clicks !== "" ? Number(max_clicks) : null,
+      targeting: targeting || null,
     });
 
     // Trigger webhook for link.created

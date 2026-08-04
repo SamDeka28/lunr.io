@@ -1,15 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { withApiAuth, type AuthenticatedApiRequest } from "@/lib/middleware/api-auth";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/admin";
+import { AnalyticsService } from "@/lib/services/analytics.service";
+import { PlanService } from "@/lib/services/plan.service";
 
 // GET /api/v1/links/[id]/analytics - Get analytics for a specific link
 async function handleGet(
-  request: AuthenticatedApiRequest,
+  _request: AuthenticatedApiRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const userId = request.apiKey!.user_id;
 
     // Verify ownership
@@ -27,60 +29,38 @@ async function handleGet(
       );
     }
 
-    // Get analytics data
-    const { data: analytics } = await supabase
-      .from("analytics")
-      .select("*")
-      .eq("link_id", id)
-      .order("clicked_at", { ascending: false })
-      .limit(1000); // Limit to last 1000 clicks
+    const planService = new PlanService(supabase);
+    const retentionDays = await planService.getUserAnalyticsRetentionDays(userId);
 
-    // Calculate stats
-    const uniqueIps = new Set(
-      analytics?.filter((a) => a.ip_address).map((a) => a.ip_address) || []
-    );
-
-    // Group by date
-    const clicksByDate: Record<string, number> = {};
-    analytics?.forEach((item) => {
-      const date = new Date(item.clicked_at).toISOString().split("T")[0];
-      clicksByDate[date] = (clicksByDate[date] || 0) + 1;
-    });
-
-    // Top referrers
-    const referrers: Record<string, number> = {};
-    analytics?.forEach((item) => {
-      const referrer = item.referrer || "Direct";
-      referrers[referrer] = (referrers[referrer] || 0) + 1;
-    });
-
-    // Countries
-    const countries: Record<string, number> = {};
-    analytics?.forEach((item) => {
-      if (item.country) {
-        countries[item.country] = (countries[item.country] || 0) + 1;
-      }
-    });
+    const analyticsService = new AnalyticsService(supabase);
+    const stats = await analyticsService.getStats(id, { days: retentionDays });
+    const recent = await analyticsService.getAnalytics(id, { days: retentionDays });
 
     return NextResponse.json({
       link_id: id,
       total_clicks: link.click_count,
-      unique_clicks: uniqueIps.size,
-      clicks_by_date: clicksByDate,
-      top_referrers: Object.entries(referrers)
-        .map(([referrer, count]) => ({ referrer, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10),
-      clicks_by_country: Object.entries(countries)
-        .map(([country, count]) => ({ country, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10),
-      recent_clicks: analytics?.slice(0, 50).map((a) => ({
-        clicked_at: a.clicked_at,
-        referrer: a.referrer,
-        country: a.country,
-        user_agent: a.user_agent,
-      })) || [],
+      unique_clicks: stats.unique_clicks,
+      clicks_by_date: Object.fromEntries(
+        (stats.clicks_by_date || []).map((d) => [d.date, d.count])
+      ),
+      top_referrers: stats.top_referrers,
+      clicks_by_country: stats.clicks_by_country,
+      clicks_by_device: stats.clicks_by_device,
+      clicks_by_browser: stats.clicks_by_browser,
+      clicks_by_os: stats.clicks_by_os,
+      retention_days: stats.retention_days,
+      retention_truncated: stats.retention_truncated,
+      recent_clicks:
+        recent?.slice(0, 50).map((a) => ({
+          clicked_at: a.clicked_at,
+          referrer: a.referrer,
+          country: a.country,
+          device_type: a.device_type,
+          browser: a.browser,
+          os: a.os,
+          is_bot: a.is_bot,
+          user_agent: a.user_agent,
+        })) || [],
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -91,4 +71,3 @@ async function handleGet(
 }
 
 export const GET = withApiAuth(handleGet);
-

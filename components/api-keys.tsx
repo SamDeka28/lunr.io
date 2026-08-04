@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Key, Plus, Copy, Trash2, Eye, EyeOff, Calendar, Clock, Check, X, Crown, Loader2, ExternalLink, BookOpen } from "lucide-react";
+import { Key, Plus, Copy, Trash2, Eye, EyeOff, Calendar, Clock, Check, X, Crown, Loader2, ExternalLink, BookOpen, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import { CollapsibleSection } from "./collapsible-section";
@@ -127,6 +127,32 @@ export function ApiKeys({ userId, hasApiAccess }: ApiKeysProps) {
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to delete API key");
+    }
+  };
+
+  const handleRotate = async (keyId: string) => {
+    if (
+      !confirm(
+        "Rotate this API key? The old secret will stop working immediately. You will get a new token to copy."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/api-keys/${keyId}/rotate`, {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to rotate API key");
+      }
+      setNewKeyToken(data.token);
+      setShowNewToken(true);
+      await fetchApiKeys();
+      toast.success("API key rotated — copy the new token now");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to rotate API key");
     }
   };
 
@@ -299,6 +325,13 @@ export function ApiKeys({ userId, hasApiAccess }: ApiKeysProps) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleRotate(key.id)}
+                    className="p-2 rounded-lg text-electric-sapphire hover:bg-electric-sapphire/10 transition-colors"
+                    title="Rotate key"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </button>
                   <button
                     onClick={() => handleToggleActive(key.id, key.is_active)}
                     className={cn(

@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCachedUser } from "@/lib/supabase/auth";
+import { PageService } from "@/lib/services/page.service";
 import { PageAnalyticsClient } from "./analytics-client";
 
 export default async function PageAnalyticsPage({
@@ -9,15 +11,12 @@ export default async function PageAnalyticsPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  // Fetch page details
   const { data: page, error: pageError } = await supabase
     .from("pages")
     .select("*")
@@ -29,6 +28,12 @@ export default async function PageAnalyticsPage({
     redirect("/dashboard/pages");
   }
 
-  return <PageAnalyticsClient page={page} />;
-}
+  const pageService = new PageService(supabase);
+  const links = Array.isArray(page.links) ? page.links : [];
+  const analytics = await pageService.getAnalyticsSummary(
+    page.id,
+    links.map((l: any) => ({ id: l.id, title: l.title }))
+  );
 
+  return <PageAnalyticsClient page={page} analytics={analytics} />;
+}

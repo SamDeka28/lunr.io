@@ -57,6 +57,63 @@ export class ProfileRepository {
   }
 
   /**
+   * Create a new profile (if it doesn't exist)
+   */
+  async create(userId: string, email?: string | null): Promise<Profile> {
+    // First, get the free plan ID
+    const { data: freePlan } = await this.supabase
+      .from("plans")
+      .select("id")
+      .eq("name", "free")
+      .eq("is_active", true)
+      .single();
+
+    if (!freePlan) {
+      throw new Error("Free plan not found. Please ensure the free plan exists in the database.");
+    }
+
+    const { data, error } = await this.supabase
+      .from("profiles")
+      .insert({
+        id: userId,
+        email: email || null,
+        plan_id: freePlan.id,
+        plan_started_at: new Date().toISOString(),
+        usage_links: 0,
+        usage_qr_codes: 0,
+        usage_pages: 0,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      // If profile already exists, just return it
+      if (error.code === "23505") {
+        const existing = await this.getByUserId(userId);
+        if (existing) {
+          return existing;
+        }
+      }
+      throw new Error(`Failed to create profile: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  /**
+   * Create or get profile (ensures profile exists)
+   */
+  async ensureProfile(userId: string, email?: string | null): Promise<Profile> {
+    let profile = await this.getByUserId(userId);
+    
+    if (!profile) {
+      profile = await this.create(userId, email);
+    }
+    
+    return profile;
+  }
+
+  /**
    * Update profile
    */
   async update(userId: string, updates: Partial<Profile>): Promise<Profile> {
@@ -142,9 +199,16 @@ export class ProfileRepository {
   }
 
   /**
-   * Get usage limits for a user
+   * Get usage limits for a user.
+   *
+   * `usage_links` / `usage_qr_codes` / `usage_pages` are maintained by database
+   * triggers on insert and archive (see schema.sql), so the stored counters are
+   * accurate for normal app flows. `syncIfNeeded` therefore defaults to `false`
+   * to avoid 3 extra COUNT queries (plus a possible UPDATE) on every page render.
+   * Pass `syncIfNeeded: true` only when repairing drift (e.g. after a hard delete
+   * or a data migration) where the trigger-maintained counters may be stale.
    */
-  async getUsageLimits(userId: string, syncIfNeeded: boolean = true): Promise<{
+  async getUsageLimits(userId: string, syncIfNeeded: boolean = false): Promise<{
     max_links: number;
     max_qr_codes: number;
     max_pages: number;
@@ -158,10 +222,29 @@ export class ProfileRepository {
     can_create_qr: boolean;
     can_create_page: boolean;
   }> {
-    const profile = await this.getProfileWithPlan(userId);
+    let profile = await this.getProfileWithPlan(userId);
     
+    // If profile doesn't exist, create it (handles OAuth users where trigger might not fire immediately)
     if (!profile) {
-      throw new Error("Profile not found");
+      try {
+        // Try to create the profile
+        await this.ensureProfile(userId, null);
+        
+        // Fetch the newly created profile
+        profile = await this.getProfileWithPlan(userId);
+        
+        if (!profile) {
+          // If creation failed (e.g., RLS policy not set up), throw a more helpful error
+          throw new Error("Profile not found and could not be created. Please ensure the INSERT policy for profiles exists in your database.");
+        }
+      } catch (error: any) {
+        // If profile creation fails, provide helpful error message
+        if (error.message?.includes("new row violates row-level security policy") || 
+            error.message?.includes("permission denied")) {
+          throw new Error("Profile not found. Please run the migration 'add_profile_insert_policy.sql' in your Supabase database to enable profile creation.");
+        }
+        throw error;
+      }
     }
 
     const plan = profile.plan;

@@ -1,47 +1,45 @@
-// Webhook Service
+// Webhook Service — with retries, timeouts, and delivery logs
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { WebhookRepository, type CreateWebhookInput, type Webhook } from "@/lib/db/repositories/webhook.repository";
 import { createHmac } from "crypto";
 
+const VALID_EVENTS = [
+  "link.created",
+  "link.updated",
+  "link.deleted",
+  "link.clicked",
+  "qr.created",
+  "qr.updated",
+  "qr.deleted",
+  "page.created",
+  "page.updated",
+  "page.deleted",
+  "campaign.created",
+  "campaign.updated",
+  "campaign.deleted",
+];
+
+const MAX_ATTEMPTS = 3;
+const TIMEOUT_MS = 10_000;
+const BACKOFF_MS = [0, 1000, 3000];
+
 export class WebhookService {
   private webhookRepo: WebhookRepository;
+  private supabase: SupabaseClient | null;
 
   constructor(supabaseClient?: SupabaseClient) {
     this.webhookRepo = new WebhookRepository(supabaseClient);
+    this.supabase = supabaseClient || null;
   }
 
-  /**
-   * Create a new webhook
-   */
   async createWebhook(input: CreateWebhookInput): Promise<Webhook> {
-    // Validate URL
     try {
       new URL(input.url);
     } catch {
       throw new Error("Invalid webhook URL");
     }
 
-    // Validate events
-    const validEvents = [
-      // Link events
-      "link.created",
-      "link.updated",
-      "link.deleted",
-      "link.clicked",
-      // QR Code events
-      "qr.created",
-      "qr.updated",
-      "qr.deleted",
-      // Page events
-      "page.created",
-      "page.updated",
-      "page.deleted",
-      // Campaign events
-      "campaign.created",
-      "campaign.updated",
-      "campaign.deleted",
-    ];
-    const invalidEvents = input.events.filter((e) => !validEvents.includes(e));
+    const invalidEvents = input.events.filter((e) => !VALID_EVENTS.includes(e));
     if (invalidEvents.length > 0) {
       throw new Error(`Invalid event types: ${invalidEvents.join(", ")}`);
     }
@@ -49,23 +47,14 @@ export class WebhookService {
     return this.webhookRepo.create(input);
   }
 
-  /**
-   * Get all webhooks for a user
-   */
   async getUserWebhooks(userId: string): Promise<Webhook[]> {
     return this.webhookRepo.getByUserId(userId);
   }
 
-  /**
-   * Get webhook by ID
-   */
   async getWebhook(webhookId: string, userId: string): Promise<Webhook | null> {
     return this.webhookRepo.getById(webhookId, userId);
   }
 
-  /**
-   * Update webhook
-   */
   async updateWebhook(
     webhookId: string,
     updates: {
@@ -84,26 +73,7 @@ export class WebhookService {
     }
 
     if (updates.events) {
-      const validEvents = [
-        // Link events
-        "link.created",
-        "link.updated",
-        "link.deleted",
-        "link.clicked",
-        // QR Code events
-        "qr.created",
-        "qr.updated",
-        "qr.deleted",
-        // Page events
-        "page.created",
-        "page.updated",
-        "page.deleted",
-        // Campaign events
-        "campaign.created",
-        "campaign.updated",
-        "campaign.deleted",
-      ];
-      const invalidEvents = updates.events.filter((e) => !validEvents.includes(e));
+      const invalidEvents = updates.events.filter((e) => !VALID_EVENTS.includes(e));
       if (invalidEvents.length > 0) {
         throw new Error(`Invalid event types: ${invalidEvents.join(", ")}`);
       }
@@ -112,15 +82,12 @@ export class WebhookService {
     return this.webhookRepo.update(webhookId, updates);
   }
 
-  /**
-   * Delete webhook
-   */
   async deleteWebhook(webhookId: string): Promise<void> {
     return this.webhookRepo.delete(webhookId);
   }
 
   /**
-   * Trigger webhooks for an event
+   * Trigger webhooks for an event (fire-and-forget with retries)
    */
   async triggerWebhooks(
     userId: string,
@@ -130,64 +97,117 @@ export class WebhookService {
     try {
       const webhooks = await this.webhookRepo.getActiveByEvent(userId, event);
 
-      // Trigger webhooks asynchronously
       for (const webhook of webhooks) {
-        this.sendWebhook(webhook, event, payload).catch((error) => {
+        this.deliverWithRetries(webhook, event, payload).catch((error) => {
           console.error(`Failed to trigger webhook ${webhook.id}:`, error);
-          this.webhookRepo.updateLastTriggered(webhook.id, false).catch(() => {
-            // Ignore errors when updating last triggered
-          });
         });
       }
     } catch (error: any) {
-      // If webhooks table doesn't exist, log warning but don't fail
       if (error.message?.includes("Could not find the table") || error.message?.includes("webhooks")) {
-        console.warn("Webhooks table not found. Webhook triggering skipped. Please apply the migration: supabase/migrations/add_webhooks_and_api_usage.sql");
+        console.warn("Webhooks table not found. Webhook triggering skipped.");
         return;
       }
-      // Re-throw other errors
       throw error;
     }
   }
 
-  /**
-   * Send webhook request
-   */
-  private async sendWebhook(webhook: Webhook, event: string, payload: any): Promise<void> {
-    const signature = this.generateSignature(webhook.secret || "", JSON.stringify(payload));
+  private async deliverWithRetries(
+    webhook: Webhook,
+    event: string,
+    payload: any
+  ): Promise<void> {
+    let lastError: string | null = null;
+    let lastStatus: number | null = null;
+    let success = false;
 
-    const response = await fetch(webhook.url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Webhook-Event": event,
-        "X-Webhook-Signature": signature,
-        "X-Webhook-Id": webhook.id,
-      },
-      body: JSON.stringify(payload),
-    });
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      if (BACKOFF_MS[attempt - 1]) {
+        await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt - 1]));
+      }
 
-    const success = response.ok;
+      try {
+        const result = await this.sendWebhookOnce(webhook, event, payload);
+        lastStatus = result.status;
+        success = result.ok;
+        await this.logDelivery(webhook.id, event, payload, result.status, result.ok, attempt, null);
+        if (result.ok) break;
+        lastError = `HTTP ${result.status}`;
+      } catch (error: any) {
+        lastError = error.message || "Delivery failed";
+        await this.logDelivery(webhook.id, event, payload, null, false, attempt, lastError);
+      }
+    }
+
     await this.webhookRepo.updateLastTriggered(webhook.id, success);
-
     if (!success) {
-      throw new Error(`Webhook returned status ${response.status}`);
+      throw new Error(lastError || `Webhook failed after ${MAX_ATTEMPTS} attempts (last status: ${lastStatus})`);
     }
   }
 
-  /**
-   * Generate webhook signature
-   */
+  private async sendWebhookOnce(
+    webhook: Webhook,
+    event: string,
+    payload: any
+  ): Promise<{ ok: boolean; status: number }> {
+    const body = JSON.stringify({
+      event,
+      data: payload,
+      delivered_at: new Date().toISOString(),
+    });
+    const signature = this.generateSignature(webhook.secret || "", body);
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    try {
+      const response = await fetch(webhook.url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Webhook-Event": event,
+          "X-Webhook-Signature": signature,
+          "X-Webhook-Id": webhook.id,
+        },
+        body,
+        signal: controller.signal,
+      });
+      return { ok: response.ok, status: response.status };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  private async logDelivery(
+    webhookId: string,
+    event: string,
+    payload: any,
+    statusCode: number | null,
+    success: boolean,
+    attempt: number,
+    error: string | null
+  ): Promise<void> {
+    if (!this.supabase) return;
+    try {
+      await this.supabase.from("webhook_deliveries").insert({
+        webhook_id: webhookId,
+        event,
+        payload,
+        status_code: statusCode,
+        success,
+        attempt,
+        error,
+      });
+    } catch (err) {
+      console.error("Failed to log webhook delivery:", err);
+    }
+  }
+
   private generateSignature(secret: string, payload: string): string {
     return createHmac("sha256", secret).update(payload).digest("hex");
   }
 
-  /**
-   * Verify webhook signature (for incoming webhooks)
-   */
   verifySignature(secret: string, payload: string, signature: string): boolean {
     const expectedSignature = this.generateSignature(secret, payload);
     return expectedSignature === signature;
   }
 }
-

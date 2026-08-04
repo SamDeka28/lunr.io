@@ -72,17 +72,112 @@ export class PageService {
   }
 
   /**
-   * Track page view
+   * Track page view (counter + page_analytics event)
    */
-  async trackView(id: string): Promise<void> {
-    return await this.pageRepo.incrementViewCount(id);
+  async trackView(
+    id: string,
+    meta?: { referrer?: string | null; userAgent?: string | null; country?: string | null }
+  ): Promise<void> {
+    await this.pageRepo.incrementViewCount(id);
+    await this.pageRepo.insertAnalyticsEvent({
+      pageId: id,
+      eventType: "view",
+      referrer: meta?.referrer,
+      userAgent: meta?.userAgent,
+      country: meta?.country,
+    });
   }
 
   /**
-   * Track page click
+   * Track page link click (counter + per-link analytics)
    */
-  async trackClick(id: string): Promise<void> {
-    return await this.pageRepo.incrementClickCount(id);
+  async trackClick(
+    id: string,
+    meta?: {
+      linkId?: string | null;
+      referrer?: string | null;
+      userAgent?: string | null;
+      country?: string | null;
+    }
+  ): Promise<void> {
+    await this.pageRepo.incrementClickCount(id);
+    await this.pageRepo.insertAnalyticsEvent({
+      pageId: id,
+      eventType: "click",
+      linkId: meta?.linkId,
+      referrer: meta?.referrer,
+      userAgent: meta?.userAgent,
+      country: meta?.country,
+    });
+  }
+
+  /**
+   * Aggregate analytics for dashboard
+   */
+  async getAnalyticsSummary(pageId: string, pageLinks: Array<{ id: string; title?: string }> = []) {
+    const rows = await this.pageRepo.getAnalytics(pageId, 30);
+
+    const eventsByDate: Record<string, { views: number; clicks: number }> = {};
+    const referrers: Record<string, number> = {};
+    const linkClicks: Record<string, number> = {};
+    let views = 0;
+    let clicks = 0;
+
+    for (const row of rows) {
+      const date = row.created_at.slice(0, 10);
+      if (!eventsByDate[date]) eventsByDate[date] = { views: 0, clicks: 0 };
+
+      if (row.event_type === "view") {
+        views += 1;
+        eventsByDate[date].views += 1;
+      } else if (row.event_type === "click") {
+        clicks += 1;
+        eventsByDate[date].clicks += 1;
+        if (row.link_id) {
+          linkClicks[row.link_id] = (linkClicks[row.link_id] || 0) + 1;
+        }
+      }
+
+      if (row.event_type === "view" || row.event_type === "click") {
+        let ref = "Direct";
+        if (row.referrer) {
+          try {
+            ref = new URL(row.referrer).hostname.replace(/^www\./, "") || "Direct";
+          } catch {
+            ref = row.referrer.slice(0, 40);
+          }
+        }
+        referrers[ref] = (referrers[ref] || 0) + 1;
+      }
+    }
+
+    const timeSeries = Object.entries(eventsByDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, counts]) => ({ date, ...counts }));
+
+    const topReferrers = Object.entries(referrers)
+      .map(([referrer, count]) => ({ referrer, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    const perLinkCtr = pageLinks.map((link) => {
+      const linkClickCount = linkClicks[link.id] || 0;
+      return {
+        linkId: link.id,
+        title: link.title || link.id,
+        clicks: linkClickCount,
+        ctr: views > 0 ? Number(((linkClickCount / views) * 100).toFixed(1)) : 0,
+      };
+    });
+
+    return {
+      views,
+      clicks,
+      timeSeries,
+      topReferrers,
+      perLinkCtr,
+      overallCtr: views > 0 ? Number(((clicks / views) * 100).toFixed(1)) : 0,
+    };
   }
 }
 

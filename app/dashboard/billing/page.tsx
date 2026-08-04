@@ -1,14 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCachedUser } from "@/lib/supabase/auth";
 import { PlanService } from "@/lib/services/plan.service";
 import { ProfileService } from "@/lib/services/profile.service";
 import { BillingPageClient } from "./billing-page-client";
 
 export default async function BillingPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   if (!user) {
     redirect("/login");

@@ -12,6 +12,7 @@ export interface ApiKey {
   last_used_at: string | null;
   expires_at: string | null;
   is_active: boolean;
+  scopes?: string[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -20,6 +21,7 @@ export interface CreateApiKeyInput {
   user_id: string;
   name: string;
   expires_at?: string | null;
+  scopes?: string[] | null;
 }
 
 export interface ApiKeyWithToken extends Omit<ApiKey, "key_hash"> {
@@ -65,6 +67,18 @@ export class ApiKeyRepository {
         key_prefix: keyPrefix,
         expires_at: input.expires_at || null,
         is_active: true,
+        scopes: input.scopes || [
+          "links:read",
+          "links:write",
+          "analytics:read",
+          "webhooks:read",
+          "webhooks:write",
+          "campaigns:read",
+          "campaigns:write",
+          "qr:read",
+          "qr:write",
+          "usage:read",
+        ],
       })
       .select()
       .single();
@@ -158,6 +172,7 @@ export class ApiKeyRepository {
       name?: string;
       is_active?: boolean;
       expires_at?: string | null;
+      scopes?: string[] | null;
     }
   ): Promise<ApiKey> {
     const { data, error } = await this.supabase
@@ -172,6 +187,37 @@ export class ApiKeyRepository {
     }
 
     return data;
+  }
+
+  /**
+   * Rotate API key secret — regenerates token, hash, and prefix.
+   * Returns the new plain token once.
+   */
+  async rotate(keyId: string): Promise<ApiKeyWithToken> {
+    const token = this.generateApiKey();
+    const keyHash = this.hashApiKey(token);
+    const keyPrefix = token.substring(0, 12);
+
+    const { data, error } = await this.supabase
+      .from("api_keys")
+      .update({
+        key_hash: keyHash,
+        key_prefix: keyPrefix,
+        last_used_at: null,
+      })
+      .eq("id", keyId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to rotate API key: ${error.message}`);
+    }
+
+    const { key_hash: _, ...rest } = data;
+    return {
+      ...rest,
+      token,
+    };
   }
 
   /**

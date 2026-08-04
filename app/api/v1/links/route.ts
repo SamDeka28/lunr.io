@@ -2,23 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { withApiAuth, type AuthenticatedApiRequest } from "@/lib/middleware/api-auth";
 import { LinkService } from "@/lib/services/link.service";
 import { PlanService } from "@/lib/services/plan.service";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/admin";
 
 // GET /api/v1/links - List all links for the authenticated API user
 async function handleGet(request: AuthenticatedApiRequest) {
   try {
-    // Use service role client to bypass RLS for API key authentication
-    const { createClient: createServiceClient } = await import("@supabase/supabase-js");
-    const serviceSupabase = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const serviceSupabase = createServiceClient();
     const userId = request.apiKey!.user_id;
 
     const linkService = new LinkService(serviceSupabase);
@@ -79,18 +68,7 @@ async function handlePost(request: AuthenticatedApiRequest) {
       );
     }
 
-    // Use service role client to bypass RLS for API key authentication
-    const { createClient: createServiceClient } = await import("@supabase/supabase-js");
-    const serviceSupabase = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const serviceSupabase = createServiceClient();
 
     // Validate against plan limits
     const planService = new PlanService(serviceSupabase);
@@ -168,4 +146,3 @@ async function handlePost(request: AuthenticatedApiRequest) {
 
 export const GET = withApiAuth(handleGet);
 export const POST = withApiAuth(handlePost);
-

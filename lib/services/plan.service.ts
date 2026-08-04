@@ -122,6 +122,44 @@ export class PlanService {
   }
 
   /**
+   * Analytics retention window in days for a plan.
+   * free: 30, pro: 90, business/enterprise: unlimited (-1).
+   */
+  getAnalyticsRetentionDays(planName: string | null | undefined): number {
+    switch ((planName || "free").toLowerCase()) {
+      case "pro":
+        return 90;
+      case "business":
+      case "enterprise":
+        return -1;
+      case "free":
+      default:
+        return 30;
+    }
+  }
+
+  /**
+   * Resolve retention days for a user from their current plan.
+   */
+  async getUserAnalyticsRetentionDays(userId: string): Promise<number> {
+    const profile = await this.getUserPlan(userId);
+    return this.getAnalyticsRetentionDays(profile?.plan?.name);
+  }
+
+  /**
+   * Check if user can use password protection
+   */
+  async canUsePasswordProtection(userId: string): Promise<boolean> {
+    // Explicit feature flag, or any paid plan (non-free)
+    if (await this.hasFeature(userId, "password_protection")) {
+      return true;
+    }
+    const profile = await this.getUserPlan(userId);
+    const planName = profile?.plan?.name;
+    return !!planName && planName !== "free";
+  }
+
+  /**
    * Validate link creation request against plan
    */
   async validateLinkCreation(userId: string, data: {
@@ -151,6 +189,14 @@ export class PlanService {
       return {
         valid: false,
         error: "Link expiration is a premium feature. Upgrade to set expiration dates.",
+      };
+    }
+
+    // Check password protection
+    if (data.password && !(await this.canUsePasswordProtection(userId))) {
+      return {
+        valid: false,
+        error: "Password protection is a premium feature. Upgrade to protect links with a password.",
       };
     }
 

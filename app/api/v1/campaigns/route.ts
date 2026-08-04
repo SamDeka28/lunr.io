@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withApiAuth, type AuthenticatedApiRequest } from "@/lib/middleware/api-auth";
 import { CampaignService } from "@/lib/services/campaign.service";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/admin";
 
 // GET /api/v1/campaigns - List all campaigns for the authenticated API user
 async function handleGet(request: AuthenticatedApiRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const userId = request.apiKey!.user_id;
 
     const { data: campaigns, error } = await supabase
@@ -37,7 +37,7 @@ async function handleGet(request: AuthenticatedApiRequest) {
 // POST /api/v1/campaigns - Create a new campaign
 async function handlePost(request: AuthenticatedApiRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const userId = request.apiKey!.user_id;
     const body = await request.json();
     const {
@@ -49,6 +49,7 @@ async function handlePost(request: AuthenticatedApiRequest) {
       tags,
       target_clicks,
       budget,
+      utm_defaults,
     } = body;
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -68,6 +69,7 @@ async function handlePost(request: AuthenticatedApiRequest) {
       tags: tags || null,
       target_clicks: target_clicks || 0,
       budget: budget || 0,
+      utm_defaults: utm_defaults || null,
       user_id: userId,
     });
 
@@ -82,6 +84,7 @@ async function handlePost(request: AuthenticatedApiRequest) {
         tags: campaign.tags,
         target_clicks: campaign.target_clicks,
         budget: campaign.budget,
+        utm_defaults: campaign.utm_defaults,
         is_active: campaign.is_active,
         created_at: campaign.created_at,
       },
