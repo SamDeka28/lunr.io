@@ -1,30 +1,14 @@
-"use client";
-
-import { motion, useReducedMotion } from "framer-motion";
-
 /**
- * Dashboard page transition.
+ * Dashboard segment template.
  *
- * A `template.tsx` (unlike `layout.tsx`) is re-mounted on every navigation, so
- * wrapping the page content in a `motion.div` re-fires the enter animation each
- * time the user switches tabs. The animation is intentionally short and subtle
- * so it reads as "snappy" and runs on the incoming content once its `loading.tsx`
- * skeleton resolves. Users who prefer reduced motion get no animation.
+ * Kept intentionally animation-free: a fade/slide on every navigation made
+ * sidebar clicks feel laggy even after the RSC payload arrived. Instant paint
+ * of `loading.tsx` → page content reads as snappy.
  */
 export default function DashboardTemplate({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const shouldReduceMotion = useReducedMotion();
-
-  return (
-    <motion.div
-      initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
-    >
-      {children}
-    </motion.div>
-  );
+  return <>{children}</>;
 }

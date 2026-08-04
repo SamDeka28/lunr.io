@@ -777,7 +777,7 @@ The API Reference includes:
 
 ## Rate Limits
 
-*Rate limits are enforced.* Enterprise plans are limited to **1,000 requests per hour** per API key by default (higher limits available on request). Rate limit headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`) are included in API responses.
+*Rate limits are enforced.* Enterprise plans are limited to **1,000 requests per hour** per API key by default (higher limits available on request). Rate limit headers (\`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\`, \`X-RateLimit-Reset\`) are included in API responses.
 
 ## Response Format
 

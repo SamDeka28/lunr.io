@@ -61,6 +61,8 @@ export default function PublicPageViewer({ page }: { page: any }) {
   const gradientColors = content.gradientColors || { start: "#FFFFFF", end: "#F3F4F6" };
   const backgroundImageUrl = content.backgroundImageUrl || "";
   const backgroundImageOpacity = content.backgroundImageOpacity ?? 1;
+  const backgroundOverlayColor = content.backgroundOverlayColor || "#000000";
+  const backgroundOverlayOpacity = content.backgroundOverlayOpacity ?? 0;
   const profileImageUrl = content.profileImageUrl || "";
   const showProfileImage = content.showProfileImage || false;
   const socialIconSize = content.socialIconSize || 20;
@@ -91,27 +93,42 @@ export default function PublicPageViewer({ page }: { page: any }) {
       <div
         className="min-h-screen flex flex-col items-stretch justify-start relative overflow-hidden"
         style={{
+          backgroundColor:
+            backgroundType === "gradient"
+              ? undefined
+              : page.background_color || "#FFFFFF",
           background:
-            backgroundType === "image" && backgroundImageUrl
-              ? `url(${backgroundImageUrl})`
-              : backgroundType === "gradient"
-                ? `linear-gradient(135deg, ${gradientColors.start} 0%, ${gradientColors.end} 100%)`
-                : page.background_color || "#FFFFFF",
-          backgroundSize: backgroundType === "image" ? "cover" : undefined,
-          backgroundPosition: backgroundType === "image" ? "center" : undefined,
-          backgroundRepeat: backgroundType === "image" ? "no-repeat" : undefined,
+            backgroundType === "gradient"
+              ? `linear-gradient(135deg, ${gradientColors.start} 0%, ${gradientColors.end} 100%)`
+              : undefined,
           color: page.text_color || "#000000",
           fontFamily: `"${fontFamily}", sans-serif`,
         }}
       >
         {backgroundType === "image" && backgroundImageUrl && (
-          <div
-            className="absolute inset-0 z-0"
-            style={{
-              backgroundColor: page.background_color || "#FFFFFF",
-              opacity: backgroundImageOpacity,
-            }}
-          />
+          <>
+            <div
+              className="absolute inset-0 z-0 pointer-events-none"
+              style={{
+                backgroundImage: `url("${backgroundImageUrl}")`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+                opacity: backgroundImageOpacity,
+              }}
+              aria-hidden
+            />
+            {backgroundOverlayOpacity > 0 && (
+              <div
+                className="absolute inset-0 z-[1] pointer-events-none"
+                style={{
+                  backgroundColor: backgroundOverlayColor,
+                  opacity: backgroundOverlayOpacity,
+                }}
+                aria-hidden
+              />
+            )}
+          </>
         )}
         <PageLayoutRenderer
           layoutTemplate={layoutTemplate as any}

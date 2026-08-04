@@ -77,6 +77,12 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
   const [gradientColors, setGradientColors] = useState(pageContent.gradientColors || { start: "#FFFFFF", end: "#F3F4F6" });
   const [backgroundImageUrl, setBackgroundImageUrl] = useState(pageContent.backgroundImageUrl || "");
   const [backgroundImageOpacity, setBackgroundImageOpacity] = useState(pageContent.backgroundImageOpacity ?? 1);
+  const [backgroundOverlayColor, setBackgroundOverlayColor] = useState(
+    pageContent.backgroundOverlayColor || "#000000"
+  );
+  const [backgroundOverlayOpacity, setBackgroundOverlayOpacity] = useState(
+    pageContent.backgroundOverlayOpacity ?? 0
+  );
   const [profileImageUrl, setProfileImageUrl] = useState(pageContent.profileImageUrl || "");
   const [showProfileImage, setShowProfileImage] = useState(pageContent.showProfileImage || false);
   
@@ -290,6 +296,8 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
             socialIconGap,
             backgroundImageUrl,
             backgroundImageOpacity,
+            backgroundOverlayColor,
+            backgroundOverlayOpacity,
             blocks: contentBlocks,
           },
           links: pageLinks.map(link => ({
@@ -684,14 +692,64 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                             onChange={setBackgroundImageOpacity}
                             min={0.1}
                             max={1}
+                            step={0.05}
+                            unit=""
                           />
+                          <div className="space-y-3 pt-1 border-t border-neutral-border">
+                            <p className="text-xs font-semibold text-neutral-text uppercase tracking-wide">
+                              Background Overlay
+                            </p>
+                            <p className="text-xs text-neutral-muted -mt-1">
+                              Soften harsh images so text stays readable
+                            </p>
+                            <ColorPickerWithInput
+                              label="Overlay Color"
+                              value={backgroundOverlayColor}
+                              onChange={setBackgroundOverlayColor}
+                            />
+                            <SliderWithInput
+                              label="Overlay Strength"
+                              value={backgroundOverlayOpacity}
+                              onChange={setBackgroundOverlayOpacity}
+                              min={0}
+                              max={0.85}
+                              step={0.05}
+                              unit=""
+                            />
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { label: "None", opacity: 0, color: "#000000" },
+                                { label: "Soft dark", opacity: 0.35, color: "#000000" },
+                                { label: "Strong dark", opacity: 0.55, color: "#000000" },
+                                { label: "Soft light", opacity: 0.4, color: "#FFFFFF" },
+                              ].map((preset) => (
+                                <button
+                                  key={preset.label}
+                                  type="button"
+                                  onClick={() => {
+                                    setBackgroundOverlayColor(preset.color);
+                                    setBackgroundOverlayOpacity(preset.opacity);
+                                  }}
+                                  className={cn(
+                                    "h-8 px-2.5 rounded-lg border text-xs font-medium transition-colors",
+                                    backgroundOverlayOpacity === preset.opacity &&
+                                      backgroundOverlayColor.toLowerCase() === preset.color.toLowerCase()
+                                      ? "border-electric-sapphire bg-electric-sapphire/10 text-electric-sapphire"
+                                      : "border-neutral-border bg-white text-neutral-text hover:bg-neutral-bg"
+                                  )}
+                                >
+                                  {preset.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                           <ColorPickerWithInput
-                            label="Overlay Color (optional)"
+                            label="Fallback / Blend Color"
                             value={backgroundColor}
                             onChange={setBackgroundColor}
                           />
                           <p className="text-xs text-neutral-muted -mt-2">
-                            Add a color overlay on top of the image
+                            Shows through when image opacity is below 100%
                           </p>
                         </div>
                       )}
@@ -1276,26 +1334,42 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
           <div
             className="min-h-full w-full flex flex-col items-stretch justify-start relative overflow-hidden"
             style={{
-              background: backgroundType === "image" && backgroundImageUrl
-                ? `url(${backgroundImageUrl})`
-                : backgroundType === "gradient"
-                ? `linear-gradient(135deg, ${gradientColors.start} 0%, ${gradientColors.end} 100%)`
-                : backgroundColor,
-              backgroundSize: backgroundType === "image" ? "cover" : undefined,
-              backgroundPosition: backgroundType === "image" ? "center" : undefined,
-              backgroundRepeat: backgroundType === "image" ? "no-repeat" : undefined,
+              backgroundColor:
+                backgroundType === "gradient"
+                  ? undefined
+                  : backgroundColor,
+              background:
+                backgroundType === "gradient"
+                  ? `linear-gradient(135deg, ${gradientColors.start} 0%, ${gradientColors.end} 100%)`
+                  : undefined,
               color: textColor,
               fontFamily: `"${fontFamily}", sans-serif`,
             }}
           >
             {backgroundType === "image" && backgroundImageUrl && (
-              <div
-                className="absolute inset-0 z-0"
-                style={{
-                  backgroundColor: backgroundColor,
-                  opacity: backgroundImageOpacity,
-                }}
-              />
+              <>
+                <div
+                  className="absolute inset-0 z-0 pointer-events-none"
+                  style={{
+                    backgroundImage: `url("${backgroundImageUrl}")`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                    opacity: backgroundImageOpacity,
+                  }}
+                  aria-hidden
+                />
+                {backgroundOverlayOpacity > 0 && (
+                  <div
+                    className="absolute inset-0 z-[1] pointer-events-none"
+                    style={{
+                      backgroundColor: backgroundOverlayColor,
+                      opacity: backgroundOverlayOpacity,
+                    }}
+                    aria-hidden
+                  />
+                )}
+              </>
             )}
             <PageLayoutRenderer
               layoutTemplate={layoutTemplate}
@@ -1346,7 +1420,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
               ExternalLink={ExternalLink}
             />
             {contentBlocks.length > 0 && (
-              <div className="w-full mx-auto px-5 sm:px-6 pb-8" style={{ maxWidth: `${maxContentWidth}px` }}>
+              <div className="relative z-10 w-full mx-auto px-5 sm:px-6 pb-8" style={{ maxWidth: `${maxContentWidth}px` }}>
                 <PageContentBlocks
                   pageId={page.id}
                   blocks={contentBlocks}

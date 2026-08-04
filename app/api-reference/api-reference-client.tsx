@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import Link from "next/link";
 import { CodeEditor } from "@/components/code-editor";
+import { BrandLogo } from "@/components/brand-logo";
 
 type Language = "curl" | "javascript" | "python" | "php";
 
@@ -1021,10 +1022,7 @@ export function ApiReferenceClient() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire via-bright-indigo to-vivid-royal flex items-center justify-center shadow-button">
-                <span className="text-white font-bold text-lg">L</span>
-              </div>
-              <span className="text-xl font-bold text-neutral-text">lunr.to</span>
+              <BrandLogo href={null} variant="full" size="md" />
               <span className="text-sm text-neutral-muted">API Reference</span>
             </Link>
             <div className="flex items-center gap-4">

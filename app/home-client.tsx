@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand-logo";
 
 export default function HomePageClient() {
   const router = useRouter();
@@ -188,17 +189,13 @@ export default function HomePageClient() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire via-bright-indigo to-vivid-royal flex items-center justify-center shadow-button group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                <span className="text-white font-bold text-lg">L</span>
-              </div>
-              <span className={cn(
-                "text-xl font-bold transition-colors",
-                isScrolled 
-                  ? "text-neutral-text group-hover:text-electric-sapphire" 
-                  : "text-white group-hover:text-white/80"
-              )}>
-                lunr.to
-              </span>
+              {isScrolled ? (
+                <BrandLogo href={null} variant="full" size="md" priority className="group-hover:opacity-90 transition-opacity" />
+              ) : (
+                <span className="rounded-xl bg-white/95 px-2.5 py-1.5 shadow-soft group-hover:bg-white transition-colors">
+                  <BrandLogo href={null} variant="full" size="sm" priority />
+                </span>
+              )}
             </Link>
             <div className="flex items-center gap-4">
               <Link
@@ -377,9 +374,7 @@ export default function HomePageClient() {
                 {/* Mock Dashboard Preview */}
                 <div className="bg-white rounded-2xl p-6 shadow-xl group-hover:scale-[1.02] transition-transform duration-300">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire to-bright-indigo flex items-center justify-center group-hover:rotate-6 group-hover:scale-110 transition-all duration-300 shadow-lg">
-                      <span className="text-white font-bold">L</span>
-                    </div>
+                    <BrandLogo href={null} variant="mark" size="md" />
                     <div>
                       <div className="h-3 w-24 bg-neutral-border rounded mb-2 group-hover:bg-gradient-to-r group-hover:from-electric-sapphire/20 group-hover:to-bright-indigo/20 transition-all duration-300"></div>
                       <div className="h-2 w-16 bg-neutral-border rounded group-hover:bg-gradient-to-r group-hover:from-electric-sapphire/20 group-hover:to-bright-indigo/20 transition-all duration-300"></div>
@@ -1807,11 +1802,8 @@ export default function HomePageClient() {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire via-bright-indigo to-vivid-royal flex items-center justify-center shadow-button">
-                  <span className="text-white font-bold text-lg">L</span>
+                <BrandLogo href={null} variant="full" size="md" />
               </div>
-                <span className="text-lg font-bold text-neutral-text">lunr.to</span>
-            </div>
               <p className="text-sm text-neutral-muted">
                 The all-in-one link management platform for professionals and businesses.
               </p>

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useUserStore } from "@/store/user-store";
+import { BrandLogo } from "@/components/brand-logo";
 
 function LoginPageContent() {
   const router = useRouter();
@@ -206,14 +207,8 @@ function LoginPageContent() {
       <div className="w-full max-w-md relative z-10">
         {/* Logo and Header */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center justify-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-electric-sapphire via-bright-indigo to-vivid-royal flex items-center justify-center shadow-button">
-              <span className="text-white font-bold text-xl">L</span>
-            </div>
-            <div className="text-left">
-              <div className="text-2xl font-bold text-neutral-text">lunr.to</div>
-              <div className="text-xs text-neutral-muted">Premium</div>
-            </div>
+          <Link href="/" className="inline-flex items-center justify-center mb-6">
+            <BrandLogo href={null} variant="full" size="lg" priority />
           </Link>
           <h1 className="text-4xl font-bold text-neutral-text mb-3">
             {isSignUp ? "Create your account" : "Welcome back"}
