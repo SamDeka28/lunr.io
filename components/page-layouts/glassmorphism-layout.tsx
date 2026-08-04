@@ -2,6 +2,7 @@ import { PageLayoutProps } from "./types";
 import { LayoutShell } from "./layout-shell";
 import { PageLinks } from "./page-links";
 import { SocialIcons } from "./social-icons";
+import { fluidAvatar, fluidBody, fluidTitle } from "@/lib/utils/fluid-type";
 
 interface GlassmorphismLayoutProps extends PageLayoutProps {
   Globe: React.ComponentType<any>;
@@ -41,6 +42,8 @@ export function GlassmorphismLayout(props: GlassmorphismLayoutProps) {
   const hasTopImage =
     showBanner && bannerPosition === "top" && bannerType === "image" && !!bannerImageUrl;
 
+  const avatar = fluidAvatar(92, 68);
+
   return (
     <LayoutShell
       showBanner={showBanner}
@@ -52,15 +55,16 @@ export function GlassmorphismLayout(props: GlassmorphismLayoutProps) {
       bannerType={bannerType}
       maxContentWidth={maxContentWidth}
       spacing={0}
+      verticalAlign={props.verticalAlign}
       contentStyle={{
-        marginTop: hasTopImage ? -56 : 24,
+        marginTop: hasTopImage ? -40 : 16,
         paddingTop: 0,
       }}
     >
       <div
-        className="w-full rounded-3xl px-7 py-9 flex flex-col items-center"
+        className="w-full rounded-2xl sm:rounded-3xl px-4 py-6 sm:px-7 sm:py-9 flex flex-col items-center"
         style={{
-          gap: `${spacing}px`,
+          gap: `clamp(${Math.max(12, Math.round(spacing * 0.7))}px, 3vw, ${spacing}px)`,
           background: "rgba(255, 255, 255, 0.72)",
           backdropFilter: "blur(24px) saturate(1.4)",
           WebkitBackdropFilter: "blur(24px) saturate(1.4)",
@@ -74,8 +78,8 @@ export function GlassmorphismLayout(props: GlassmorphismLayoutProps) {
             alt="Profile"
             className="object-cover rounded-full border-[3px] bg-white"
             style={{
-              width: 92,
-              height: 92,
+              width: avatar,
+              height: avatar,
               borderColor: buttonColor,
               boxShadow: `0 4px 16px ${buttonColor}35`,
             }}
@@ -86,8 +90,9 @@ export function GlassmorphismLayout(props: GlassmorphismLayoutProps) {
         )}
         {title && (
           <h1
+            className="break-words"
             style={{
-              fontSize: `${titleFontSize * 1.05}px`,
+              fontSize: fluidTitle(titleFontSize, 1.05),
               textAlign: "center",
               fontFamily: `"${fontFamily}", sans-serif`,
               color: textColor,
@@ -102,8 +107,9 @@ export function GlassmorphismLayout(props: GlassmorphismLayoutProps) {
         )}
         {description && (
           <p
+            className="break-words"
             style={{
-              fontSize: `${descriptionFontSize}px`,
+              fontSize: fluidBody(descriptionFontSize),
               textAlign: "center",
               fontFamily: `"${fontFamily}", sans-serif`,
               color: textColor,
@@ -118,22 +124,20 @@ export function GlassmorphismLayout(props: GlassmorphismLayoutProps) {
           </p>
         )}
         <PageLinks
+          {...linkProps}
           pageLinks={pageLinks}
-          textAlignment="center"
           ExternalLink={ExternalLink}
           buttonColor={buttonColor}
-          buttonTextColor={linkProps.buttonTextColor}
+          fontFamily={fontFamily}
           onLinkClick={props.onLinkClick}
-          {...linkProps}
         />
         <SocialIcons
+          {...linkProps}
           socialLinks={socialLinks}
           socialIcons={socialIcons}
           textColor={textColor}
           buttonColor={buttonColor}
-          buttonTextColor={linkProps.buttonTextColor}
           Globe={Globe}
-          {...linkProps}
         />
       </div>
     </LayoutShell>

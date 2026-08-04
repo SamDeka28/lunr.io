@@ -23,6 +23,12 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import { ContentBlocksEditor } from "@/components/page-layouts/content-blocks-editor";
 import { PageContentBlocks } from "@/components/page-layouts/page-content-blocks";
 import type { PageBlock } from "@/lib/utils/page-blocks";
+import {
+  BUTTON_THEME_PRESETS,
+  type ButtonThemeId,
+  type ButtonVariant,
+  type ButtonShadow,
+} from "@/lib/utils/link-button-style";
 
 interface LinkItem {
   id: string;
@@ -88,7 +94,13 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
   const [descriptionFontSize, setDescriptionFontSize] = useState(18);
   const [buttonBorderRadius, setButtonBorderRadius] = useState(12);
   const [buttonPadding, setButtonPadding] = useState(16);
+  const [buttonFontSize, setButtonFontSize] = useState(16);
+  const [buttonVariant, setButtonVariant] = useState<ButtonVariant>("filled");
+  const [buttonShadow, setButtonShadow] = useState<ButtonShadow>("soft");
+  const [buttonTheme, setButtonTheme] = useState<ButtonThemeId>("solid");
+  const [buttonTextAlignment, setButtonTextAlignment] = useState<"left" | "center" | "right">("center");
   const [textAlignment, setTextAlignment] = useState<"left" | "center" | "right">("center");
+  const [verticalAlign, setVerticalAlign] = useState<"top" | "center">("top");
   const [spacing, setSpacing] = useState(24);
   const [backgroundType, setBackgroundType] = useState<"solid" | "gradient" | "image">("solid");
   const [gradientColors, setGradientColors] = useState({ start: "#FFFFFF", end: "#F3F4F6" });
@@ -153,11 +165,25 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
     setTitleFontWeight(theme.settings.titleFontWeight);
     setDescriptionFontWeight(theme.settings.descriptionFontWeight);
     setButtonFontWeight(theme.settings.buttonFontWeight);
+    setButtonFontSize(theme.settings.buttonFontSize);
+    setButtonVariant(theme.settings.buttonVariant);
+    setButtonShadow(theme.settings.buttonShadow);
+    setButtonTheme(theme.settings.buttonTheme);
     setButtonBorderRadius(theme.settings.buttonBorderRadius);
     setButtonPadding(theme.settings.buttonPadding);
     setSocialIconStyle(theme.settings.socialIconStyle);
     setSocialIconShape(theme.settings.socialIconShape);
     toast.success(`Applied ${theme.name} theme`);
+  };
+
+  const handleButtonThemeSelect = (id: ButtonThemeId) => {
+    const preset = BUTTON_THEME_PRESETS.find((p) => p.id === id);
+    if (!preset) return;
+    setButtonTheme(preset.id);
+    setButtonVariant(preset.buttonVariant);
+    setButtonBorderRadius(preset.buttonBorderRadius);
+    setButtonShadow(preset.buttonShadow);
+    if (preset.buttonPadding != null) setButtonPadding(preset.buttonPadding);
   };
 
   // Load Google Fonts dynamically
@@ -284,9 +310,15 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
             titleFontWeight,
             descriptionFontWeight,
             buttonFontWeight,
+            buttonFontSize,
+            buttonVariant,
+            buttonShadow,
+            buttonTheme,
+            buttonTextAlignment,
             buttonBorderRadius,
             buttonPadding,
             textAlignment,
+            verticalAlign,
             spacing,
             linkGap,
             maxContentWidth,
@@ -818,16 +850,6 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
                         value={textColor}
                         onChange={setTextColor}
                       />
-                      <ColorPickerWithInput
-                        label="Button Color"
-                        value={buttonColor}
-                        onChange={setButtonColor}
-                      />
-                      <ColorPickerWithInput
-                        label="Button Text Color"
-                        value={buttonTextColor}
-                        onChange={setButtonTextColor}
-                      />
                     </div>
                   )}
                 </div>
@@ -847,6 +869,120 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
                   </button>
                   {designSections.buttons && (
                     <div className="px-4 pb-4 space-y-4 animate-slide-reveal">
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                          Button Theme
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {BUTTON_THEME_PRESETS.map((preset) => (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => handleButtonThemeSelect(preset.id)}
+                              className={cn(
+                                "h-auto py-2 px-2.5 rounded-lg border-2 text-left transition-all",
+                                buttonTheme === preset.id
+                                  ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                  : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
+                              )}
+                            >
+                              <div className="text-xs font-semibold">{preset.label}</div>
+                              <div
+                                className={cn(
+                                  "text-[10px] mt-0.5 leading-snug",
+                                  buttonTheme === preset.id ? "text-white/80" : "text-neutral-muted"
+                                )}
+                              >
+                                {preset.description}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <ColorPickerWithInput
+                        label="Button Color"
+                        value={buttonColor}
+                        onChange={setButtonColor}
+                      />
+                      <ColorPickerWithInput
+                        label="Button Text Color"
+                        value={buttonTextColor}
+                        onChange={setButtonTextColor}
+                      />
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                          Button Text Alignment
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(["left", "center", "right"] as const).map((align) => (
+                            <button
+                              key={align}
+                              type="button"
+                              onClick={() => setButtonTextAlignment(align)}
+                              className={cn(
+                                "h-9 px-2 rounded-lg border-2 text-xs font-semibold capitalize transition-all",
+                                buttonTextAlignment === align
+                                  ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                  : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
+                              )}
+                            >
+                              {align}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                          Shadow
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(["none", "soft", "strong"] as const).map((shadow) => (
+                            <button
+                              key={shadow}
+                              type="button"
+                              onClick={() => setButtonShadow(shadow)}
+                              className={cn(
+                                "h-9 px-2 rounded-lg border-2 text-xs font-semibold capitalize transition-all",
+                                buttonShadow === shadow
+                                  ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                  : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
+                              )}
+                            >
+                              {shadow}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <SliderWithInput
+                        label="Button Font Size"
+                        value={buttonFontSize}
+                        onChange={setButtonFontSize}
+                        min={12}
+                        max={28}
+                      />
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                          Button Font Weight
+                        </label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {[400, 500, 600, 700].map((weight) => (
+                            <button
+                              key={weight}
+                              type="button"
+                              onClick={() => setButtonFontWeight(weight)}
+                              className={cn(
+                                "h-9 px-2 rounded-lg border-2 text-xs font-semibold transition-all",
+                                buttonFontWeight === weight
+                                  ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                  : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
+                              )}
+                              style={{ fontWeight: weight }}
+                            >
+                              {weight}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <SliderWithInput
                         label="Button Border Radius"
                         value={buttonBorderRadius}
@@ -1029,30 +1165,6 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
                     ))}
                   </div>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
-                    Button Font Weight
-                  </label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[400, 500, 600, 700].map((weight) => (
-                      <button
-                        key={weight}
-                        type="button"
-                        onClick={() => setButtonFontWeight(weight)}
-                        className={cn(
-                          "h-9 px-2 rounded-lg border-2 text-xs font-semibold transition-all",
-                          buttonFontWeight === weight
-                            ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
-                            : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
-                        )}
-                        style={{ fontWeight: weight }}
-                      >
-                        {weight}
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
             )}
 
@@ -1085,6 +1197,38 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
                       </button>
                     ))}
                   </div>
+                  <p className="mt-1.5 text-[11px] text-neutral-muted">
+                    Title and description. Button text alignment is under Design → Buttons.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                    Vertical Position
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { id: "top" as const, label: "Top" },
+                      { id: "center" as const, label: "Center" },
+                    ]).map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setVerticalAlign(opt.id)}
+                        className={cn(
+                          "h-10 px-3 rounded-lg border-2 text-xs font-semibold transition-all",
+                          verticalAlign === opt.id
+                            ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                            : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-neutral-muted">
+                    Center vertically pins the page content in the middle of the screen.
+                  </p>
                 </div>
 
                 <SliderWithInput
@@ -1380,9 +1524,19 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
         </div>
 
         {/* Preview Content */}
-        <div className="flex-1 overflow-auto">
+        <div
+          className={cn(
+            "flex-1 overflow-auto",
+            previewDevice === "mobile" && "flex justify-center p-4 sm:p-6 bg-neutral-200/50"
+          )}
+        >
           <div
-            className="min-h-full w-full flex flex-col items-stretch justify-start relative overflow-hidden"
+            className={cn(
+              "min-h-full w-full flex flex-col items-stretch relative overflow-hidden",
+              verticalAlign === "center" ? "justify-center" : "justify-start",
+              previewDevice === "mobile" &&
+                "min-h-[680px] w-full max-w-[390px] rounded-[1.75rem] shadow-xl border border-neutral-border ring-4 ring-black/5"
+            )}
             style={{
               backgroundColor:
                 backgroundType === "gradient"
@@ -1436,12 +1590,18 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
               titleFontWeight={titleFontWeight}
               descriptionFontWeight={descriptionFontWeight}
               buttonFontWeight={buttonFontWeight}
+              buttonFontSize={buttonFontSize}
+              buttonVariant={buttonVariant}
+              buttonShadow={buttonShadow}
+              buttonTheme={buttonTheme}
+              buttonTextAlignment={buttonTextAlignment}
               buttonBorderRadius={buttonBorderRadius}
               buttonPadding={buttonPadding}
               spacing={spacing}
               linkGap={linkGap}
               maxContentWidth={maxContentWidth}
               textAlignment={textAlignment}
+              verticalAlign={verticalAlign}
               showProfileImage={showProfileImage}
               profileImageUrl={profileImageUrl}
               showBanner={showBanner && ((bannerType === "text" && bannerText) || (bannerType === "image" && bannerImageUrl))}
@@ -1480,6 +1640,10 @@ export default function PageStudio({ userId, userLinks }: { userId: string; user
                   fontFamily={fontFamily}
                   buttonBorderRadius={buttonBorderRadius}
                   buttonPadding={buttonPadding}
+                  buttonFontSize={buttonFontSize}
+                  buttonFontWeight={buttonFontWeight}
+                  buttonVariant={buttonVariant}
+                  buttonShadow={buttonShadow}
                   linkGap={linkGap}
                   interactive={false}
                 />

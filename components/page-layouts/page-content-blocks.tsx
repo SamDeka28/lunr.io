@@ -5,6 +5,8 @@ import { Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import type { PageBlock } from "@/lib/utils/page-blocks";
 import { getVideoEmbedUrl, renderSimpleMarkdown } from "@/lib/utils/page-blocks";
+import { getLinkButtonStyle } from "@/lib/utils/link-button-style";
+import type { ButtonShadow, ButtonVariant } from "@/lib/utils/link-button-style";
 
 interface PageContentBlocksProps {
   pageId: string;
@@ -15,6 +17,10 @@ interface PageContentBlocksProps {
   fontFamily: string;
   buttonBorderRadius: number;
   buttonPadding: number;
+  buttonFontSize?: number;
+  buttonFontWeight?: number;
+  buttonVariant?: ButtonVariant;
+  buttonShadow?: ButtonShadow;
   linkGap: number;
   interactive?: boolean;
 }
@@ -28,6 +34,10 @@ export function PageContentBlocks({
   fontFamily,
   buttonBorderRadius,
   buttonPadding,
+  buttonFontSize = 14,
+  buttonFontWeight = 600,
+  buttonVariant = "filled",
+  buttonShadow = "soft",
   linkGap,
   interactive = true,
 }: PageContentBlocksProps) {
@@ -85,6 +95,10 @@ export function PageContentBlocks({
               fontFamily={fontFamily}
               buttonBorderRadius={buttonBorderRadius}
               buttonPadding={buttonPadding}
+              buttonFontSize={buttonFontSize}
+              buttonFontWeight={buttonFontWeight}
+              buttonVariant={buttonVariant}
+              buttonShadow={buttonShadow}
               interactive={interactive}
             />
           );
@@ -105,6 +119,10 @@ function EmailCaptureForm({
   fontFamily,
   buttonBorderRadius,
   buttonPadding,
+  buttonFontSize,
+  buttonFontWeight,
+  buttonVariant,
+  buttonShadow,
   interactive,
 }: {
   pageId: string;
@@ -115,6 +133,10 @@ function EmailCaptureForm({
   fontFamily: string;
   buttonBorderRadius: number;
   buttonPadding: number;
+  buttonFontSize: number;
+  buttonFontWeight: number;
+  buttonVariant: ButtonVariant;
+  buttonShadow: ButtonShadow;
   interactive: boolean;
 }) {
   const [email, setEmail] = useState("");
@@ -179,14 +201,18 @@ function EmailCaptureForm({
           <button
             type="submit"
             disabled={!interactive || loading}
-            className="h-11 px-4 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
-            style={{
-              backgroundColor: buttonColor,
-              color: buttonTextColor,
-              borderRadius: `${buttonBorderRadius}px`,
-              paddingLeft: `${buttonPadding}px`,
-              paddingRight: `${buttonPadding}px`,
-            }}
+            className="h-11 px-4 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+            style={getLinkButtonStyle({
+              buttonColor,
+              buttonTextColor,
+              buttonVariant,
+              buttonShadow,
+              buttonFontSize,
+              buttonFontWeight,
+              buttonBorderRadius,
+              buttonPadding,
+              fontFamily,
+            })}
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {block.buttonText || "Subscribe"}

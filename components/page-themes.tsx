@@ -22,6 +22,10 @@ export interface PageTheme {
     titleFontWeight: number;
     descriptionFontWeight: number;
     buttonFontWeight: number;
+    buttonFontSize: number;
+    buttonVariant: "filled" | "outlined" | "soft" | "glass";
+    buttonShadow: "none" | "soft" | "strong";
+    buttonTheme: "solid" | "soft" | "outline" | "pill" | "glass" | "flat";
     buttonBorderRadius: number;
     buttonPadding: number;
     socialIconStyle: "filled" | "outlined" | "minimal";
@@ -50,6 +54,10 @@ export const defaultThemes: PageTheme[] = [
       titleFontWeight: 700,
       descriptionFontWeight: 400,
       buttonFontWeight: 600,
+      buttonFontSize: 16,
+      buttonVariant: "filled",
+      buttonShadow: "soft",
+      buttonTheme: "solid",
       buttonBorderRadius: 12,
       buttonPadding: 16,
       socialIconStyle: "filled",
@@ -76,6 +84,10 @@ export const defaultThemes: PageTheme[] = [
       titleFontWeight: 700,
       descriptionFontWeight: 400,
       buttonFontWeight: 600,
+      buttonFontSize: 16,
+      buttonVariant: "filled",
+      buttonShadow: "soft",
+      buttonTheme: "solid",
       buttonBorderRadius: 16,
       buttonPadding: 18,
       socialIconStyle: "outlined",
@@ -102,6 +114,10 @@ export const defaultThemes: PageTheme[] = [
       titleFontWeight: 700,
       descriptionFontWeight: 500,
       buttonFontWeight: 600,
+      buttonFontSize: 16,
+      buttonVariant: "filled",
+      buttonShadow: "soft",
+      buttonTheme: "solid",
       buttonBorderRadius: 10,
       buttonPadding: 16,
       socialIconStyle: "minimal",
@@ -126,6 +142,10 @@ export const defaultThemes: PageTheme[] = [
       titleFontWeight: 700,
       descriptionFontWeight: 400,
       buttonFontWeight: 600,
+      buttonFontSize: 16,
+      buttonVariant: "filled",
+      buttonShadow: "soft",
+      buttonTheme: "solid",
       buttonBorderRadius: 8,
       buttonPadding: 16,
       socialIconStyle: "outlined",
@@ -150,6 +170,10 @@ export const defaultThemes: PageTheme[] = [
       titleFontWeight: 700,
       descriptionFontWeight: 400,
       buttonFontWeight: 600,
+      buttonFontSize: 16,
+      buttonVariant: "filled",
+      buttonShadow: "soft",
+      buttonTheme: "solid",
       buttonBorderRadius: 12,
       buttonPadding: 16,
       socialIconStyle: "filled",
@@ -176,6 +200,10 @@ export const defaultThemes: PageTheme[] = [
       titleFontWeight: 600,
       descriptionFontWeight: 400,
       buttonFontWeight: 600,
+      buttonFontSize: 16,
+      buttonVariant: "filled",
+      buttonShadow: "soft",
+      buttonTheme: "solid",
       buttonBorderRadius: 14,
       buttonPadding: 16,
       socialIconStyle: "filled",
@@ -202,6 +230,10 @@ export const defaultThemes: PageTheme[] = [
       titleFontWeight: 800,
       descriptionFontWeight: 500,
       buttonFontWeight: 700,
+      buttonFontSize: 16,
+      buttonVariant: "filled",
+      buttonShadow: "soft",
+      buttonTheme: "solid",
       buttonBorderRadius: 12,
       buttonPadding: 18,
       socialIconStyle: "filled",
@@ -228,6 +260,10 @@ export const defaultThemes: PageTheme[] = [
       titleFontWeight: 700,
       descriptionFontWeight: 400,
       buttonFontWeight: 600,
+      buttonFontSize: 16,
+      buttonVariant: "filled",
+      buttonShadow: "soft",
+      buttonTheme: "solid",
       buttonBorderRadius: 10,
       buttonPadding: 16,
       socialIconStyle: "outlined",

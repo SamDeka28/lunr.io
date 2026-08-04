@@ -2,6 +2,8 @@ import { PageLayoutProps } from "./types";
 import { LayoutShell } from "./layout-shell";
 import { PageLinks } from "./page-links";
 import { SocialIcons } from "./social-icons";
+import { getLinkButtonStyle } from "@/lib/utils/link-button-style";
+import { fluidAvatar, fluidBody, fluidTitle } from "@/lib/utils/fluid-type";
 
 interface MagazineLayoutProps extends PageLayoutProps {
   Globe: React.ComponentType<any>;
@@ -42,6 +44,20 @@ export function MagazineLayout(props: MagazineLayoutProps) {
     showBanner && bannerPosition === "top" && bannerType === "image" && !!bannerImageUrl;
 
   const [featured, ...rest] = pageLinks;
+  const avatar = fluidAvatar(48, 40);
+
+  const featuredStyle = getLinkButtonStyle({
+    buttonColor,
+    buttonTextColor: linkProps.buttonTextColor,
+    buttonVariant: linkProps.buttonVariant,
+    buttonShadow: linkProps.buttonShadow,
+    buttonFontSize: Math.round((linkProps.buttonFontSize || descriptionFontSize) * 1.05),
+    buttonFontWeight: linkProps.buttonFontWeight,
+    buttonBorderRadius: linkProps.buttonBorderRadius,
+    buttonPadding: linkProps.buttonPadding + 4,
+    fontFamily,
+    paddingScale: 1.15,
+  });
 
   return (
     <LayoutShell
@@ -54,14 +70,15 @@ export function MagazineLayout(props: MagazineLayoutProps) {
       bannerType={bannerType}
       maxContentWidth={Math.max(maxContentWidth, 460)}
       spacing={spacing}
+      verticalAlign={props.verticalAlign}
       contentClassName="items-stretch"
-      contentStyle={{ paddingTop: hasTopImage ? 20 : 32 }}
+      contentStyle={{ paddingTop: hasTopImage ? 16 : undefined }}
     >
-      {/* Masthead — always on page background */}
       {title && (
         <h1
+          className="break-words"
           style={{
-            fontSize: `${titleFontSize * 1.45}px`,
+            fontSize: fluidTitle(titleFontSize, 1.45),
             textAlign: "left",
             fontFamily: `"${fontFamily}", sans-serif`,
             color: textColor,
@@ -70,7 +87,7 @@ export function MagazineLayout(props: MagazineLayoutProps) {
             width: "100%",
             letterSpacing: "-0.04em",
             borderBottom: `3px solid ${textColor}`,
-            paddingBottom: 12,
+            paddingBottom: 10,
           }}
         >
           {title}
@@ -83,7 +100,7 @@ export function MagazineLayout(props: MagazineLayoutProps) {
             src={profileImageUrl}
             alt="Profile"
             className="object-cover rounded-full border-2 bg-white flex-shrink-0"
-            style={{ width: 48, height: 48, borderColor: buttonColor }}
+            style={{ width: avatar, height: avatar, borderColor: buttonColor }}
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
@@ -91,8 +108,9 @@ export function MagazineLayout(props: MagazineLayoutProps) {
         )}
         {description && (
           <p
+            className="break-words min-w-0"
             style={{
-              fontSize: `${descriptionFontSize * 0.95}px`,
+              fontSize: fluidBody(descriptionFontSize, 0.95),
               textAlign: "left",
               fontFamily: `"${fontFamily}", sans-serif`,
               color: textColor,
@@ -101,7 +119,6 @@ export function MagazineLayout(props: MagazineLayoutProps) {
               fontWeight: descriptionFontWeight,
               fontStyle: "italic",
               flex: 1,
-              minWidth: 0,
             }}
           >
             {description}
@@ -115,8 +132,8 @@ export function MagazineLayout(props: MagazineLayoutProps) {
           style={{
             borderTop: `1px solid ${textColor}22`,
             borderBottom: `1px solid ${textColor}22`,
-            paddingTop: 16,
-            paddingBottom: 16,
+            paddingTop: 14,
+            paddingBottom: 14,
           }}
         >
           <p
@@ -143,37 +160,18 @@ export function MagazineLayout(props: MagazineLayoutProps) {
                 props.onLinkClick!(featured.id, featured.url);
                 window.open(featured.url, "_blank", "noopener,noreferrer");
               }}
-              className="block w-full text-left transition-opacity hover:opacity-80"
-              style={{
-                backgroundColor: buttonColor,
-                color: linkProps.buttonTextColor,
-                padding: `${linkProps.buttonPadding + 4}px ${linkProps.buttonPadding + 8}px`,
-                borderRadius: `${linkProps.buttonBorderRadius}px`,
-                fontFamily: `"${fontFamily}", sans-serif`,
-                fontSize: `${descriptionFontSize * 1.05}px`,
-                fontWeight: linkProps.buttonFontWeight,
-              }}
+              className="block w-full text-left transition-opacity hover:opacity-80 break-words"
+              style={featuredStyle}
             >
               <span className="flex items-center justify-between gap-3">
-                <span>{featured.title}</span>
+                <span className="min-w-0 break-words">{featured.title}</span>
                 <ExternalLink className="h-4 w-4 flex-shrink-0 opacity-80" />
               </span>
             </a>
           ) : (
-            <div
-              className="w-full text-left"
-              style={{
-                backgroundColor: buttonColor,
-                color: linkProps.buttonTextColor,
-                padding: `${linkProps.buttonPadding + 4}px ${linkProps.buttonPadding + 8}px`,
-                borderRadius: `${linkProps.buttonBorderRadius}px`,
-                fontFamily: `"${fontFamily}", sans-serif`,
-                fontSize: `${descriptionFontSize * 1.05}px`,
-                fontWeight: linkProps.buttonFontWeight,
-              }}
-            >
+            <div className="w-full text-left break-words" style={featuredStyle}>
               <span className="flex items-center justify-between gap-3">
-                <span>{featured.title}</span>
+                <span className="min-w-0 break-words">{featured.title}</span>
                 <ExternalLink className="h-4 w-4 flex-shrink-0 opacity-80" />
               </span>
             </div>
@@ -182,29 +180,32 @@ export function MagazineLayout(props: MagazineLayoutProps) {
       )}
 
       {rest.length > 0 && (
-        <div className="w-full flex flex-col" style={{ gap: `${linkProps.linkGap}px` }}>
+        <div
+          className="w-full flex flex-col"
+          style={{
+            gap: `clamp(${Math.max(8, Math.round(linkProps.linkGap * 0.75))}px, 2vw, ${linkProps.linkGap}px)`,
+          }}
+        >
           <PageLinks
+            {...linkProps}
             pageLinks={rest}
-            textAlignment="left"
             ExternalLink={ExternalLink}
             buttonColor={buttonColor}
-            buttonTextColor={linkProps.buttonTextColor}
+            fontFamily={fontFamily}
             onLinkClick={props.onLinkClick}
-            {...linkProps}
           />
         </div>
       )}
 
       {Object.keys(socialLinks).some((key) => socialLinks[key]) && (
-        <div className="w-full border-t pt-5" style={{ borderColor: `${textColor}18` }}>
+        <div className="w-full border-t pt-4 sm:pt-5" style={{ borderColor: `${textColor}18` }}>
           <SocialIcons
+            {...linkProps}
             socialLinks={socialLinks}
             socialIcons={socialIcons}
             textColor={textColor}
             buttonColor={buttonColor}
-            buttonTextColor={linkProps.buttonTextColor}
             Globe={Globe}
-            {...linkProps}
           />
         </div>
       )}

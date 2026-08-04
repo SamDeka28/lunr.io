@@ -2,6 +2,7 @@ import { PageLayoutProps } from "./types";
 import { LayoutShell } from "./layout-shell";
 import { PageLinks } from "./page-links";
 import { SocialIcons } from "./social-icons";
+import { fluidAvatar, fluidBody, fluidTitle } from "@/lib/utils/fluid-type";
 
 interface BoldTypographyLayoutProps extends PageLayoutProps {
   Globe: React.ComponentType<any>;
@@ -41,6 +42,8 @@ export function BoldTypographyLayout(props: BoldTypographyLayoutProps) {
   const hasTopImage =
     showBanner && bannerPosition === "top" && bannerType === "image" && !!bannerImageUrl;
 
+  const avatar = fluidAvatar(56, 44);
+
   return (
     <LayoutShell
       showBanner={showBanner}
@@ -52,15 +55,16 @@ export function BoldTypographyLayout(props: BoldTypographyLayoutProps) {
       bannerType={bannerType}
       maxContentWidth={Math.round(maxContentWidth * 0.9)}
       spacing={Math.max(12, spacing * 0.75)}
+      verticalAlign={props.verticalAlign}
       contentClassName="items-center text-center"
-      contentStyle={{ paddingTop: hasTopImage ? 24 : 40 }}
+      contentStyle={{ paddingTop: hasTopImage ? 16 : undefined }}
     >
       {showProfileImage && profileImageUrl && (
         <img
           src={profileImageUrl}
           alt="Profile"
           className="object-cover rounded-full border-2 bg-white shadow-sm"
-          style={{ width: 56, height: 56, borderColor: buttonColor }}
+          style={{ width: avatar, height: avatar, borderColor: buttonColor }}
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = "none";
           }}
@@ -68,8 +72,9 @@ export function BoldTypographyLayout(props: BoldTypographyLayoutProps) {
       )}
       {title && (
         <h1
+          className="break-words"
           style={{
-            fontSize: `${Math.min(titleFontSize * 1.55, 72)}px`,
+            fontSize: fluidTitle(Math.min(titleFontSize * 1.55, 72)),
             textAlign: "center",
             fontFamily: `"${fontFamily}", sans-serif`,
             color: textColor,
@@ -85,8 +90,9 @@ export function BoldTypographyLayout(props: BoldTypographyLayoutProps) {
       )}
       {description && (
         <p
+          className="break-words"
           style={{
-            fontSize: `${descriptionFontSize}px`,
+            fontSize: fluidBody(descriptionFontSize),
             textAlign: "center",
             fontFamily: `"${fontFamily}", sans-serif`,
             color: textColor,
@@ -105,27 +111,27 @@ export function BoldTypographyLayout(props: BoldTypographyLayoutProps) {
       {pageLinks.length > 0 && (
         <div
           className="w-full flex flex-col pt-2"
-          style={{ gap: `${linkProps.linkGap * 0.85}px` }}
+          style={{
+            gap: `clamp(${Math.max(8, Math.round(linkProps.linkGap * 0.65))}px, 2vw, ${Math.round(linkProps.linkGap * 0.85)}px)`,
+          }}
         >
           <PageLinks
+            {...linkProps}
             pageLinks={pageLinks}
-            textAlignment="center"
             ExternalLink={ExternalLink}
             buttonColor={buttonColor}
-            buttonTextColor={linkProps.buttonTextColor}
+            fontFamily={fontFamily}
             onLinkClick={props.onLinkClick}
-            {...linkProps}
           />
         </div>
       )}
       <SocialIcons
+        {...linkProps}
         socialLinks={socialLinks}
         socialIcons={socialIcons}
         textColor={textColor}
         buttonColor={buttonColor}
-        buttonTextColor={linkProps.buttonTextColor}
         Globe={Globe}
-        {...linkProps}
       />
     </LayoutShell>
   );

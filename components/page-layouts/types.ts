@@ -15,12 +15,18 @@ export interface PageLayoutProps {
   titleFontWeight: number;
   descriptionFontWeight: number;
   buttonFontWeight: number;
+  buttonFontSize: number;
+  buttonVariant: "filled" | "outlined" | "soft" | "glass";
+  buttonShadow: "none" | "soft" | "strong";
+  buttonTheme: "solid" | "soft" | "outline" | "pill" | "glass" | "flat";
   buttonBorderRadius: number;
   buttonPadding: number;
+  buttonTextAlignment: "left" | "center" | "right";
   spacing: number;
   linkGap: number;
   maxContentWidth: number;
   textAlignment: "left" | "center" | "right";
+  verticalAlign: "top" | "center";
   
   // Profile
   showProfileImage: boolean;

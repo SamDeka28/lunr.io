@@ -131,13 +131,13 @@ export function NavigationLoaderProvider({
       {children}
       {isNavigating && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-white/65 backdrop-blur-[3px]"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-white/70 backdrop-blur-[4px]"
           aria-live="polite"
           aria-busy="true"
           role="status"
         >
-          <div className="flex flex-col items-center gap-2 rounded-2xl bg-white px-8 py-6 shadow-soft border border-neutral-border">
-            <div className="w-[88px] h-[88px]">
+          <div className="flex flex-col items-center gap-3 rounded-3xl bg-white/95 px-10 py-8 shadow-soft border border-neutral-border">
+            <div className="w-[120px] h-[120px]">
               <Lottie
                 animationData={navLoaderAnimation}
                 loop
@@ -145,7 +145,9 @@ export function NavigationLoaderProvider({
                 style={{ width: "100%", height: "100%" }}
               />
             </div>
-            <p className="text-sm font-medium text-neutral-muted">Loading…</p>
+            <p className="text-sm font-semibold text-neutral-text tracking-tight">
+              Loading…
+            </p>
           </div>
         </div>
       )}

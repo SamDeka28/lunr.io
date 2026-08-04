@@ -3,6 +3,7 @@ import { LayoutShell, avatarOverlapClass } from "./layout-shell";
 import { PageLinks } from "./page-links";
 import { SocialIcons } from "./social-icons";
 import { cn } from "@/lib/utils/cn";
+import { fluidAvatar, fluidBody, fluidSpace, fluidTitle } from "@/lib/utils/fluid-type";
 
 interface AsymmetricLayoutProps extends PageLayoutProps {
   Globe: React.ComponentType<any>;
@@ -42,6 +43,8 @@ export function AsymmetricLayout(props: AsymmetricLayoutProps) {
   const hasTopImage =
     showBanner && bannerPosition === "top" && bannerType === "image" && !!bannerImageUrl;
 
+  const avatar = fluidAvatar(128, 72);
+
   return (
     <LayoutShell
       showBanner={showBanner}
@@ -53,17 +56,18 @@ export function AsymmetricLayout(props: AsymmetricLayoutProps) {
       bannerType={bannerType}
       maxContentWidth={Math.max(maxContentWidth, 520)}
       spacing={spacing}
-    >
-      <div className="w-full flex flex-row gap-5 items-start">
+      verticalAlign={props.verticalAlign}
+>
+      <div className="w-full flex flex-col sm:flex-row gap-4 sm:gap-5 items-start">
         {showProfileImage && profileImageUrl && (
-          <div className={cn("flex-shrink-0", avatarOverlapClass(hasTopImage, "md"))}>
+          <div className={cn("flex-shrink-0 self-center sm:self-start", avatarOverlapClass(hasTopImage, "md"))}>
             <img
               src={profileImageUrl}
               alt="Profile"
               className="object-cover rounded-2xl border-[3px] bg-white shadow-lg"
               style={{
-                width: 128,
-                height: 128,
+                width: avatar,
+                height: avatar,
                 borderColor: buttonColor,
                 transform: "rotate(-2deg)",
               }}
@@ -73,24 +77,22 @@ export function AsymmetricLayout(props: AsymmetricLayoutProps) {
             />
           </div>
         )}
-        {/* Text stays on page background — pad past the banner fold */}
         <div
-          className="flex-1 flex flex-col items-start min-w-0"
+          className="flex-1 flex flex-col items-start min-w-0 w-full"
           style={{
-            gap: `${Math.max(10, spacing * 0.6)}px`,
-            paddingTop: hasTopImage ? 12 : 4,
+            gap: fluidSpace(Math.max(10, spacing * 0.6)),
+            paddingTop: hasTopImage ? 8 : 4,
           }}
         >
           {title && (
             <h1
+              className="break-words text-center sm:text-left w-full"
               style={{
-                fontSize: `${titleFontSize * 1.08}px`,
-                textAlign: "left",
+                fontSize: fluidTitle(titleFontSize, 1.08),
                 fontFamily: `"${fontFamily}", sans-serif`,
                 color: textColor,
                 fontWeight: titleFontWeight,
                 lineHeight: 1.12,
-                width: "100%",
                 letterSpacing: "-0.025em",
               }}
             >
@@ -99,15 +101,14 @@ export function AsymmetricLayout(props: AsymmetricLayoutProps) {
           )}
           {description && (
             <p
+              className="break-words text-center sm:text-left w-full"
               style={{
-                fontSize: `${descriptionFontSize}px`,
-                textAlign: "left",
+                fontSize: fluidBody(descriptionFontSize),
                 fontFamily: `"${fontFamily}", sans-serif`,
                 color: textColor,
                 opacity: 0.72,
                 lineHeight: 1.55,
                 fontWeight: descriptionFontWeight,
-                width: "100%",
               }}
             >
               {description}
@@ -116,27 +117,24 @@ export function AsymmetricLayout(props: AsymmetricLayoutProps) {
         </div>
       </div>
 
-      {/* Links full-width below the header row — asymmetric signature */}
       <div className="w-full" style={{ marginTop: 4 }}>
         <PageLinks
+          {...linkProps}
           pageLinks={pageLinks}
-          textAlignment="left"
           ExternalLink={ExternalLink}
           buttonColor={buttonColor}
-          buttonTextColor={linkProps.buttonTextColor}
+          fontFamily={fontFamily}
           onLinkClick={props.onLinkClick}
-          {...linkProps}
         />
       </div>
       <div className="w-full flex justify-start">
         <SocialIcons
+          {...linkProps}
           socialLinks={socialLinks}
           socialIcons={socialIcons}
           textColor={textColor}
           buttonColor={buttonColor}
-          buttonTextColor={linkProps.buttonTextColor}
           Globe={Globe}
-          {...linkProps}
         />
       </div>
     </LayoutShell>

@@ -188,13 +188,19 @@ export default function HomePageClient() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-3 group">
+            <Link href="/" className="flex items-center group">
               {isScrolled ? (
                 <BrandLogo href={null} variant="full" size="md" priority className="group-hover:opacity-90 transition-opacity" />
               ) : (
-                <span className="rounded-xl bg-white/95 px-2.5 py-1.5 shadow-soft group-hover:bg-white transition-colors">
-                  <BrandLogo href={null} variant="full" size="sm" priority />
-                </span>
+                <BrandLogo
+                  href={null}
+                  variant="mark"
+                  size="md"
+                  onDark
+                  showWordmark
+                  priority
+                  className="group-hover:opacity-90 transition-opacity"
+                />
               )}
             </Link>
             <div className="flex items-center gap-4">

@@ -2,6 +2,8 @@ import { PageLayoutProps } from "./types";
 import { LayoutShell, avatarOverlapClass } from "./layout-shell";
 import { SocialIcons } from "./social-icons";
 import { cn } from "@/lib/utils/cn";
+import { getLinkButtonStyle } from "@/lib/utils/link-button-style";
+import { fluidAvatar, fluidBody, fluidTitle } from "@/lib/utils/fluid-type";
 
 interface GridLayoutProps extends PageLayoutProps {
   Globe: React.ComponentType<any>;
@@ -41,6 +43,8 @@ export function GridLayout(props: GridLayoutProps) {
   const hasTopImage =
     showBanner && bannerPosition === "top" && bannerType === "image" && !!bannerImageUrl;
 
+  const avatar = fluidAvatar(80, 64);
+
   return (
     <LayoutShell
       showBanner={showBanner}
@@ -52,6 +56,7 @@ export function GridLayout(props: GridLayoutProps) {
       bannerType={bannerType}
       maxContentWidth={Math.max(maxContentWidth, 420)}
       spacing={spacing}
+      verticalAlign={props.verticalAlign}
       contentClassName="items-center text-center"
     >
       {showProfileImage && profileImageUrl && (
@@ -60,7 +65,7 @@ export function GridLayout(props: GridLayoutProps) {
             src={profileImageUrl}
             alt="Profile"
             className="object-cover rounded-full border-[3px] bg-white shadow-md"
-            style={{ width: 80, height: 80, borderColor: buttonColor }}
+            style={{ width: avatar, height: avatar, borderColor: buttonColor }}
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
@@ -69,8 +74,9 @@ export function GridLayout(props: GridLayoutProps) {
       )}
       {title && (
         <h1
+          className="break-words"
           style={{
-            fontSize: `${titleFontSize}px`,
+            fontSize: fluidTitle(titleFontSize),
             textAlign: "center",
             fontFamily: `"${fontFamily}", sans-serif`,
             color: textColor,
@@ -85,8 +91,9 @@ export function GridLayout(props: GridLayoutProps) {
       )}
       {description && (
         <p
+          className="break-words"
           style={{
-            fontSize: `${descriptionFontSize}px`,
+            fontSize: fluidBody(descriptionFontSize),
             textAlign: "center",
             fontFamily: `"${fontFamily}", sans-serif`,
             color: textColor,
@@ -101,24 +108,26 @@ export function GridLayout(props: GridLayoutProps) {
         </p>
       )}
       {pageLinks.length > 0 && (
-        <div className="w-full grid grid-cols-2 gap-3 pt-1">
+        <div className="w-full grid grid-cols-1 min-[380px]:grid-cols-2 gap-2 sm:gap-3 pt-1">
           {pageLinks.map((link) => {
             const linkContent = (
-              <div className="flex flex-col items-center justify-center gap-1.5 min-h-[72px]">
-                <span className="truncate w-full px-1 font-semibold">{link.title}</span>
-                <ExternalLink className="h-3.5 w-3.5 opacity-70" />
+              <div className="flex flex-col items-center justify-center gap-1 sm:gap-1.5 min-h-[56px] sm:min-h-[72px]">
+                <span className="line-clamp-2 w-full px-1 font-semibold break-words">{link.title}</span>
+                <ExternalLink className="h-3.5 w-3.5 opacity-70 flex-shrink-0" />
               </div>
             );
 
-            const linkStyle = {
-              backgroundColor: buttonColor,
-              color: linkProps.buttonTextColor,
-              padding: `${Math.max(12, linkProps.buttonPadding * 0.85)}px`,
-              borderRadius: `${linkProps.buttonBorderRadius}px`,
-              fontFamily: `"${fontFamily}", sans-serif`,
-              fontSize: `${descriptionFontSize * 0.88}px`,
-              fontWeight: linkProps.buttonFontWeight,
-            };
+            const linkStyle = getLinkButtonStyle({
+              buttonColor,
+              buttonTextColor: linkProps.buttonTextColor,
+              buttonVariant: linkProps.buttonVariant,
+              buttonShadow: linkProps.buttonShadow,
+              buttonFontSize: Math.round((linkProps.buttonFontSize || descriptionFontSize) * 0.88),
+              buttonFontWeight: linkProps.buttonFontWeight,
+              buttonBorderRadius: linkProps.buttonBorderRadius,
+              buttonPadding: Math.max(12, linkProps.buttonPadding * 0.85),
+              fontFamily,
+            });
 
             if (props.onLinkClick) {
               return (
@@ -132,7 +141,7 @@ export function GridLayout(props: GridLayoutProps) {
                     props.onLinkClick!(link.id, link.url);
                     window.open(link.url, "_blank", "noopener,noreferrer");
                   }}
-                  className="w-full transition-all hover:opacity-90 active:scale-[0.98] shadow-soft text-center block"
+                  className="w-full transition-all hover:opacity-90 active:scale-[0.98] text-center block"
                   style={linkStyle}
                 >
                   {linkContent}
@@ -143,7 +152,7 @@ export function GridLayout(props: GridLayoutProps) {
             return (
               <div
                 key={link.id}
-                className="w-full transition-all hover:opacity-90 active:scale-[0.98] shadow-soft text-center"
+                className="w-full transition-all hover:opacity-90 active:scale-[0.98] text-center"
                 style={linkStyle}
               >
                 {linkContent}
@@ -153,13 +162,12 @@ export function GridLayout(props: GridLayoutProps) {
         </div>
       )}
       <SocialIcons
+        {...linkProps}
         socialLinks={socialLinks}
         socialIcons={socialIcons}
         textColor={textColor}
         buttonColor={buttonColor}
-        buttonTextColor={linkProps.buttonTextColor}
         Globe={Globe}
-        {...linkProps}
       />
     </LayoutShell>
   );

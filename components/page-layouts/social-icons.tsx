@@ -32,8 +32,8 @@ export function SocialIcons({
   }
 
   const getIconStyle = (): React.CSSProperties => {
-    const totalSize = socialIconSize + (socialIconPadding * 2);
-    
+    const totalSize = socialIconSize + socialIconPadding * 2;
+
     const baseStyle: React.CSSProperties = {
       width: `${totalSize}px`,
       height: `${totalSize}px`,
@@ -45,7 +45,7 @@ export function SocialIcons({
       transition: "all 0.2s",
       padding: `${socialIconPadding}px`,
     };
-    
+
     if (socialIconStyle === "filled") {
       baseStyle.backgroundColor = buttonColor;
       baseStyle.color = buttonTextColor;
@@ -54,7 +54,7 @@ export function SocialIcons({
       baseStyle.border = `2px solid ${textColor}`;
       baseStyle.opacity = 0.8;
     }
-    
+
     if (socialIconShape === "circle") {
       baseStyle.borderRadius = "50%";
     } else if (socialIconShape === "square") {
@@ -62,19 +62,21 @@ export function SocialIcons({
     } else if (socialIconShape === "rounded") {
       baseStyle.borderRadius = "8px";
     }
-    
+
     return baseStyle;
   };
 
   return (
     <div
-      className="flex items-center justify-center"
-      style={{ gap: `${socialIconGap}px` }}
+      className="flex flex-wrap items-center justify-center max-w-full"
+      style={{
+        gap: `clamp(${Math.max(8, Math.round(socialIconGap * 0.75))}px, 2vw, ${socialIconGap}px)`,
+      }}
     >
       {Object.entries(socialLinks).map(([platform, url]: [string, any]) => {
         if (!url) return null;
         const Icon = socialIcons[platform.toLowerCase()] || Globe;
-        
+
         return (
           <a
             key={platform}
@@ -92,4 +94,3 @@ export function SocialIcons({
     </div>
   );
 }
-

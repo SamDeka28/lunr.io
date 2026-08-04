@@ -3,6 +3,7 @@ import { LayoutShell, avatarOverlapClass } from "./layout-shell";
 import { PageLinks } from "./page-links";
 import { SocialIcons } from "./social-icons";
 import { cn } from "@/lib/utils/cn";
+import { fluidBody, fluidSpace, fluidTitle } from "@/lib/utils/fluid-type";
 
 interface SplitLayoutProps extends PageLayoutProps {
   Globe: React.ComponentType<any>;
@@ -53,17 +54,18 @@ export function SplitLayout(props: SplitLayoutProps) {
       bannerType={bannerType}
       maxContentWidth={Math.max(maxContentWidth, 560)}
       spacing={spacing}
-    >
+      verticalAlign={props.verticalAlign}
+>
       <div
         className={cn(
-          "w-full grid gap-6 items-start",
+          "w-full grid gap-4 sm:gap-6 items-start",
           showProfileImage && profileImageUrl
-            ? "grid-cols-1 sm:grid-cols-[minmax(140px,38%)_1fr]"
+            ? "grid-cols-1 sm:grid-cols-[minmax(120px,36%)_1fr]"
             : "grid-cols-1"
         )}
       >
         {showProfileImage && profileImageUrl && (
-          <div className={cn(avatarOverlapClass(hasTopImage, "md"))}>
+          <div className={cn("mx-auto w-full max-w-[220px] sm:max-w-none sm:mx-0", avatarOverlapClass(hasTopImage, "md"))}>
             <div
               className="w-full overflow-hidden rounded-2xl border-[3px] bg-white shadow-lg aspect-square sm:aspect-[4/5]"
               style={{ borderColor: buttonColor }}
@@ -81,16 +83,17 @@ export function SplitLayout(props: SplitLayoutProps) {
         )}
 
         <div
-          className="flex flex-col items-start min-w-0"
+          className="flex flex-col items-start min-w-0 w-full"
           style={{
-            gap: `${Math.max(12, spacing * 0.7)}px`,
-            paddingTop: hasTopImage ? 14 : 0,
+            gap: fluidSpace(Math.max(12, spacing * 0.7)),
+            paddingTop: hasTopImage ? 10 : 0,
           }}
         >
           {title && (
             <h1
+              className="break-words"
               style={{
-                fontSize: `${titleFontSize}px`,
+                fontSize: fluidTitle(titleFontSize),
                 textAlign: "left",
                 fontFamily: `"${fontFamily}", sans-serif`,
                 color: textColor,
@@ -105,8 +108,9 @@ export function SplitLayout(props: SplitLayoutProps) {
           )}
           {description && (
             <p
+              className="break-words"
               style={{
-                fontSize: `${descriptionFontSize}px`,
+                fontSize: fluidBody(descriptionFontSize),
                 textAlign: "left",
                 fontFamily: `"${fontFamily}", sans-serif`,
                 color: textColor,
@@ -120,22 +124,20 @@ export function SplitLayout(props: SplitLayoutProps) {
             </p>
           )}
           <PageLinks
+            {...linkProps}
             pageLinks={pageLinks}
-            textAlignment="left"
             ExternalLink={ExternalLink}
             buttonColor={buttonColor}
-            buttonTextColor={linkProps.buttonTextColor}
+            fontFamily={fontFamily}
             onLinkClick={props.onLinkClick}
-            {...linkProps}
           />
           <SocialIcons
+            {...linkProps}
             socialLinks={socialLinks}
             socialIcons={socialIcons}
             textColor={textColor}
             buttonColor={buttonColor}
-            buttonTextColor={linkProps.buttonTextColor}
             Globe={Globe}
-            {...linkProps}
           />
         </div>
       </div>

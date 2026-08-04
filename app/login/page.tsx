@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Link2, Loader2, Mail, Lock, ArrowRight, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -11,7 +11,6 @@ import { useUserStore } from "@/store/user-store";
 import { BrandLogo } from "@/components/brand-logo";
 
 function LoginPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -107,27 +106,31 @@ function LoginPageContent() {
         setEmail("");
         setPassword("");
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (signInError) throw signInError;
 
-        // Get user data and store in Zustand
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const authUser = signInData.user;
         if (authUser) {
           setUser({
             id: authUser.id,
             email: authUser.email || null,
           });
-          // Fetch and store plan data
-          await refreshUserData();
+          // Don't block redirect on profile fetch
+          void refreshUserData();
         }
 
         toast.success("Welcome back!");
-        router.push(redirect);
-        router.refresh();
+        // Hard navigation so middleware sees fresh auth cookies
+        const next =
+          redirect.startsWith("/") && !redirect.startsWith("//")
+            ? redirect
+            : "/dashboard";
+        window.location.assign(next);
+        return;
       }
     } catch (err: any) {
       // More detailed error handling

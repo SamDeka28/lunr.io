@@ -3,6 +3,7 @@ import { LayoutShell, avatarOverlapClass } from "./layout-shell";
 import { PageLinks } from "./page-links";
 import { SocialIcons } from "./social-icons";
 import { cn } from "@/lib/utils/cn";
+import { fluidAvatar, fluidBody, fluidTitle } from "@/lib/utils/fluid-type";
 
 interface HeroLayoutProps extends PageLayoutProps {
   Globe: React.ComponentType<any>;
@@ -42,6 +43,8 @@ export function HeroLayout(props: HeroLayoutProps) {
   const hasTopImage =
     showBanner && bannerPosition === "top" && bannerType === "image" && !!bannerImageUrl;
 
+  const avatar = fluidAvatar(120, 72);
+
   return (
     <LayoutShell
       showBanner={showBanner}
@@ -53,6 +56,7 @@ export function HeroLayout(props: HeroLayoutProps) {
       bannerType={bannerType}
       maxContentWidth={maxContentWidth}
       spacing={Math.max(14, spacing * 0.8)}
+      verticalAlign={props.verticalAlign}
       contentClassName="items-center text-center"
     >
       {showProfileImage && profileImageUrl && (
@@ -60,10 +64,10 @@ export function HeroLayout(props: HeroLayoutProps) {
           <img
             src={profileImageUrl}
             alt="Profile"
-            className="object-cover rounded-full border-[4px] bg-white shadow-xl"
+            className="object-cover rounded-full border-[3px] sm:border-[4px] bg-white shadow-xl"
             style={{
-              width: 120,
-              height: 120,
+              width: avatar,
+              height: avatar,
               borderColor: buttonColor,
             }}
             onError={(e) => {
@@ -74,8 +78,9 @@ export function HeroLayout(props: HeroLayoutProps) {
       )}
       {title && (
         <h1
+          className="break-words"
           style={{
-            fontSize: `${titleFontSize * 1.25}px`,
+            fontSize: fluidTitle(titleFontSize, 1.25),
             textAlign: "center",
             fontFamily: `"${fontFamily}", sans-serif`,
             color: textColor,
@@ -91,8 +96,9 @@ export function HeroLayout(props: HeroLayoutProps) {
       )}
       {description && (
         <p
+          className="break-words mx-auto"
           style={{
-            fontSize: `${descriptionFontSize * 1.05}px`,
+            fontSize: fluidBody(descriptionFontSize, 1.05),
             textAlign: "center",
             fontFamily: `"${fontFamily}", sans-serif`,
             color: textColor,
@@ -109,23 +115,21 @@ export function HeroLayout(props: HeroLayoutProps) {
       )}
       <div className="w-full pt-1">
         <PageLinks
+          {...linkProps}
           pageLinks={pageLinks}
-          textAlignment="center"
           ExternalLink={ExternalLink}
           buttonColor={buttonColor}
-          buttonTextColor={linkProps.buttonTextColor}
+          fontFamily={fontFamily}
           onLinkClick={props.onLinkClick}
-          {...linkProps}
         />
       </div>
       <SocialIcons
+        {...linkProps}
         socialLinks={socialLinks}
         socialIcons={socialIcons}
         textColor={textColor}
         buttonColor={buttonColor}
-        buttonTextColor={linkProps.buttonTextColor}
         Globe={Globe}
-        {...linkProps}
       />
     </LayoutShell>
   );

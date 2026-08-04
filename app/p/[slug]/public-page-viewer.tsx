@@ -51,9 +51,23 @@ export default function PublicPageViewer({ page }: { page: any }) {
   const titleFontWeight = content.titleFontWeight || 700;
   const descriptionFontWeight = content.descriptionFontWeight || 400;
   const buttonFontWeight = content.buttonFontWeight || 600;
+  const buttonFontSize = content.buttonFontSize || 16;
+  const buttonVariant = (["filled", "outlined", "soft", "glass"].includes(content.buttonVariant)
+    ? content.buttonVariant
+    : "filled") as "filled" | "outlined" | "soft" | "glass";
+  const buttonShadow = (["none", "soft", "strong"].includes(content.buttonShadow)
+    ? content.buttonShadow
+    : "soft") as "none" | "soft" | "strong";
+  const buttonTheme = (["solid", "soft", "outline", "pill", "glass", "flat"].includes(content.buttonTheme)
+    ? content.buttonTheme
+    : "solid") as "solid" | "soft" | "outline" | "pill" | "glass" | "flat";
   const buttonBorderRadius = content.buttonBorderRadius || 12;
   const buttonPadding = content.buttonPadding || 16;
   const textAlignment = content.textAlignment || "center";
+  const buttonTextAlignment = (["left", "center", "right"].includes(content.buttonTextAlignment)
+    ? content.buttonTextAlignment
+    : textAlignment) as "left" | "center" | "right";
+  const verticalAlign = content.verticalAlign === "center" ? "center" : "top";
   const spacing = content.spacing || 24;
   const linkGap = content.linkGap || 12;
   const maxContentWidth = content.maxContentWidth || 400;
@@ -91,7 +105,9 @@ export default function PublicPageViewer({ page }: { page: any }) {
         />
       )}
       <div
-        className="min-h-screen flex flex-col items-stretch justify-start relative overflow-hidden"
+        className={`min-h-screen flex flex-col items-stretch relative overflow-hidden ${
+          verticalAlign === "center" ? "justify-center" : "justify-start"
+        }`}
         style={{
           backgroundColor:
             backgroundType === "gradient"
@@ -149,12 +165,18 @@ export default function PublicPageViewer({ page }: { page: any }) {
           titleFontWeight={titleFontWeight}
           descriptionFontWeight={descriptionFontWeight}
           buttonFontWeight={buttonFontWeight}
+          buttonFontSize={buttonFontSize}
+          buttonVariant={buttonVariant}
+          buttonShadow={buttonShadow}
+          buttonTheme={buttonTheme}
+          buttonTextAlignment={buttonTextAlignment}
           buttonBorderRadius={buttonBorderRadius}
           buttonPadding={buttonPadding}
           spacing={spacing}
           linkGap={linkGap}
           maxContentWidth={maxContentWidth}
           textAlignment={textAlignment as "left" | "center" | "right"}
+          verticalAlign={verticalAlign}
           showProfileImage={showProfileImage}
           profileImageUrl={profileImageUrl}
           showBanner={
@@ -190,6 +212,10 @@ export default function PublicPageViewer({ page }: { page: any }) {
               fontFamily={fontFamily}
               buttonBorderRadius={buttonBorderRadius}
               buttonPadding={buttonPadding}
+              buttonFontSize={buttonFontSize}
+              buttonFontWeight={buttonFontWeight}
+              buttonVariant={buttonVariant}
+              buttonShadow={buttonShadow}
               linkGap={linkGap}
               interactive
             />

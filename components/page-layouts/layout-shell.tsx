@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils/cn";
+import { fluidSpace } from "@/lib/utils/fluid-type";
 import { Banner } from "./banner";
 import type { PageLayoutProps } from "./types";
 
@@ -13,6 +14,7 @@ type ShellBannerProps = Pick<
   | "bannerType"
   | "maxContentWidth"
   | "spacing"
+  | "verticalAlign"
 >;
 
 interface LayoutShellProps extends ShellBannerProps {
@@ -36,6 +38,7 @@ export function LayoutShell({
   bannerType,
   maxContentWidth,
   spacing,
+  verticalAlign = "top",
   children,
   contentClassName,
   contentStyle,
@@ -57,21 +60,31 @@ export function LayoutShell({
     bannerType,
   };
 
+  const isVerticallyCentered = verticalAlign === "center";
+  const padTop = hasTopImage ? 0 : undefined;
+
   return (
-    <div className="relative z-10 w-full flex flex-col items-center self-stretch">
+    <div
+      className={cn(
+        "relative z-10 w-full flex flex-col items-center self-stretch",
+        isVerticallyCentered && "flex-1 min-h-0"
+      )}
+    >
       {hasTopImage && <Banner {...bannerProps} variant="hero" />}
 
       <div
         className={cn(
-          "relative z-10 w-full flex flex-col px-5 sm:px-6",
+          "relative z-10 w-full flex flex-col px-4 sm:px-6",
+          !hasTopImage && !isVerticallyCentered && "pt-6 sm:pt-8",
+          !hasBottomImage && !isVerticallyCentered && "pb-8 sm:pb-12",
+          hasBottomImage && "pb-5 sm:pb-7",
+          isVerticallyCentered && "flex-1 justify-center py-6 sm:py-8",
           contentClassName
         )}
         style={{
-          maxWidth: `${maxContentWidth}px`,
-          gap: `${spacing}px`,
-          // Keep body text on the page background — never over the banner
-          paddingTop: hasTopImage ? 0 : 32,
-          paddingBottom: hasBottomImage ? 28 : 48,
+          maxWidth: `min(100%, ${maxContentWidth}px)`,
+          gap: fluidSpace(spacing),
+          ...(padTop !== undefined ? { paddingTop: padTop } : {}),
           ...contentStyle,
         }}
       >
@@ -88,7 +101,7 @@ export function LayoutShell({
 /** Negative margin so only the avatar sits on the banner edge */
 export function avatarOverlapClass(hasTopImageBanner: boolean, size: "sm" | "md" | "lg" = "md") {
   if (!hasTopImageBanner) return "";
-  if (size === "sm") return "-mt-8 relative z-20";
-  if (size === "lg") return "-mt-14 relative z-20";
-  return "-mt-11 relative z-20";
+  if (size === "sm") return "-mt-6 sm:-mt-8 relative z-20";
+  if (size === "lg") return "-mt-10 sm:-mt-14 relative z-20";
+  return "-mt-8 sm:-mt-11 relative z-20";
 }

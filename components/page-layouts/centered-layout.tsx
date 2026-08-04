@@ -3,6 +3,7 @@ import { LayoutShell, avatarOverlapClass } from "./layout-shell";
 import { PageLinks } from "./page-links";
 import { SocialIcons } from "./social-icons";
 import { cn } from "@/lib/utils/cn";
+import { fluidAvatar, fluidBody, fluidTitle } from "@/lib/utils/fluid-type";
 
 interface CenteredLayoutProps extends PageLayoutProps {
   Globe: React.ComponentType<any>;
@@ -42,6 +43,8 @@ export function CenteredLayout(props: CenteredLayoutProps) {
   const hasTopImage =
     showBanner && bannerPosition === "top" && bannerType === "image" && !!bannerImageUrl;
 
+  const avatar = fluidAvatar(88);
+
   return (
     <LayoutShell
       showBanner={showBanner}
@@ -53,6 +56,7 @@ export function CenteredLayout(props: CenteredLayoutProps) {
       bannerType={bannerType}
       maxContentWidth={maxContentWidth}
       spacing={spacing}
+      verticalAlign={props.verticalAlign}
       contentClassName="items-center"
     >
       {showProfileImage && profileImageUrl && (
@@ -61,7 +65,7 @@ export function CenteredLayout(props: CenteredLayoutProps) {
             src={profileImageUrl}
             alt="Profile"
             className="object-cover rounded-full border-[3px] bg-white shadow-md"
-            style={{ width: 88, height: 88, borderColor: buttonColor }}
+            style={{ width: avatar, height: avatar, borderColor: buttonColor }}
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
@@ -70,8 +74,9 @@ export function CenteredLayout(props: CenteredLayoutProps) {
       )}
       {title && (
         <h1
+          className="break-words hyphens-auto"
           style={{
-            fontSize: `${titleFontSize}px`,
+            fontSize: fluidTitle(titleFontSize),
             textAlign: textAlignment,
             fontFamily: `"${fontFamily}", sans-serif`,
             color: textColor,
@@ -87,8 +92,9 @@ export function CenteredLayout(props: CenteredLayoutProps) {
       )}
       {description && (
         <p
+          className="break-words"
           style={{
-            fontSize: `${descriptionFontSize}px`,
+            fontSize: fluidBody(descriptionFontSize),
             textAlign: textAlignment,
             fontFamily: `"${fontFamily}", sans-serif`,
             color: textColor,
@@ -96,29 +102,27 @@ export function CenteredLayout(props: CenteredLayoutProps) {
             lineHeight: 1.55,
             fontWeight: descriptionFontWeight,
             width: "100%",
-            marginTop: -Math.max(6, spacing * 0.35),
+            marginTop: -Math.max(4, spacing * 0.25),
           }}
         >
           {description}
         </p>
       )}
       <PageLinks
+        {...linkProps}
         pageLinks={pageLinks}
-        textAlignment={textAlignment}
         ExternalLink={ExternalLink}
         buttonColor={buttonColor}
-        buttonTextColor={linkProps.buttonTextColor}
+        fontFamily={fontFamily}
         onLinkClick={props.onLinkClick}
-        {...linkProps}
       />
       <SocialIcons
+        {...linkProps}
         socialLinks={socialLinks}
         socialIcons={socialIcons}
         textColor={textColor}
         buttonColor={buttonColor}
-        buttonTextColor={linkProps.buttonTextColor}
         Globe={Globe}
-        {...linkProps}
       />
     </LayoutShell>
   );
