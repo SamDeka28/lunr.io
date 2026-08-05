@@ -8,7 +8,7 @@ import {
   uploadImage,
 } from "@/lib/supabase/storage";
 
-const ALLOWED_PREFIXES = new Set(["pages", "avatars", "qr"]);
+const ALLOWED_PREFIXES = new Set(["pages", "avatars", "qr", "links"]);
 
 // POST /api/upload — auth-checked image upload to the lunr bucket
 export async function POST(request: NextRequest) {
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     if (!ALLOWED_PREFIXES.has(pathPrefix)) {
       return NextResponse.json(
-        { error: "Invalid pathPrefix. Use pages, avatars, or qr." },
+        { error: "Invalid pathPrefix. Use pages, avatars, qr, or links." },
         { status: 400 }
       );
     }

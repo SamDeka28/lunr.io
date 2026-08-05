@@ -4,6 +4,7 @@ import { PageLinks } from "./page-links";
 import { SocialIcons } from "./social-icons";
 import { getLinkButtonStyle } from "@/lib/utils/link-button-style";
 import { fluidAvatar, fluidBody, fluidTitle } from "@/lib/utils/fluid-type";
+import { hasAnySocialLinks } from "@/lib/utils/social-links";
 
 interface MagazineLayoutProps extends PageLayoutProps {
   Globe: React.ComponentType<any>;
@@ -197,7 +198,7 @@ export function MagazineLayout(props: MagazineLayoutProps) {
         </div>
       )}
 
-      {Object.keys(socialLinks).some((key) => socialLinks[key]) && (
+      {hasAnySocialLinks(socialLinks) && (
         <div className="w-full border-t pt-4 sm:pt-5" style={{ borderColor: `${textColor}18` }}>
           <SocialIcons
             {...linkProps}

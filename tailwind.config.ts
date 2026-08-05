@@ -29,25 +29,24 @@ const config: Config = {
           DEFAULT: "#f72585",
           dark: "#b5179e",
         },
-        // Airbnb-inspired neutrals
+        // Soft product canvas
         neutral: {
-          bg: "#F7F7F7", // soft page background
-          surface: "#F7F7F7", // muted fill / zebra
-          border: "#EBEBEB", // soft border
-          text: "#222222", // near-black body
-          muted: "#717171", // secondary copy
-          zebra: "#F7F7F7",
+          bg: "#F3F5FA",
+          surface: "#EEF1F8",
+          border: "#E6EAF2",
+          text: "#111827",
+          muted: "#6B7280",
+          zebra: "#F3F5FA",
         },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
       },
       fontSize: {
-        // Friendlier Inter type scale
-        "display": ["2.5rem", { lineHeight: "1.15", letterSpacing: "-0.02em", fontWeight: "600" }],
-        "title": ["1.75rem", { lineHeight: "1.25", letterSpacing: "-0.015em", fontWeight: "600" }],
-        "body": ["1rem", { lineHeight: "1.5", fontWeight: "400" }],
-        "caption": ["0.8125rem", { lineHeight: "1.4", fontWeight: "400" }],
+        display: ["2.5rem", { lineHeight: "1.15", letterSpacing: "-0.03em", fontWeight: "650" }],
+        title: ["1.75rem", { lineHeight: "1.25", letterSpacing: "-0.02em", fontWeight: "600" }],
+        body: ["1rem", { lineHeight: "1.5", fontWeight: "400" }],
+        caption: ["0.8125rem", { lineHeight: "1.4", fontWeight: "400" }],
       },
       spacing: {
         "8pt": "8px",
@@ -56,9 +55,9 @@ const config: Config = {
         "32pt": "32px",
       },
       borderRadius: {
-        "input": "12px",
-        "card": "16px",
-        "special": "16px",
+        input: "14px",
+        card: "20px",
+        special: "24px",
       },
       animation: {
         "slide-reveal": "slideReveal 200ms ease-out",
@@ -84,12 +83,13 @@ const config: Config = {
           "100%": { transform: "scale(1)", opacity: "1" },
         },
       },
-      // Soft elevation — prefer shadow-soft for resting cards, shadow-hover for lift
+      // Fluid elevation — soft depth without harsh multi-layer stacks
       boxShadow: {
-        soft: "0 2px 8px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06)",
-        hover: "0 8px 16px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.06)",
-        button: "0 2px 4px rgba(67, 97, 238, 0.2)",
-        premium: "0 4px 20px rgba(67, 97, 238, 0.15)",
+        soft: "0 1px 2px rgba(17, 24, 39, 0.04), 0 8px 24px rgba(67, 97, 238, 0.06)",
+        hover: "0 4px 12px rgba(17, 24, 39, 0.06), 0 16px 40px rgba(67, 97, 238, 0.10)",
+        button: "0 4px 14px rgba(67, 97, 238, 0.28)",
+        premium: "0 12px 40px rgba(67, 97, 238, 0.12)",
+        float: "0 20px 50px rgba(17, 24, 39, 0.08)",
       },
     },
   },

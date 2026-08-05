@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils/cn";
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Soft lift on hover (shadow-hover) */
+  /** Soft lift on hover */
   hoverLift?: boolean;
   padding?: "none" | "sm" | "md" | "lg";
 }
@@ -10,8 +10,8 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 const paddingClasses = {
   none: "",
   sm: "p-4",
-  md: "p-6",
-  lg: "p-8",
+  md: "p-5 sm:p-6",
+  lg: "p-6 sm:p-8",
 };
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
@@ -23,8 +23,9 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          "rounded-2xl bg-white border border-neutral-border shadow-soft",
-          hoverLift && "transition-shadow duration-200 hover:shadow-hover",
+          "rounded-card bg-white border border-neutral-border/80 shadow-soft",
+          hoverLift &&
+            "transition-all duration-300 hover:shadow-hover hover:-translate-y-0.5",
           paddingClasses[padding],
           className
         )}
@@ -50,7 +51,10 @@ export function CardTitle({
 }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={cn("text-lg font-semibold text-neutral-text tracking-tight", className)}
+      className={cn(
+        "text-base sm:text-lg font-semibold text-neutral-text tracking-tight",
+        className
+      )}
       {...props}
     />
   );
@@ -61,6 +65,6 @@ export function CardDescription({
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn("text-sm text-neutral-muted mt-1", className)} {...props} />
+    <p className={cn("text-sm text-neutral-muted mt-1 leading-relaxed", className)} {...props} />
   );
 }

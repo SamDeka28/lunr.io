@@ -1,14 +1,16 @@
 "use client";
 
-import { ExternalLink, Mail, Twitter, Instagram, Linkedin, Github, Youtube, Facebook, Globe } from "lucide-react";
+import { ExternalLink, Mail, Instagram, Linkedin, Github, Youtube, Facebook, Globe } from "lucide-react";
 import { useState } from "react";
 import { PageLayoutRenderer } from "@/components/page-layouts";
 import { PageContentBlocks } from "@/components/page-layouts/page-content-blocks";
 import type { PageBlock } from "@/lib/utils/page-blocks";
+import { hasAnySocialLinks } from "@/lib/utils/social-links";
+import { XSocialIcon } from "@/components/page-layouts/x-social-icon";
 
 const socialIcons: Record<string, any> = {
   email: Mail,
-  twitter: Twitter,
+  twitter: XSocialIcon,
   instagram: Instagram,
   linkedin: Linkedin,
   github: Github,
@@ -224,7 +226,7 @@ export default function PublicPageViewer({ page }: { page: any }) {
 
         {links.length === 0 &&
           blocks.length === 0 &&
-          Object.keys(socialLinks).filter((key) => socialLinks[key]).length === 0 && (
+          !hasAnySocialLinks(socialLinks) && (
             <div className="text-center py-16 px-6 opacity-60">
               <p
                 style={{

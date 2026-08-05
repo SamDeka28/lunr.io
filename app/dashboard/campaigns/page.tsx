@@ -5,6 +5,7 @@ import { CampaignsList } from "./campaigns-list";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { DashboardContainer } from "@/components/ui/dashboard-container";
 import { Button } from "@/components/ui/button";
 
 export default async function CampaignsPage() {
@@ -54,7 +55,7 @@ export default async function CampaignsPage() {
   }));
 
   return (
-    <div className="max-w-7xl mx-auto w-full">
+    <DashboardContainer>
       <PageHeader
         title="Campaigns"
         description="Organize, track, and compare your marketing campaigns"
@@ -69,6 +70,6 @@ export default async function CampaignsPage() {
       />
 
       <CampaignsList campaigns={campaignsWithStats || []} />
-    </div>
+    </DashboardContainer>
   );
 }

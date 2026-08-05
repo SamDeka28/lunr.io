@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCachedUser } from "@/lib/supabase/auth";
-import { TrendingUp, Link2, QrCode, ArrowRight, Zap } from "lucide-react";
+import { TrendingUp, Link2, QrCode, ArrowRight, FileText } from "lucide-react";
 import Link from "next/link";
 import { QuickCreateCard } from "./quick-create-card";
 import { PageHeader } from "@/components/ui/page-header";
+import { DashboardContainer } from "@/components/ui/dashboard-container";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -42,11 +42,38 @@ export default async function DashboardPage() {
   const qrCount = qrCodes?.length || 0;
   const remainingLinks = limits.remaining_links === -1 ? Infinity : limits.remaining_links;
 
+  const shortcuts = [
+    {
+      href: "/dashboard/links",
+      title: "Links",
+      description: "Manage short links and destinations",
+      icon: Link2,
+    },
+    {
+      href: "/dashboard/qr",
+      title: "QR codes",
+      description: "Generate and download QR codes",
+      icon: QrCode,
+    },
+    {
+      href: "/dashboard/pages",
+      title: "Pages",
+      description: "Build branded link-in-bio pages",
+      icon: FileText,
+    },
+    {
+      href: "/dashboard/analytics",
+      title: "Analytics",
+      description: "Clicks, referrers, and performance",
+      icon: TrendingUp,
+    },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto w-full">
+    <DashboardContainer>
       <PageHeader
-        title="Welcome back"
-        description="Here's what's happening with your links today"
+        title="Home"
+        description="Create links, track clicks, and manage your campaigns."
       />
 
       <div className="mb-8">
@@ -56,106 +83,77 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <StatCard
-          label="Total Links"
-          value={linkCount}
-          icon={<Link2 className="h-5 w-5" />}
+          label="Total links"
+          value={linkCount.toLocaleString()}
+          icon={<Link2 className="h-4 w-4" />}
           accent="primary"
           hint={
-            <Link
-              href="/dashboard/links"
-              className="text-primary font-semibold hover:underline"
-            >
-              View all →
+            <Link href="/dashboard/links" className="text-primary font-medium hover:underline">
+              View all
             </Link>
           }
         />
         <StatCard
-          label="Total Clicks"
-          value={totalClicks}
-          icon={<TrendingUp className="h-5 w-5" />}
+          label="Total clicks"
+          value={totalClicks.toLocaleString()}
+          icon={<TrendingUp className="h-4 w-4" />}
           hint={
             <Link
               href="/dashboard/analytics"
-              className="font-semibold text-neutral-muted hover:text-neutral-text"
+              className="font-medium text-neutral-muted hover:text-neutral-text transition-colors"
             >
-              View analytics →
+              Open analytics
             </Link>
           }
         />
         <StatCard
-          label="QR Codes"
-          value={qrCount}
-          icon={<QrCode className="h-5 w-5" />}
+          label="QR codes"
+          value={qrCount.toLocaleString()}
+          icon={<QrCode className="h-4 w-4" />}
           hint={
             <Link
               href="/dashboard/qr"
-              className="font-semibold text-neutral-muted hover:text-neutral-text"
+              className="font-medium text-neutral-muted hover:text-neutral-text transition-colors"
             >
-              Manage QR →
+              Manage
             </Link>
           }
         />
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
-        <Link href="/dashboard/links" className="group block">
-          <Card hoverLift padding="lg" className="h-full">
-            <div className="flex items-center justify-between mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center shadow-button">
-                <Link2 className="h-7 w-7" />
-              </div>
-              <ArrowRight className="w-5 h-5 text-neutral-muted group-hover:text-primary group-hover:translate-x-1 transition-all" />
-            </div>
-            <h3 className="text-xl font-semibold text-neutral-text mb-2">Manage Links</h3>
-            <p className="text-sm text-neutral-muted leading-relaxed">
-              View, edit, and manage all your shortened links. Track performance and optimize your campaigns.
-            </p>
-          </Card>
-        </Link>
-
-        <Link href="/dashboard/qr" className="group block">
-          <Card hoverLift padding="lg" className="h-full">
-            <div className="flex items-center justify-between mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-neutral-text text-white flex items-center justify-center">
-                <QrCode className="h-7 w-7" />
-              </div>
-              <ArrowRight className="w-5 h-5 text-neutral-muted group-hover:text-neutral-text group-hover:translate-x-1 transition-all" />
-            </div>
-            <h3 className="text-xl font-semibold text-neutral-text mb-2">QR Codes</h3>
-            <p className="text-sm text-neutral-muted leading-relaxed">
-              Generate and manage QR codes for your links. Perfect for offline marketing and print materials.
-            </p>
-          </Card>
-        </Link>
+      <div>
+        <h2 className="text-sm font-semibold text-neutral-muted uppercase tracking-wide mb-3 px-0.5">
+          Shortcuts
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {shortcuts.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.href} href={item.href} className="group block">
+                <Card
+                  hoverLift
+                  className="h-full flex items-center gap-4 !p-4 sm:!p-5"
+                >
+                  <div className="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition-colors duration-200">
+                    <Icon className="h-[18px] w-[18px]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-neutral-text tracking-tight">
+                      {item.title}
+                    </div>
+                    <div className="text-xs text-neutral-muted mt-0.5 leading-relaxed truncate">
+                      {item.description}
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-neutral-border group-hover:text-primary transition-colors shrink-0" />
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
       </div>
-
-      <Card>
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-neutral-surface flex items-center justify-center text-neutral-muted">
-            <Zap className="h-5 w-5" />
-          </div>
-          <h3 className="text-lg font-semibold text-neutral-text">Quick Start</h3>
-        </div>
-        <div className="grid md:grid-cols-3 gap-3">
-          <Link href="/dashboard/links/new">
-            <Button variant="outline" className="w-full justify-start" pill={false}>
-              Create Link →
-            </Button>
-          </Link>
-          <Link href="/dashboard/qr/new">
-            <Button variant="outline" className="w-full justify-start" pill={false}>
-              Generate QR →
-            </Button>
-          </Link>
-          <Link href="/dashboard/analytics">
-            <Button variant="outline" className="w-full justify-start" pill={false}>
-              View Analytics →
-            </Button>
-          </Link>
-        </div>
-      </Card>
-    </div>
+    </DashboardContainer>
   );
 }

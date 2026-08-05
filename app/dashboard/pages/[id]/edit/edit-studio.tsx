@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
   FileText, Loader2, ChevronRight, Globe, Lock, Link2, Plus, X, 
-  Mail, Twitter, Instagram, Linkedin, Github, Youtube, Facebook, 
+  Mail, Instagram, Linkedin, Github, Youtube, Facebook, 
   Palette, Type, Layout, Settings, Eye, Save, Monitor, Smartphone,
   GripVertical, ExternalLink, ChevronDown
 } from "lucide-react";
@@ -21,7 +21,14 @@ import { PageLayoutRenderer } from "@/components/page-layouts";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { ContentBlocksEditor } from "@/components/page-layouts/content-blocks-editor";
 import { PageContentBlocks } from "@/components/page-layouts/page-content-blocks";
+import { SocialLinksEditor } from "@/components/page-layouts/social-links-editor";
+import { XSocialIcon } from "@/components/page-layouts/x-social-icon";
 import type { PageBlock } from "@/lib/utils/page-blocks";
+import {
+  hasAnySocialLinks,
+  sanitizeSocialLinks,
+  type SocialLinksMap,
+} from "@/lib/utils/social-links";
 import {
   BUTTON_THEME_PRESETS,
   type ButtonThemeId,
@@ -60,10 +67,20 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
     Array.isArray(pageContent.blocks) ? pageContent.blocks : []
   );
 
-  // Social links state - initialized from page
-  const [socialLinks, setSocialLinks] = useState<Record<string, string>>(
-    page.social_links || {}
-  );
+  const [socialLinks, setSocialLinks] = useState<SocialLinksMap>(() => {
+    const raw = (page.social_links || {}) as SocialLinksMap;
+    const next: SocialLinksMap = {};
+    for (const [key, value] of Object.entries(raw)) {
+      if (key === "others" && Array.isArray(value)) {
+        next.others = value.filter(
+          (item: any) => item && typeof item.url === "string" && item.url.trim()
+        );
+      } else if (typeof value === "string" && value.trim()) {
+        next[key] = value;
+      }
+    }
+    return next;
+  });
 
   // Design state - initialized from page
   const [backgroundColor, setBackgroundColor] = useState(page.background_color || "#FFFFFF");
@@ -285,14 +302,6 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
     setPageLinks(pageLinks.filter((_, i) => i !== index));
   };
 
-  // Update social link
-  const handleSocialLinkChange = (platform: string, url: string) => {
-    setSocialLinks({
-      ...socialLinks,
-      [platform]: url,
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -355,7 +364,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
             title: link.title,
             url: link.url,
           })),
-          social_links: socialLinks,
+          social_links: sanitizeSocialLinks(socialLinks),
           background_color: backgroundColor,
           text_color: textColor,
           button_color: buttonColor,
@@ -382,51 +391,66 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
   const pageUrl = slug ? `${typeof window !== "undefined" ? window.location.origin : ""}/p/${slug}` : "";
 
   return (
-    <div className="flex h-[calc(100vh-73px)] bg-neutral-bg">
+    <div
+      className="flex h-[calc(100dvh-3.75rem)] relative"
+      style={{
+        background:
+          "radial-gradient(120% 80% at 100% 0%, rgba(67,97,238,0.06), transparent 45%), #F3F5FA",
+      }}
+    >
       {/* Left Panel - Controls */}
-      <div className="w-96 bg-white border-r border-neutral-border flex flex-col overflow-hidden">
+      <div className="w-[22rem] xl:w-96 bg-white/85 backdrop-blur-xl border-r border-neutral-border/70 shadow-soft flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-neutral-border">
-          <h1 className="text-2xl font-bold text-neutral-text mb-1">Page Studio</h1>
-          <p className="text-sm text-neutral-muted">Edit your custom landing page</p>
+        <div className="px-5 pt-5 pb-4 border-b border-neutral-border/70">
+          <h1 className="text-xl font-semibold text-neutral-text tracking-tight">
+            Page Studio
+          </h1>
+          <p className="text-sm text-neutral-muted mt-0.5">
+            Edit your custom landing page
+          </p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-neutral-border bg-neutral-bg/50">
-          {[
-            { id: "content", label: "Content", icon: FileText },
-            { id: "design", label: "Design", icon: Palette },
-            { id: "typography", label: "Typography", icon: Type },
-            { id: "layout", label: "Layout", icon: Layout },
-            { id: "settings", label: "Settings", icon: Settings },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={cn(
-                  "flex-1 px-3 py-3 text-xs font-semibold transition-colors border-b-2",
-                  activeTab === tab.id
-                    ? "text-electric-sapphire border-electric-sapphire bg-white"
-                    : "text-neutral-muted border-transparent hover:text-neutral-text"
-                )}
-              >
-                <Icon className="h-4 w-4 mx-auto mb-1" />
-                <div className="hidden sm:block">{tab.label}</div>
-              </button>
-            );
-          })}
+        {/* Tabs — pill strip */}
+        <div className="px-3 py-3 border-b border-neutral-border/70 bg-neutral-surface/40">
+          <div className="flex gap-1 p-1 rounded-full bg-white/80 border border-neutral-border/70 shadow-soft overflow-x-auto">
+            {[
+              { id: "content", label: "Content", icon: FileText },
+              { id: "design", label: "Design", icon: Palette },
+              { id: "typography", label: "Type", icon: Type },
+              { id: "layout", label: "Layout", icon: Layout },
+              { id: "settings", label: "Settings", icon: Settings },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={cn(
+                    "flex-1 min-w-0 px-2 py-2 rounded-full text-[11px] font-semibold transition-all",
+                    active
+                      ? "bg-primary text-white shadow-button"
+                      : "text-neutral-muted hover:text-neutral-text hover:bg-neutral-surface"
+                  )}
+                  title={tab.label}
+                >
+                  <Icon className="h-3.5 w-3.5 mx-auto mb-0.5" />
+                  <div className="truncate">{tab.label}</div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Tab Content - Same as PageStudio but with update button */}
+        {/* Tab Content */}
         <div className="flex-1 overflow-y-auto">
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form id="page-edit-studio-form" onSubmit={handleSubmit} className="p-5 space-y-6 pb-6">
             {/* Content Tab - Same content as PageStudio */}
             {activeTab === "content" && (
               <div className="space-y-6">
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-neutral-muted mb-2">
                     Page Slug
                   </label>
                   <div className="flex items-center gap-2">
@@ -442,13 +466,13 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                       }}
                       placeholder="my-page"
                       required
-                      className="flex-1 h-10 px-3 rounded-lg border-2 border-neutral-border bg-white text-neutral-text text-sm font-medium focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
+                      className="flex-1 h-11 px-3.5 rounded-xl border border-neutral-border/80 bg-white text-neutral-text text-sm font-medium shadow-soft focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-neutral-muted mb-2">
                     Page Title
                   </label>
                   <input
@@ -457,12 +481,12 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="My Awesome Page"
                     required
-                    className="w-full h-10 px-3 rounded-lg border-2 border-neutral-border bg-white text-neutral-text text-sm font-medium focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
+                    className="w-full h-11 px-3.5 rounded-xl border border-neutral-border/80 bg-white text-neutral-text text-sm font-medium shadow-soft focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-neutral-muted mb-2">
                     Description
                   </label>
                   <textarea
@@ -470,7 +494,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="A brief description..."
                     rows={3}
-                    className="w-full px-3 py-2 rounded-lg border-2 border-neutral-border bg-white text-neutral-text text-sm resize-none focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
+                    className="w-full px-3.5 py-3 rounded-xl border border-neutral-border/80 bg-white text-neutral-text text-sm resize-none shadow-soft focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
 
@@ -484,7 +508,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                       <button
                         type="button"
                         onClick={() => setShowAddLink(true)}
-                        className="text-xs text-electric-sapphire hover:text-bright-indigo font-semibold flex items-center gap-1"
+                        className="text-xs text-primary hover:text-bright-indigo font-semibold flex items-center gap-1"
                       >
                         <Plus className="h-3 w-3" />
                         Add
@@ -493,26 +517,26 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                   </div>
 
                   {showAddLink && (
-                    <div className="p-3 rounded-lg border-2 border-neutral-border bg-neutral-bg space-y-2 mb-3">
+                    <div className="p-3.5 rounded-2xl border border-neutral-border/80 bg-neutral-surface/70 space-y-2 mb-3 shadow-soft">
                       <input
                         type="text"
                         value={newLinkTitle}
                         onChange={(e) => setNewLinkTitle(e.target.value)}
                         placeholder="Link title"
-                        className="w-full h-9 px-3 rounded-lg border border-neutral-border bg-white text-sm text-neutral-text font-medium"
+                        className="w-full h-10 px-3.5 rounded-xl border border-neutral-border/80 bg-white text-sm text-neutral-text font-medium shadow-soft"
                       />
                       <input
                         type="url"
                         value={newLinkUrl}
                         onChange={(e) => setNewLinkUrl(e.target.value)}
                         placeholder="https://example.com"
-                        className="w-full h-9 px-3 rounded-lg border border-neutral-border bg-white text-sm text-neutral-text font-medium"
+                        className="w-full h-10 px-3.5 rounded-xl border border-neutral-border/80 bg-white text-sm text-neutral-text font-medium shadow-soft"
                       />
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={handleAddCustomLink}
-                          className="flex-1 h-9 px-3 rounded-lg bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-xs font-semibold"
+                          className="flex-1 h-9 px-3 rounded-lg bg-primary text-white text-xs font-semibold shadow-button hover:bg-bright-indigo"
                         >
                           Add
                         </button>
@@ -523,7 +547,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                             setNewLinkTitle("");
                             setNewLinkUrl("");
                           }}
-                          className="h-9 px-3 rounded-lg border border-neutral-border text-neutral-text text-xs font-semibold"
+                          className="h-9 px-3.5 rounded-full border border-neutral-border/80 bg-white text-neutral-text text-xs font-semibold shadow-soft hover:border-primary/30"
                         >
                           Cancel
                         </button>
@@ -540,14 +564,14 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                             key={link.id}
                             type="button"
                             onClick={() => handleAddExistingLink(link)}
-                            className="w-full flex items-center justify-between p-2 rounded-lg border border-neutral-border hover:border-electric-sapphire hover:bg-electric-sapphire/5 transition-all text-left text-xs"
+                            className="w-full flex items-center justify-between p-2.5 rounded-xl border border-neutral-border/80 bg-white hover:border-primary/40 hover:bg-primary/5 transition-all text-left text-xs shadow-soft"
                           >
                             <div className="flex-1 min-w-0">
                               <div className="font-semibold text-neutral-text truncate">
                                 {link.title || link.short_code}
                               </div>
                             </div>
-                            <Plus className="h-3 w-3 text-electric-sapphire flex-shrink-0 ml-2" />
+                            <Plus className="h-3 w-3 text-primary flex-shrink-0 ml-2" />
                           </button>
                         ))}
                     </div>
@@ -562,8 +586,8 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                         onDragOver={(e) => handleDragOver(e, index)}
                         onDragEnd={handleDragEnd}
                         className={cn(
-                          "flex items-center gap-2 p-2 rounded-lg border-2 bg-white cursor-move",
-                          draggedIndex === index ? "border-electric-sapphire opacity-50" : "border-neutral-border"
+                          "flex items-center gap-2 p-2.5 rounded-2xl border bg-white cursor-move shadow-soft",
+                          draggedIndex === index ? "border-primary opacity-50" : "border-neutral-border"
                         )}
                       >
                         <GripVertical className="h-4 w-4 text-neutral-muted flex-shrink-0" />
@@ -589,26 +613,10 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
 
                 <ContentBlocksEditor blocks={contentBlocks} onChange={setContentBlocks} />
 
-                {/* Social Links */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="block text-xs font-semibold text-neutral-text uppercase tracking-wide">
-                      Social Links
-                    </label>
-                  </div>
-                  <div className="space-y-2">
-                    {["email", "twitter", "instagram", "linkedin", "github", "youtube", "facebook", "website"].map((platform) => (
-                      <input
-                        key={platform}
-                        type={platform === "email" ? "email" : "url"}
-                        value={socialLinks[platform] || ""}
-                        onChange={(e) => handleSocialLinkChange(platform, e.target.value)}
-                        placeholder={platform === "email" ? "your@email.com" : `${platform}.com/yourprofile`}
-                        className="w-full h-9 px-3 rounded-lg border-2 border-neutral-border bg-white text-neutral-text text-sm font-medium focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
-                      />
-                    ))}
-                  </div>
-                </div>
+                <SocialLinksEditor
+                  value={socialLinks}
+                  onChange={setSocialLinks}
+                />
               </div>
             )}
 
@@ -616,7 +624,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
             {activeTab === "design" && (
               <div className="space-y-4">
                 {/* Themes Section */}
-                <div className="bg-white rounded-xl overflow-hidden shadow-soft border border-neutral-border">
+                <div className="bg-white rounded-2xl overflow-hidden shadow-soft border border-neutral-border/80">
                   <button
                     type="button"
                     onClick={() => setDesignSections({ ...designSections, themes: !designSections.themes })}
@@ -644,7 +652,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                 </div>
 
                 {/* Background Section */}
-                <div className="bg-white rounded-xl overflow-hidden shadow-soft border border-neutral-border">
+                <div className="bg-white rounded-2xl overflow-hidden shadow-soft border border-neutral-border/80">
                   <button
                     type="button"
                     onClick={() => setDesignSections({ ...designSections, background: !designSections.background })}
@@ -659,7 +667,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                   {designSections.background && (
                     <div className="px-4 pb-4 space-y-4 animate-slide-reveal">
                       <div>
-                        <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                        <label className="block text-xs font-semibold text-neutral-muted mb-2">
                           Background Type
                         </label>
                         <div className="grid grid-cols-3 gap-2">
@@ -667,9 +675,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                             type="button"
                             onClick={() => setBackgroundType("solid")}
                             className={cn(
-                              "h-9 px-3 rounded-lg border-2 text-xs font-semibold transition-all",
+                              "h-9 px-3 rounded-full border text-xs font-semibold transition-all",
                               backgroundType === "solid"
-                                ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                ? "bg-primary text-white border-primary shadow-button"
                                 : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                             )}
                           >
@@ -679,9 +687,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                             type="button"
                             onClick={() => setBackgroundType("gradient")}
                             className={cn(
-                              "h-9 px-3 rounded-lg border-2 text-xs font-semibold transition-all",
+                              "h-9 px-3 rounded-full border text-xs font-semibold transition-all",
                               backgroundType === "gradient"
-                                ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                ? "bg-primary text-white border-primary shadow-button"
                                 : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                             )}
                           >
@@ -691,9 +699,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                             type="button"
                             onClick={() => setBackgroundType("image")}
                             className={cn(
-                              "h-9 px-3 rounded-lg border-2 text-xs font-semibold transition-all",
+                              "h-9 px-3 rounded-full border text-xs font-semibold transition-all",
                               backgroundType === "image"
-                                ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                ? "bg-primary text-white border-primary shadow-button"
                                 : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                             )}
                           >
@@ -784,7 +792,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                                     "h-8 px-2.5 rounded-lg border text-xs font-medium transition-colors",
                                     backgroundOverlayOpacity === preset.opacity &&
                                       backgroundOverlayColor.toLowerCase() === preset.color.toLowerCase()
-                                      ? "border-electric-sapphire bg-electric-sapphire/10 text-electric-sapphire"
+                                      ? "border-primary/30 bg-primary/10 text-primary"
                                       : "border-neutral-border bg-white text-neutral-text hover:bg-neutral-bg"
                                   )}
                                 >
@@ -808,7 +816,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                 </div>
 
                 {/* Colors Section */}
-                <div className="bg-white rounded-xl overflow-hidden shadow-soft border border-neutral-border">
+                <div className="bg-white rounded-2xl overflow-hidden shadow-soft border border-neutral-border/80">
                   <button
                     type="button"
                     onClick={() => setDesignSections({ ...designSections, colors: !designSections.colors })}
@@ -832,7 +840,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                 </div>
 
                 {/* Buttons Section */}
-                <div className="bg-white rounded-xl overflow-hidden shadow-soft border border-neutral-border">
+                <div className="bg-white rounded-2xl overflow-hidden shadow-soft border border-neutral-border/80">
                   <button
                     type="button"
                     onClick={() => setDesignSections({ ...designSections, buttons: !designSections.buttons })}
@@ -847,7 +855,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                   {designSections.buttons && (
                     <div className="px-4 pb-4 space-y-4 animate-slide-reveal">
                       <div>
-                        <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                        <label className="block text-xs font-semibold text-neutral-muted mb-2">
                           Button Theme
                         </label>
                         <div className="grid grid-cols-2 gap-2">
@@ -857,9 +865,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                               type="button"
                               onClick={() => handleButtonThemeSelect(preset.id)}
                               className={cn(
-                                "h-auto py-2 px-2.5 rounded-lg border-2 text-left transition-all",
+                                "h-auto py-2 px-2.5 rounded-2xl border text-left transition-all shadow-soft",
                                 buttonTheme === preset.id
-                                  ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                  ? "bg-primary text-white border-primary shadow-button"
                                   : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                               )}
                             >
@@ -887,7 +895,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                         onChange={setButtonTextColor}
                       />
                       <div>
-                        <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                        <label className="block text-xs font-semibold text-neutral-muted mb-2">
                           Button Text Alignment
                         </label>
                         <div className="grid grid-cols-3 gap-2">
@@ -897,9 +905,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                               type="button"
                               onClick={() => setButtonTextAlignment(align)}
                               className={cn(
-                                "h-9 px-2 rounded-lg border-2 text-xs font-semibold capitalize transition-all",
+                                "h-9 px-2 rounded-full border text-xs font-semibold capitalize transition-all",
                                 buttonTextAlignment === align
-                                  ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                  ? "bg-primary text-white border-primary shadow-button"
                                   : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                               )}
                             >
@@ -909,7 +917,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                        <label className="block text-xs font-semibold text-neutral-muted mb-2">
                           Shadow
                         </label>
                         <div className="grid grid-cols-3 gap-2">
@@ -919,9 +927,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                               type="button"
                               onClick={() => setButtonShadow(shadow)}
                               className={cn(
-                                "h-9 px-2 rounded-lg border-2 text-xs font-semibold capitalize transition-all",
+                                "h-9 px-2 rounded-full border text-xs font-semibold capitalize transition-all",
                                 buttonShadow === shadow
-                                  ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                  ? "bg-primary text-white border-primary shadow-button"
                                   : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                               )}
                             >
@@ -938,7 +946,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                         max={28}
                       />
                       <div>
-                        <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                        <label className="block text-xs font-semibold text-neutral-muted mb-2">
                           Button Font Weight
                         </label>
                         <div className="grid grid-cols-4 gap-2">
@@ -948,9 +956,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                               type="button"
                               onClick={() => setButtonFontWeight(weight)}
                               className={cn(
-                                "h-9 px-2 rounded-lg border-2 text-xs font-semibold transition-all",
+                                "h-9 px-2 rounded-full border text-xs font-semibold transition-all",
                                 buttonFontWeight === weight
-                                  ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                  ? "bg-primary text-white border-primary shadow-button"
                                   : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                               )}
                               style={{ fontWeight: weight }}
@@ -979,7 +987,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                 </div>
 
                 {/* Social Icons Section */}
-                <div className="bg-white rounded-xl overflow-hidden shadow-soft border border-neutral-border">
+                <div className="bg-white rounded-2xl overflow-hidden shadow-soft border border-neutral-border/80">
                   <button
                     type="button"
                     onClick={() => setDesignSections({ ...designSections, socialIcons: !designSections.socialIcons })}
@@ -994,7 +1002,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                   {designSections.socialIcons && (
                     <div className="px-4 pb-4 space-y-4 animate-slide-reveal">
                       <div>
-                        <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                        <label className="block text-xs font-semibold text-neutral-muted mb-2">
                           Icon Style
                         </label>
                         <div className="grid grid-cols-3 gap-2">
@@ -1004,9 +1012,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                               type="button"
                               onClick={() => setSocialIconStyle(style)}
                               className={cn(
-                                "h-9 px-3 rounded-lg border-2 text-xs font-semibold transition-all capitalize",
+                                "h-9 px-3 rounded-full border text-xs font-semibold transition-all capitalize",
                                 socialIconStyle === style
-                                  ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                  ? "bg-primary text-white border-primary shadow-button"
                                   : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                               )}
                             >
@@ -1017,7 +1025,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                        <label className="block text-xs font-semibold text-neutral-muted mb-2">
                           Icon Shape
                         </label>
                         <div className="grid grid-cols-3 gap-2">
@@ -1027,9 +1035,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                               type="button"
                               onClick={() => setSocialIconShape(shape)}
                               className={cn(
-                                "h-9 px-3 rounded-lg border-2 text-xs font-semibold transition-all capitalize",
+                                "h-9 px-3 rounded-full border text-xs font-semibold transition-all capitalize",
                                 socialIconShape === shape
-                                  ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                  ? "bg-primary text-white border-primary shadow-button"
                                   : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                               )}
                             >
@@ -1069,7 +1077,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
             {activeTab === "typography" && (
               <div className="space-y-6">
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-neutral-muted mb-2">
                     Font Family
                   </label>
                   <FontSelector
@@ -1087,7 +1095,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                 />
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-neutral-muted mb-2">
                     Title Font Weight
                   </label>
                   <div className="grid grid-cols-4 gap-2">
@@ -1097,9 +1105,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                         type="button"
                         onClick={() => setTitleFontWeight(weight)}
                         className={cn(
-                          "h-9 px-2 rounded-lg border-2 text-xs font-semibold transition-all",
+                          "h-9 px-2 rounded-full border text-xs font-semibold transition-all",
                           titleFontWeight === weight
-                            ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                            ? "bg-primary text-white border-primary shadow-button"
                             : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                         )}
                         style={{ fontWeight: weight }}
@@ -1119,7 +1127,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                 />
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-neutral-muted mb-2">
                     Description Font Weight
                   </label>
                   <div className="grid grid-cols-4 gap-2">
@@ -1129,9 +1137,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                         type="button"
                         onClick={() => setDescriptionFontWeight(weight)}
                         className={cn(
-                          "h-9 px-2 rounded-lg border-2 text-xs font-semibold transition-all",
+                          "h-9 px-2 rounded-full border text-xs font-semibold transition-all",
                           descriptionFontWeight === weight
-                            ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                            ? "bg-primary text-white border-primary shadow-button"
                             : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                         )}
                         style={{ fontWeight: weight }}
@@ -1152,7 +1160,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                 />
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-neutral-muted mb-2">
                     Text Alignment
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -1162,9 +1170,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                         type="button"
                         onClick={() => setTextAlignment(align)}
                         className={cn(
-                          "h-10 px-3 rounded-lg border-2 text-xs font-semibold transition-all capitalize",
+                          "h-10 px-3 rounded-full border text-xs font-semibold transition-all capitalize",
                           textAlignment === align
-                            ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                            ? "bg-primary text-white border-primary shadow-button"
                             : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                         )}
                       >
@@ -1178,7 +1186,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-neutral-muted mb-2">
                     Vertical Position
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -1191,9 +1199,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                         type="button"
                         onClick={() => setVerticalAlign(opt.id)}
                         className={cn(
-                          "h-10 px-3 rounded-lg border-2 text-xs font-semibold transition-all",
+                          "h-10 px-3 rounded-full border text-xs font-semibold transition-all",
                           verticalAlign === opt.id
-                            ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                            ? "bg-primary text-white border-primary shadow-button"
                             : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                         )}
                       >
@@ -1233,7 +1241,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                   Maximum width of your page content in pixels
                 </p>
 
-                <div className="p-4 rounded-lg bg-gradient-to-r from-electric-sapphire/5 to-bright-indigo/5 border border-electric-sapphire/10">
+                <div className="p-4 rounded-lg bg-primary/[0.04] border border-primary/10 shadow-soft">
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <div className="text-sm font-semibold text-neutral-text">Profile Image</div>
@@ -1244,7 +1252,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                       onClick={() => setShowProfileImage(!showProfileImage)}
                       className={cn(
                         "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                        showProfileImage ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo" : "bg-neutral-border"
+                        showProfileImage ? "bg-primary" : "bg-neutral-border"
                       )}
                     >
                       <span
@@ -1265,7 +1273,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                   )}
                 </div>
 
-                <div className="p-4 rounded-lg bg-gradient-to-r from-electric-sapphire/5 to-bright-indigo/5 border border-electric-sapphire/10">
+                <div className="p-4 rounded-lg bg-primary/[0.04] border border-primary/10 shadow-soft">
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <div className="text-sm font-semibold text-neutral-text">Banner</div>
@@ -1276,7 +1284,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                       onClick={() => setShowBanner(!showBanner)}
                       className={cn(
                         "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                        showBanner ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo" : "bg-neutral-border"
+                        showBanner ? "bg-primary" : "bg-neutral-border"
                       )}
                     >
                       <span
@@ -1290,7 +1298,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                   {showBanner && (
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                        <label className="block text-xs font-semibold text-neutral-muted mb-2">
                           Banner Type
                         </label>
                         <div className="grid grid-cols-2 gap-2">
@@ -1300,9 +1308,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                               type="button"
                               onClick={() => setBannerType(type)}
                               className={cn(
-                                "h-9 px-3 rounded-lg border-2 text-xs font-semibold transition-all capitalize",
+                                "h-9 px-3 rounded-full border text-xs font-semibold transition-all capitalize",
                                 bannerType === type
-                                  ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                  ? "bg-primary text-white border-primary shadow-button"
                                   : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                               )}
                             >
@@ -1319,10 +1327,10 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                             value={bannerText}
                             onChange={(e) => setBannerText(e.target.value)}
                             placeholder="Banner message..."
-                            className="w-full h-9 px-3 rounded-lg border-2 border-neutral-border bg-white text-sm text-neutral-text font-medium focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40"
+                            className="w-full h-10 px-3.5 rounded-xl border border-neutral-border/80 bg-white text-sm shadow-soft text-neutral-text font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
                           <div>
-                            <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                            <label className="block text-xs font-semibold text-neutral-muted mb-2">
                               Banner Style
                             </label>
                             <div className="grid grid-cols-4 gap-2">
@@ -1332,9 +1340,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                                   type="button"
                                   onClick={() => setBannerStyle(style)}
                                   className={cn(
-                                    "h-9 px-2 rounded-lg border-2 text-xs font-semibold transition-all capitalize",
+                                    "h-9 px-2 rounded-full border text-xs font-semibold transition-all capitalize",
                                     bannerStyle === style
-                                      ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                      ? "bg-primary text-white border-primary shadow-button"
                                       : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                                   )}
                                 >
@@ -1358,11 +1366,11 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                         value={bannerUrl}
                         onChange={(e) => setBannerUrl(e.target.value)}
                         placeholder="Optional link URL (optional)"
-                        className="w-full h-9 px-3 rounded-lg border-2 border-neutral-border bg-white text-sm text-neutral-text font-medium focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40"
+                        className="w-full h-10 px-3.5 rounded-xl border border-neutral-border/80 bg-white text-sm shadow-soft text-neutral-text font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
                       />
                       
                       <div>
-                        <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                        <label className="block text-xs font-semibold text-neutral-muted mb-2">
                           Banner Position
                         </label>
                         <div className="grid grid-cols-2 gap-2">
@@ -1372,9 +1380,9 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                               type="button"
                               onClick={() => setBannerPosition(position)}
                               className={cn(
-                                "h-9 px-3 rounded-lg border-2 text-xs font-semibold transition-all capitalize",
+                                "h-9 px-3 rounded-full border text-xs font-semibold transition-all capitalize",
                                 bannerPosition === position
-                                  ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white border-electric-sapphire"
+                                  ? "bg-primary text-white border-primary shadow-button"
                                   : "bg-white text-neutral-text border-neutral-border hover:bg-neutral-bg"
                               )}
                             >
@@ -1391,7 +1399,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
 
             {activeTab === "settings" && (
               <div className="space-y-6">
-                <div className="p-4 rounded-lg bg-gradient-to-r from-electric-sapphire/5 to-bright-indigo/5 border border-electric-sapphire/10">
+                <div className="p-4 rounded-lg bg-primary/[0.04] border border-primary/10 shadow-soft">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-semibold text-neutral-text">Public Page</div>
@@ -1404,7 +1412,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                       onClick={() => setIsPublic(!isPublic)}
                       className={cn(
                         "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                        isPublic ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo" : "bg-neutral-border"
+                        isPublic ? "bg-primary" : "bg-neutral-border"
                       )}
                     >
                       <span
@@ -1424,56 +1432,65 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
             )}
 
             {error && (
-              <div className="p-3 rounded-lg bg-red-50 border-2 border-red-200">
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200/80 shadow-soft">
                 <p className="text-sm font-medium text-red-600">{error}</p>
               </div>
             )}
-
-            {/* Action Buttons */}
-            <div className="pt-4 border-t border-neutral-border">
-              <button
-                type="submit"
-                disabled={loading || !slug || !title}
-                className={cn(
-                  "w-full h-11 rounded-lg bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold",
-                  "hover:from-bright-indigo hover:to-vivid-royal disabled:opacity-30 disabled:cursor-not-allowed",
-                  "transition-all flex items-center justify-center gap-2"
-                )}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Save Changes
-                  </>
-                )}
-              </button>
-            </div>
           </form>
+        </div>
+
+        {/* Sticky save action */}
+        <div className="p-4 border-t border-neutral-border/70 bg-white/90 backdrop-blur-xl">
+          <button
+            type="submit"
+            form="page-edit-studio-form"
+            disabled={loading || !slug || !title}
+            className={cn(
+              "w-full h-11 rounded-full bg-primary text-white text-sm font-semibold shadow-button",
+              "hover:bg-bright-indigo disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none",
+              "transition-all flex items-center justify-center gap-2"
+            )}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Updating…
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                Save Changes
+              </>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Right Panel - Live Preview - Same as PageStudio */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-neutral-bg">
-        <div className="p-4 border-b border-neutral-border bg-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Eye className="h-5 w-5 text-neutral-muted" />
-            <h2 className="text-lg font-semibold text-neutral-text">Live Preview</h2>
+      {/* Right Panel - Live Preview */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <div className="px-5 py-3.5 border-b border-neutral-border/70 bg-white/80 backdrop-blur-xl flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+              <Eye className="h-4 w-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-neutral-text tracking-tight">
+                Live preview
+              </h2>
+              <p className="text-[11px] text-neutral-muted">Updates as you edit</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 p-1 rounded-full bg-white border border-neutral-border/80 shadow-soft">
             <button
               type="button"
               onClick={() => setPreviewDevice("desktop")}
               className={cn(
-                "p-2 rounded-lg transition-colors",
+                "p-2 rounded-full transition-colors",
                 previewDevice === "desktop"
-                  ? "bg-electric-sapphire/10 text-electric-sapphire"
-                  : "text-neutral-muted hover:bg-neutral-bg"
+                  ? "bg-primary text-white shadow-button"
+                  : "text-neutral-muted hover:text-neutral-text"
               )}
+              aria-label="Desktop preview"
             >
               <Monitor className="h-4 w-4" />
             </button>
@@ -1481,11 +1498,12 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
               type="button"
               onClick={() => setPreviewDevice("mobile")}
               className={cn(
-                "p-2 rounded-lg transition-colors",
+                "p-2 rounded-full transition-colors",
                 previewDevice === "mobile"
-                  ? "bg-electric-sapphire/10 text-electric-sapphire"
-                  : "text-neutral-muted hover:bg-neutral-bg"
+                  ? "bg-primary text-white shadow-button"
+                  : "text-neutral-muted hover:text-neutral-text"
               )}
+              aria-label="Mobile preview"
             >
               <Smartphone className="h-4 w-4" />
             </button>
@@ -1495,7 +1513,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
         <div
           className={cn(
             "flex-1 overflow-auto",
-            previewDevice === "mobile" && "flex justify-center p-4 sm:p-6 bg-neutral-200/50"
+            previewDevice === "mobile" && "flex justify-center p-5 sm:p-8"
           )}
         >
           <div
@@ -1503,7 +1521,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
               "min-h-full w-full flex flex-col items-stretch relative overflow-hidden",
               verticalAlign === "center" ? "justify-center" : "justify-start",
               previewDevice === "mobile" &&
-                "min-h-[680px] w-full max-w-[390px] rounded-[1.75rem] shadow-xl border border-neutral-border ring-4 ring-black/5"
+                "min-h-[680px] w-full max-w-[390px] rounded-[1.75rem] shadow-float border border-neutral-border/80 ring-4 ring-black/5"
             )}
             style={{
               backgroundColor:
@@ -1586,7 +1604,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
               socialIconGap={socialIconGap}
               socialIcons={{
                 email: Mail,
-                twitter: Twitter,
+                twitter: XSocialIcon,
                 instagram: Instagram,
                 linkedin: Linkedin,
                 github: Github,
@@ -1617,7 +1635,7 @@ export default function EditStudio({ page, userLinks }: { page: any; userLinks?:
                 />
               </div>
             )}
-            {pageLinks.length === 0 && contentBlocks.length === 0 && Object.keys(socialLinks).filter(key => socialLinks[key]).length === 0 && (
+            {pageLinks.length === 0 && contentBlocks.length === 0 && !hasAnySocialLinks(socialLinks) && (
               <p className="text-center py-16 px-6" style={{ color: textColor, fontFamily: `"${fontFamily}", sans-serif`, opacity: 0.6 }}>
                 Add links to see preview
               </p>

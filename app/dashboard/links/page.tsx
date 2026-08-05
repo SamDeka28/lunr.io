@@ -5,6 +5,7 @@ import { LinksPageWrapper } from "./links-page-wrapper";
 import Link from "next/link";
 import { Plus, Link2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { DashboardContainer } from "@/components/ui/dashboard-container";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -96,7 +97,7 @@ export default async function LinksPage({
   const canCreateLink = limits.can_create_link;
 
   return (
-    <div className="max-w-7xl mx-auto w-full">
+    <DashboardContainer>
       <PageHeader
         title="Your Links"
         description={`${linkCount} / ${limits.max_links === -1 ? "∞" : limits.max_links} links used`}
@@ -146,6 +147,6 @@ export default async function LinksPage({
           initialFolder={folderFilter}
         />
       )}
-    </div>
+    </DashboardContainer>
   );
 }

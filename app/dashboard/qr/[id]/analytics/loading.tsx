@@ -1,7 +1,8 @@
+import { DashboardContainer } from "@/components/ui/dashboard-container";
 export default function QRAnalyticsLoading() {
   return (
     <div className="min-h-[calc(100vh-73px)] bg-gradient-to-br from-neutral-bg via-white to-neutral-bg">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <DashboardContainer size="wide">
         {/* Header Skeleton */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
@@ -98,7 +99,7 @@ export default function QRAnalyticsLoading() {
             <div className="h-64 bg-neutral-border/20 rounded-lg animate-pulse" />
           </div>
         </div>
-      </div>
+      </DashboardContainer>
     </div>
   );
 }

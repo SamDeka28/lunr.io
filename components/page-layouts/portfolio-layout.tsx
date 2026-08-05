@@ -4,6 +4,7 @@ import { PageLinks } from "./page-links";
 import { SocialIcons } from "./social-icons";
 import { cn } from "@/lib/utils/cn";
 import { fluidAvatar, fluidBody, fluidTitle } from "@/lib/utils/fluid-type";
+import { hasAnySocialLinks } from "@/lib/utils/social-links";
 
 interface PortfolioLayoutProps extends PageLayoutProps {
   Globe: React.ComponentType<any>;
@@ -144,7 +145,7 @@ export function PortfolioLayout(props: PortfolioLayoutProps) {
         </div>
       )}
 
-      {Object.keys(socialLinks).some((key) => socialLinks[key]) && (
+      {hasAnySocialLinks(socialLinks) && (
         <div className="w-full pt-1" style={{ borderTop: `1px solid ${textColor}12` }}>
           <p
             style={{

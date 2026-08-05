@@ -21,9 +21,10 @@ import {
 import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
+import { MobileBottomNav, MobileBottomNavItem } from "@/components/mobile-bottom-nav";
 import { docsContent } from "../../docs-content";
 
-const iconMap: Record<string, React.ComponentType<any>> = {
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Zap,
   Link2,
   QrCode,
@@ -60,7 +61,7 @@ export function DocsArticleClient({
     // Process bold text
     text = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-neutral-text">$1</strong>');
     // Process inline code
-    text = text.replace(/`([^`]+)`/g, '<code class="bg-neutral-bg border border-neutral-border rounded px-1.5 py-0.5 font-mono text-sm text-electric-sapphire">$1</code>');
+    text = text.replace(/`([^`]+)`/g, '<code class="bg-neutral-bg border border-neutral-border rounded px-1.5 py-0.5 font-mono text-sm text-primary">$1</code>');
     return { __html: text };
   };
 
@@ -207,10 +208,10 @@ export function DocsArticleClient({
         elements.push(
           <div
             key={`cta-${idx}`}
-            className="my-8 p-6 bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 rounded-xl border-2 border-electric-sapphire/20"
+            className="my-8 p-6 bg-primary/10 rounded-xl border-2 border-primary/20"
           >
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-electric-sapphire to-bright-indigo flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
                 <BookOpen className="h-6 w-6 text-white" />
               </div>
               <div className="flex-1">
@@ -222,7 +223,7 @@ export function DocsArticleClient({
                 </p>
                 <Link
                   href="/api-reference"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold hover:from-bright-indigo hover:to-vivid-royal transition-all shadow-button"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-bright-indigo transition-all shadow-button"
                 >
                   <span>View API Reference</span>
                   <ExternalLink className="h-4 w-4" />
@@ -252,20 +253,20 @@ export function DocsArticleClient({
   };
 
   return (
-    <div className="min-h-screen bg-neutral-bg">
-      {/* Header */}
-      <header className="border-b border-neutral-border bg-white sticky top-0 z-50">
+    <div className="min-h-screen bg-neutral-bg pb-20 lg:pb-0">
+      <header className="border-b border-neutral-border/70 bg-white/85 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-3">
-              <BrandLogo href={null} variant="full" size="md" />
-              <span className="text-sm text-neutral-muted">Docs</span>
+          <div className="flex items-center justify-between h-14 sm:h-16 gap-3">
+            <Link href="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <BrandLogo href={null} variant="full" size="sm" className="sm:hidden" />
+              <BrandLogo href={null} variant="full" size="md" className="hidden sm:block" />
+              <span className="text-sm text-neutral-muted shrink-0">Docs</span>
             </Link>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
               {isAuthenticated ? (
                 <Link
                   href="/dashboard"
-                  className="text-sm font-medium text-neutral-muted hover:text-electric-sapphire transition-colors"
+                  className="text-sm font-medium text-neutral-muted hover:text-primary transition-colors"
                 >
                   Dashboard
                 </Link>
@@ -273,9 +274,8 @@ export function DocsArticleClient({
                 <Link
                   href="/login"
                   className={cn(
-                    "px-5 py-2.5 rounded-xl font-semibold text-white text-sm",
-                    "bg-gradient-to-r from-electric-sapphire to-bright-indigo",
-                    "hover:from-bright-indigo hover:to-vivid-royal",
+                    "px-3 sm:px-5 py-2 sm:py-2.5 rounded-full font-semibold text-white text-sm",
+                    "bg-primary",
                     "transition-all active:scale-[0.98] shadow-button"
                   )}
                 >
@@ -287,16 +287,37 @@ export function DocsArticleClient({
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <aside className="lg:col-span-1">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="lg:hidden mb-6">
+          <nav className="flex items-center gap-2 text-sm text-neutral-muted flex-wrap bg-white rounded-card border border-neutral-border p-3">
+            <Link
+              href="/docs"
+              className="hover:text-primary transition-colors flex items-center gap-1.5 font-medium"
+            >
+              <Home className="h-3.5 w-3.5" />
+              <span>Docs</span>
+            </Link>
+            <ChevronRight className="h-3 w-3 text-neutral-border" />
+            <Link
+              href={`/docs/${section.id}`}
+              className="hover:text-primary transition-colors font-medium"
+            >
+              {section.title}
+            </Link>
+            <ChevronRight className="h-3 w-3 text-neutral-border" />
+            <span className="text-neutral-text font-semibold line-clamp-1">
+              {article.title}
+            </span>
+          </nav>
+        </div>
+
+        <div className="grid lg:grid-cols-4 gap-6 lg:gap-8">
+          <aside className="hidden lg:block lg:col-span-1">
             <div className="sticky top-24 space-y-6">
-              {/* Breadcrumbs */}
               <nav className="flex items-center gap-2 text-sm text-neutral-muted flex-wrap bg-white rounded-card border border-neutral-border p-3">
                 <Link
                   href="/docs"
-                  className="hover:text-electric-sapphire transition-colors flex items-center gap-1.5 font-medium"
+                  className="hover:text-primary transition-colors flex items-center gap-1.5 font-medium"
                 >
                   <Home className="h-3.5 w-3.5" />
                   <span>Docs</span>
@@ -304,7 +325,7 @@ export function DocsArticleClient({
                 <ChevronRight className="h-3 w-3 text-neutral-border" />
                 <Link
                   href={`/docs/${section.id}`}
-                  className="hover:text-electric-sapphire transition-colors font-medium"
+                  className="hover:text-primary transition-colors font-medium"
                 >
                   {section.title}
                 </Link>
@@ -314,12 +335,11 @@ export function DocsArticleClient({
                 </span>
               </nav>
 
-              {/* Section Navigation */}
               <div className="bg-white rounded-card border border-neutral-border shadow-soft overflow-hidden">
-                <div className="bg-gradient-to-r from-electric-sapphire/10 to-bright-indigo/10 border-b border-neutral-border px-4 py-3">
+                <div className="bg-primary/10 border-b border-neutral-border px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-gradient-to-br from-electric-sapphire/20 to-bright-indigo/20">
-                      <Icon className="h-4 w-4 text-electric-sapphire" />
+                    <div className="p-2 rounded-lg bg-primary/15">
+                      <Icon className="h-4 w-4 text-primary" />
                     </div>
                     <h3 className="font-bold text-neutral-text text-sm">{section.title}</h3>
                   </div>
@@ -332,8 +352,8 @@ export function DocsArticleClient({
                       className={cn(
                         "block px-3 py-2.5 rounded-lg text-sm transition-all",
                         a.id === article.id
-                          ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white font-semibold shadow-sm"
-                          : "text-neutral-muted hover:text-electric-sapphire hover:bg-neutral-bg font-medium"
+                          ? "bg-primary text-white font-semibold shadow-sm"
+                          : "text-neutral-muted hover:text-primary hover:bg-neutral-bg font-medium"
                       )}
                     >
                       {a.title}
@@ -342,7 +362,6 @@ export function DocsArticleClient({
                 </nav>
               </div>
 
-              {/* All Sections */}
               <div className="bg-white rounded-card border border-neutral-border shadow-soft overflow-hidden">
                 <div className="bg-neutral-bg border-b border-neutral-border px-4 py-3">
                   <h4 className="text-xs font-bold text-neutral-muted uppercase tracking-wider">
@@ -359,8 +378,8 @@ export function DocsArticleClient({
                         className={cn(
                           "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all",
                           s.id === section.id
-                            ? "bg-gradient-to-r from-electric-sapphire/10 to-bright-indigo/10 text-electric-sapphire font-semibold"
-                            : "text-neutral-muted hover:text-electric-sapphire hover:bg-neutral-bg font-medium"
+                            ? "bg-primary/10 text-primary font-semibold"
+                            : "text-neutral-muted hover:text-primary hover:bg-neutral-bg font-medium"
                         )}
                       >
                         <SectionIcon className="h-4 w-4 flex-shrink-0" />
@@ -373,70 +392,66 @@ export function DocsArticleClient({
             </div>
           </aside>
 
-          {/* Main Content */}
-          <main className="lg:col-span-3">
+          <main className="lg:col-span-3 min-w-0">
             <article className="bg-white rounded-card border border-neutral-border shadow-soft overflow-hidden">
-              {/* Article Header */}
-              <div className="bg-gradient-to-br from-electric-sapphire/5 via-bright-indigo/5 to-vivid-royal/5 border-b border-neutral-border px-8 pt-8 pb-6">
+              <div className="bg-primary/[0.04] border-b border-neutral-border px-4 sm:px-8 pt-6 sm:pt-8 pb-5 sm:pb-6">
                 <Link
                   href={`/docs/${section.id}`}
-                  className="inline-flex items-center gap-2 text-sm font-medium text-neutral-muted hover:text-electric-sapphire transition-colors mb-6 group"
+                  className="inline-flex items-center gap-2 text-sm font-medium text-neutral-muted hover:text-primary transition-colors mb-4 sm:mb-6 group"
                 >
                   <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
                   <span>Back to {section.title}</span>
                 </Link>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-electric-sapphire/20 to-bright-indigo/20">
-                    <Icon className="h-5 w-5 text-electric-sapphire" />
+                <div className="flex items-start gap-3 mb-3 sm:mb-4">
+                  <div className="p-2 rounded-lg bg-primary/15 shrink-0">
+                    <Icon className="h-5 w-5 text-primary" />
                   </div>
-                  <h1 className="text-4xl font-bold text-neutral-text">
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-text">
                     {article.title}
                   </h1>
                 </div>
-                <p className="text-neutral-muted text-base">{section.description}</p>
+                <p className="text-sm sm:text-base text-neutral-muted">{section.description}</p>
               </div>
 
-              {/* Article Content */}
-              <div className="px-8 py-8 max-w-none">
-                <div className="prose prose-lg max-w-none">
+              <div className="px-4 sm:px-8 py-6 sm:py-8 max-w-none overflow-x-auto">
+                <div className="prose prose-sm sm:prose-lg max-w-none">
                   {renderContent(article.content)}
                 </div>
               </div>
 
-              {/* Navigation */}
-              <div className="px-8 pb-8">
-                <div className="pt-8 border-t border-neutral-border flex items-center justify-between gap-4">
+              <div className="px-4 sm:px-8 pb-6 sm:pb-8">
+                <div className="pt-6 sm:pt-8 border-t border-neutral-border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
                   {prevArticle ? (
                     <Link
                       href={`/docs/${section.id}/${prevArticle.id}`}
-                      className="flex items-center gap-3 px-5 py-3 rounded-xl border-2 border-neutral-border hover:border-electric-sapphire hover:bg-electric-sapphire/5 transition-all group flex-1 max-w-xs"
+                      className="flex items-center gap-3 px-4 sm:px-5 py-3 rounded-xl border-2 border-neutral-border hover:border-primary hover:bg-primary/5 transition-all group flex-1 sm:max-w-xs"
                     >
-                      <ChevronLeft className="h-5 w-5 text-neutral-muted group-hover:text-electric-sapphire transition-colors" />
+                      <ChevronLeft className="h-5 w-5 text-neutral-muted group-hover:text-primary transition-colors shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-semibold text-neutral-muted uppercase tracking-wide mb-1">Previous</div>
-                        <div className="text-sm font-semibold text-neutral-text group-hover:text-electric-sapphire transition-colors truncate">
+                        <div className="text-sm font-semibold text-neutral-text group-hover:text-primary transition-colors truncate">
                           {prevArticle.title}
                         </div>
                       </div>
                     </Link>
                   ) : (
-                    <div className="flex-1" />
+                    <div className="hidden sm:block flex-1" />
                   )}
                   {nextArticle ? (
                     <Link
                       href={`/docs/${section.id}/${nextArticle.id}`}
-                      className="flex items-center gap-3 px-5 py-3 rounded-xl border-2 border-neutral-border hover:border-electric-sapphire hover:bg-electric-sapphire/5 transition-all group flex-1 max-w-xs ml-auto text-right"
+                      className="flex items-center gap-3 px-4 sm:px-5 py-3 rounded-xl border-2 border-neutral-border hover:border-primary hover:bg-primary/5 transition-all group flex-1 sm:max-w-xs sm:ml-auto text-right"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-semibold text-neutral-muted uppercase tracking-wide mb-1">Next</div>
-                        <div className="text-sm font-semibold text-neutral-text group-hover:text-electric-sapphire transition-colors truncate">
+                        <div className="text-sm font-semibold text-neutral-text group-hover:text-primary transition-colors truncate">
                           {nextArticle.title}
                         </div>
                       </div>
-                      <ChevronRight className="h-5 w-5 text-neutral-muted group-hover:text-electric-sapphire transition-colors" />
+                      <ChevronRight className="h-5 w-5 text-neutral-muted group-hover:text-primary transition-colors shrink-0" />
                     </Link>
                   ) : (
-                    <div className="flex-1" />
+                    <div className="hidden sm:block flex-1" />
                   )}
                 </div>
               </div>
@@ -444,6 +459,21 @@ export function DocsArticleClient({
           </main>
         </div>
       </div>
+
+      <MobileBottomNav>
+        {docsContent.map((s) => {
+          const SectionIcon = iconMap[s.icon] || BookOpen;
+          return (
+            <MobileBottomNavItem
+              key={s.id}
+              href={`/docs/${s.id}`}
+              active={s.id === section.id}
+              icon={<SectionIcon />}
+              label={s.title}
+            />
+          );
+        })}
+      </MobileBottomNav>
     </div>
   );
 }

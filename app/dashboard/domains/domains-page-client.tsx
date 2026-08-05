@@ -1,9 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Globe, Plus, CheckCircle2, XCircle, AlertCircle, ExternalLink, FileText, Loader2 } from "lucide-react";
+import { DashboardContainer } from "@/components/ui/dashboard-container";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+
+import { Globe, CheckCircle2, XCircle, AlertCircle, ExternalLink, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
 
 interface Domain {
@@ -94,51 +98,41 @@ export function DomainsPageClient({ domains: initialDomains, pages }: DomainsPag
   };
 
   return (
-    <div className="max-w-7xl mx-auto w-full">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h1 className="text-3xl font-bold text-neutral-text mb-2">Custom Domains</h1>
-            <p className="text-sm text-neutral-muted">
-              Manage custom domains for your pages
-            </p>
-          </div>
-        </div>
-      </div>
+    <DashboardContainer>
+      <PageHeader
+        title="Custom Domains"
+        description="Manage custom domains for your pages"
+      />
 
       {/* Domains List */}
       {domains.length === 0 ? (
-        <div className="bg-neutral-bg border border-neutral-border rounded-xl p-12 text-center">
-          <Globe className="h-16 w-16 text-neutral-text/30 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-neutral-text mb-2">
-            No custom domains configured
-          </h3>
-          <p className="text-sm text-neutral-muted mb-6">
-            Add a custom domain to any of your pages to use your own domain
-          </p>
-          <Link
-            href="/dashboard/pages"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold hover:from-bright-indigo hover:to-vivid-royal transition-all active:scale-[0.98] shadow-button"
-          >
-            <FileText className="h-4 w-4" />
-            Go to Pages
-          </Link>
-        </div>
+        <EmptyState
+          icon={<Globe className="h-6 w-6" />}
+          title="No custom domains configured"
+          description="Add a custom domain to any of your pages to use your own domain"
+          action={
+            <Link href="/dashboard/pages">
+              <Button>
+                <FileText className="h-4 w-4" />
+                Go to Pages
+              </Button>
+            </Link>
+          }
+        />
       ) : (
         <div className="space-y-4">
           {domains.map((domain) => (
             <div
               key={domain.id}
-              className="bg-white border border-neutral-border rounded-xl p-6 space-y-4"
+              className="bg-white border border-neutral-border/80 rounded-card p-4 sm:p-6 space-y-4 shadow-soft"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Globe className="h-5 w-5 text-neutral-text/70" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-neutral-text text-lg">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start gap-3 mb-2">
+                    <Globe className="h-5 w-5 text-neutral-text/70 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold text-neutral-text text-base sm:text-lg break-all">
                           {domain.domain}
                         </span>
                         {domain.verification_status === "verified" ? (
@@ -163,8 +157,8 @@ export function DomainsPageClient({ domains: initialDomains, pages }: DomainsPag
                           href={`/dashboard/pages/${domain.page.id}/edit`}
                           className="text-sm text-neutral-muted hover:text-electric-sapphire flex items-center gap-1 mt-1"
                         >
-                          <FileText className="h-3 w-3" />
-                          {domain.page.title} ({domain.page.slug})
+                          <FileText className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{domain.page.title} ({domain.page.slug})</span>
                         </Link>
                       )}
                     </div>
@@ -176,12 +170,12 @@ export function DomainsPageClient({ domains: initialDomains, pages }: DomainsPag
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {domain.verification_status !== "verified" && (
-                    <button
+                    <Button
+                      size="sm"
                       onClick={() => handleVerifyDomain(domain.id, domain.page!.id)}
                       disabled={verifyingDomain === domain.id}
-                      className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       {verifyingDomain === domain.id ? (
                         <>
@@ -191,11 +185,11 @@ export function DomainsPageClient({ domains: initialDomains, pages }: DomainsPag
                       ) : (
                         "Verify"
                       )}
-                    </button>
+                    </Button>
                   )}
                   <button
                     onClick={() => handleDeleteDomain(domain.id, domain.page!.id)}
-                    className="p-2 hover:bg-neutral-bg rounded-lg transition-colors"
+                    className="p-2 hover:bg-neutral-bg rounded-full transition-colors"
                     title="Remove domain"
                   >
                     <XCircle className="h-5 w-5 text-neutral-text/70" />
@@ -204,7 +198,7 @@ export function DomainsPageClient({ domains: initialDomains, pages }: DomainsPag
               </div>
 
               {domain.verification_status !== "verified" && (
-                <div className="bg-neutral-bg border border-neutral-border rounded-lg p-4 space-y-3">
+                <div className="bg-white border border-neutral-border/80 rounded-2xl p-4 space-y-3 shadow-soft">
                   <h4 className="font-medium text-neutral-text text-sm">
                     DNS Configuration
                   </h4>
@@ -217,7 +211,7 @@ export function DomainsPageClient({ domains: initialDomains, pages }: DomainsPag
                     {domain.dns_records?.map((record, index) => (
                       <div
                         key={index}
-                        className="bg-white border border-neutral-border rounded p-3 space-y-2"
+                        className="bg-neutral-surface/50 border border-neutral-border/80 rounded-xl p-3 space-y-2"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -248,13 +242,13 @@ export function DomainsPageClient({ domains: initialDomains, pages }: DomainsPag
                             </svg>
                           </button>
                         </div>
-                        <code className="block text-xs font-mono bg-neutral-bg px-2 py-1 rounded border border-neutral-border text-neutral-text break-all">
+                        <code className="block text-xs font-mono bg-white px-2 py-1.5 rounded-lg border border-neutral-border/80 text-neutral-text break-all">
                           {record.value}
                         </code>
                       </div>
                     ))}
                   </div>
-                  <div className="pt-2 border-t border-neutral-border flex items-center gap-4">
+                  <div className="pt-2 border-t border-neutral-border/80 flex items-center gap-4">
                     <a
                       href={`https://${domain.domain}`}
                       target="_blank"
@@ -276,7 +270,7 @@ export function DomainsPageClient({ domains: initialDomains, pages }: DomainsPag
               )}
 
               {domain.verification_status === "verified" && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+                <div className="bg-green-50/80 border border-green-200/80 rounded-2xl p-3 space-y-2 shadow-soft">
                   <p className="text-sm text-green-800">
                     ✓ Domain verified! Your page is now accessible at{" "}
                     <a
@@ -298,7 +292,7 @@ export function DomainsPageClient({ domains: initialDomains, pages }: DomainsPag
           ))}
         </div>
       )}
-    </div>
+    </DashboardContainer>
   );
 }
 

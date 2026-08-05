@@ -9,6 +9,14 @@ import QRCode from "qrcode";
 import { usePlan } from "@/hooks/use-plan";
 import { SuccessModal } from "@/components/success-modal";
 import { BulkImportModal } from "@/components/bulk-import-modal";
+import { ColorPickerWithInput } from "@/components/color-picker-with-input";
+import { Button } from "@/components/ui/button";
+import {
+  FormWithPreviewShell,
+  FormPreviewHeader,
+  FormModeTabs,
+  PreviewPanel,
+} from "@/components/ui/form-with-preview";
 
 export function LinkCreationPage({
   userId,
@@ -92,8 +100,10 @@ export function LinkCreationPage({
   const [qrBgColor, setQrBgColor] = useState("#FFFFFF");
   const [qrSize, setQrSize] = useState("medium");
   const [addLogo, setAddLogo] = useState(false);
+  const [logoImage, setLogoImage] = useState<File | null>(null);
+  const [logoImageUrl, setLogoImageUrl] = useState<string | null>(null);
 
-  // Branding State
+  // Branding State (social unfurl — not used when scanning QR)
   const [previewImage, setPreviewImage] = useState<File | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [linkDescription, setLinkDescription] = useState("");
@@ -102,34 +112,59 @@ export function LinkCreationPage({
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewQR, setPreviewQR] = useState("");
 
-  // File input ref
+  // File input refs
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle image selection
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
     }
 
-    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size must be less than 5MB");
+      return;
+    }
+
+    setLogoImage(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoImageUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoImage(null);
+    setLogoImageUrl(null);
+    setAddLogo(false);
+    if (logoFileInputRef.current) {
+      logoFileInputRef.current.value = "";
+    }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Image size must be less than 5MB");
       return;
     }
 
     setPreviewImage(file);
-    
-    // Create preview URL
     const reader = new FileReader();
-    reader.onloadend = async () => {
-      const imageUrl = reader.result as string;
-      setPreviewImageUrl(imageUrl);
-      // QR preview will be updated by useEffect when previewImageUrl changes
+    reader.onloadend = () => {
+      setPreviewImageUrl(reader.result as string);
     };
     reader.readAsDataURL(file);
   };
@@ -140,7 +175,19 @@ export function LinkCreationPage({
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-    // QR preview will be updated by useEffect when previewImageUrl changes
+  };
+
+  const uploadOgImage = async (file: File): Promise<string> => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("pathPrefix", "links");
+    const res = await fetch("/api/upload", { method: "POST", body: form });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "Failed to upload preview image");
+    }
+    const data = await res.json();
+    return data.publicUrl as string;
   };
 
   // Handle QR code download
@@ -276,7 +323,7 @@ export function LinkCreationPage({
             width: 200,
             color: { dark: qrColor, light: qrBgColor },
           },
-          previewImageUrl || null,
+          logoImageUrl || null,
           addLogo, // Explicitly pass whether to add logo
           qrFormat
         );
@@ -310,7 +357,7 @@ export function LinkCreationPage({
             width: 200,
             color: { dark: qrColor, light: qrBgColor },
           },
-          previewImageUrl || null,
+          logoImageUrl || null,
           addLogo, // Only add logo if toggle is ON
           qrFormat
         );
@@ -322,7 +369,7 @@ export function LinkCreationPage({
 
     generateQRCode();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addLogo, previewImageUrl, qrColor, qrBgColor, customCode, url, generateQR]);
+  }, [addLogo, logoImageUrl, qrColor, qrBgColor, customCode, url, generateQR]);
 
   const handleUrlChange = async (newUrl: string) => {
     setUrl(newUrl);
@@ -345,6 +392,11 @@ export function LinkCreationPage({
     setLoading(true);
 
     try {
+      let ogImageUrl: string | null = null;
+      if (isPremium && previewImage) {
+        ogImageUrl = await uploadOgImage(previewImage);
+      }
+
       const response = await fetch("/api/links", {
         method: "POST",
         headers: {
@@ -361,6 +413,12 @@ export function LinkCreationPage({
             ? tags.split(",").map((t) => t.trim()).filter(Boolean)
             : undefined,
           folder: folder.trim() || undefined,
+          ...(isPremium
+            ? {
+                description: linkDescription || null,
+                og_image_url: ogImageUrl,
+              }
+            : {}),
           utm_parameters: utmEnabled && canUseUTMParameters() && (utmSource || utmMedium) ? {
             utm_source: utmSource || undefined,
             utm_medium: utmMedium || undefined,
@@ -416,7 +474,7 @@ export function LinkCreationPage({
               width: 300,
               color: { dark: qrColor, light: qrBgColor },
             },
-            previewImageUrl || null,
+            logoImageUrl || null,
             addLogo,
             qrFormat
           );
@@ -490,56 +548,40 @@ export function LinkCreationPage({
   };
 
   return (
-    <div className="flex h-[calc(100vh-73px)]">
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-3xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
+    <>
+    <FormWithPreviewShell
+      form={
+        <>
+          <div className="space-y-4">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <h1 className="text-3xl font-bold text-neutral-text mb-2">Create a new link</h1>
-                <p className="text-sm text-neutral-muted">
-                  Shorten your URL and track performance with detailed analytics
+                <h1 className="text-2xl sm:text-3xl font-semibold text-neutral-text tracking-tight">
+                  Create a new link
+                </h1>
+                <p className="text-sm text-neutral-muted mt-1.5 leading-relaxed">
+                  Shorten a URL and track performance
                 </p>
               </div>
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => setShowBulkModal(true)}
-                className="px-4 py-2 rounded-xl border-2 border-neutral-border hover:border-electric-sapphire hover:text-electric-sapphire text-sm font-semibold text-neutral-text transition-colors flex items-center gap-2"
+                className="shrink-0"
               >
                 <Upload className="h-4 w-4" />
                 Bulk upload
-              </button>
+              </Button>
             </div>
 
-            {/* Mode Selection */}
-            <div className="flex gap-2 p-1 bg-neutral-bg rounded-xl w-fit border border-neutral-border">
-              <button
-                type="button"
-                onClick={() => setMode("configure")}
-                className={cn(
-                  "px-5 py-2.5 rounded-xl text-sm font-semibold transition-all",
-                  mode === "configure"
-                    ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white shadow-button"
-                    : "text-neutral-muted hover:text-neutral-text hover:bg-white"
-                )}
-              >
-                Configure code
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("design")}
-                className={cn(
-                  "px-5 py-2.5 rounded-xl text-sm font-semibold transition-all",
-                  mode === "design"
-                    ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white shadow-button"
-                    : "text-neutral-muted hover:text-neutral-text hover:bg-white"
-                )}
-              >
-                Customize design
-              </button>
-            </div>
+            <FormModeTabs
+              value={mode}
+              onChange={setMode}
+              options={[
+                { id: "configure" as const, label: "Configure" },
+                { id: "design" as const, label: "Design" },
+              ]}
+            />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -1009,105 +1051,30 @@ export function LinkCreationPage({
                     )}
 
                     <div>
-                      <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
-                        QR Code Color
-                      </label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="color"
-                          value={qrColor}
-                            onChange={(e) => {
-                              if (!isPremium) return;
-                              const newColor = e.target.value;
-                              setQrColor(newColor);
-                              // QR preview will be updated by useEffect when qrColor changes
-                            }}
-                          className={cn(
-                            "w-16 h-12 rounded-xl border-2 border-neutral-border transition-all",
-                            isPremium ? "cursor-pointer" : "cursor-not-allowed opacity-50"
-                          )}
-                          disabled={!isPremium}
-                        />
-                        <div className="flex-1">
-                          <input
-                            type="text"
-                            value={qrColor}
-                            onChange={(e) => {
-                              if (!isPremium) return;
-                              const newColor = e.target.value;
-                              setQrColor(newColor);
-                              // QR preview will be updated by useEffect when qrColor changes
-                            }}
-                            placeholder="#000000"
-                            className={cn(
-                              "w-full h-12 px-4 rounded-xl border-2 text-sm font-mono font-medium transition-all",
-                              isPremium
-                                ? "bg-white border-neutral-border text-neutral-text focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
-                                : "bg-neutral-bg border-neutral-border text-neutral-muted cursor-not-allowed"
-                            )}
-                            disabled={!isPremium}
-                          />
-                        </div>
-                      </div>
+                      <ColorPickerWithInput
+                        label="QR Code Color"
+                        value={qrColor}
+                        onChange={(newColor) => {
+                          if (!isPremium) return;
+                          setQrColor(newColor);
+                        }}
+                        disabled={!isPremium}
+                      />
                       <p className="mt-2 text-xs text-neutral-muted">
                         Choose a custom color for your QR code
                       </p>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
-                        Background Color
-                      </label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="color"
-                          value={qrBgColor}
-                          onChange={async (e) => {
-                            if (!isPremium) return;
-                            const newBgColor = e.target.value;
-                            setQrBgColor(newBgColor);
-                            // Update QR preview
-                            if (url) {
-                              const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-                              const shortCode = customCode || "example";
-                              try {
-                                const qrData = await QRCode.toDataURL(`${baseUrl}/${shortCode}`, {
-                                  width: 200,
-                                  color: { dark: qrColor, light: newBgColor },
-                                });
-                                setPreviewQR(qrData);
-                              } catch (err) {
-                                console.error("Failed to generate QR preview:", err);
-                              }
-                            }
-                          }}
-                          className={cn(
-                            "w-16 h-12 rounded-xl border-2 border-neutral-border transition-all",
-                            isPremium ? "cursor-pointer" : "cursor-not-allowed opacity-50"
-                          )}
-                          disabled={!isPremium}
-                        />
-                        <div className="flex-1">
-                          <input
-                            type="text"
-                            value={qrBgColor}
-                            onChange={(e) => {
-                              if (!isPremium) return;
-                              const newBgColor = e.target.value;
-                              setQrBgColor(newBgColor);
-                              // QR preview will be updated by useEffect when qrBgColor changes
-                            }}
-                            placeholder="#FFFFFF"
-                            className={cn(
-                              "w-full h-12 px-4 rounded-xl border-2 text-sm font-mono font-medium transition-all",
-                              isPremium
-                                ? "bg-white border-neutral-border text-neutral-text focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
-                                : "bg-neutral-bg border-neutral-border text-neutral-muted cursor-not-allowed"
-                            )}
-                            disabled={!isPremium}
-                          />
-                        </div>
-                      </div>
+                      <ColorPickerWithInput
+                        label="Background Color"
+                        value={qrBgColor}
+                        onChange={(newBgColor) => {
+                          if (!isPremium) return;
+                          setQrBgColor(newBgColor);
+                        }}
+                        disabled={!isPremium}
+                      />
                     </div>
 
                     <div>
@@ -1134,52 +1101,129 @@ export function LinkCreationPage({
                       </select>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-neon-pink/5 to-raspberry-plum/5 border border-neon-pink/10">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-pink/10 to-raspberry-plum/10 flex items-center justify-center">
-                          <Crown className="h-5 w-5 text-neon-pink" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold text-neutral-text">Add Logo to QR Code</div>
-                          <div className="text-xs text-neutral-muted">
-                            Embed your logo in the center of the QR code
+                    <div
+                      className={cn(
+                        "rounded-xl border p-4 space-y-3",
+                        isPremium
+                          ? "bg-neutral-bg/60 border-neutral-border"
+                          : "bg-gradient-to-r from-neon-pink/5 to-raspberry-plum/5 border-neon-pink/10"
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={cn(
+                              "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                              isPremium
+                                ? "bg-white border border-neutral-border"
+                                : "bg-gradient-to-br from-neon-pink/10 to-raspberry-plum/10"
+                            )}
+                          >
+                            {isPremium ? (
+                              <ImageIcon className="h-5 w-5 text-electric-sapphire" />
+                            ) : (
+                              <Crown className="h-5 w-5 text-neon-pink" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-neutral-text">Add Logo to QR Code</div>
+                            <div className="text-xs text-neutral-muted">
+                              {isPremium
+                                ? "Upload a logo, then turn this on"
+                                : "Embed your logo in the center of the QR code"}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <ToggleSwitch 
-                        enabled={addLogo} 
-                        onChange={async (val) => {
-                          if (!isPremium) return;
-                          if (val && !previewImageUrl) {
-                            toast.error("Please upload an image first");
-                            return;
-                          }
-                          setAddLogo(val);
-                          // Force immediate QR regeneration with new toggle state
-                          if (url) {
-                            const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-                            const shortCode = customCode || "example";
-                            const qrUrl = `${baseUrl}/${shortCode}`;
-                            try {
-                              setPreviewQR(""); // Clear first
-                              const qrData = await generateQRWithLogo(
-                                qrUrl,
-                                {
-                                  width: 200,
-                                  color: { dark: qrColor, light: qrBgColor },
-                                },
-                                previewImageUrl || null,
-                                val // Use the new value directly, not from state
-                              );
-                              setPreviewQR(qrData);
-                            } catch (err) {
-                              console.error("Failed to generate QR preview:", err);
+                        <ToggleSwitch 
+                          enabled={addLogo} 
+                          onChange={async (val) => {
+                            if (!isPremium) return;
+                            if (val && !logoImageUrl) {
+                              toast.error("Upload a logo image first");
+                              logoFileInputRef.current?.click();
+                              return;
                             }
-                          }
-                        }} 
-                        isPremium={!isPremium}
-                        disabled={!previewImageUrl && isPremium}
-                      />
+                            setAddLogo(val);
+                            if (url) {
+                              const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+                              const shortCode = customCode || "example";
+                              const qrUrl = `${baseUrl}/${shortCode}`;
+                              try {
+                                setPreviewQR("");
+                                const qrData = await generateQRWithLogo(
+                                  qrUrl,
+                                  {
+                                    width: 200,
+                                    color: { dark: qrColor, light: qrBgColor },
+                                  },
+                                  logoImageUrl || null,
+                                  val
+                                );
+                                setPreviewQR(qrData);
+                              } catch (err) {
+                                console.error("Failed to generate QR preview:", err);
+                              }
+                            }
+                          }} 
+                          isPremium={!isPremium}
+                          disabled={!isPremium}
+                        />
+                      </div>
+
+                      {isPremium && (
+                        <div>
+                          <input
+                            ref={logoFileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoSelect}
+                            className="hidden"
+                          />
+                          {logoImageUrl ? (
+                            <div className="flex items-center gap-3 rounded-xl border border-neutral-border bg-white p-3">
+                              <img
+                                src={logoImageUrl}
+                                alt="Logo preview"
+                                className="h-12 w-12 rounded-lg object-cover border border-neutral-border"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-neutral-text truncate">
+                                  {logoImage?.name || "Logo ready"}
+                                </p>
+                                <p className="text-xs text-neutral-muted">
+                                  {addLogo ? "Embedded in QR preview" : "Toggle on to embed in QR"}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleRemoveLogo}
+                                className="p-2 rounded-lg text-neutral-muted hover:text-neutral-text hover:bg-neutral-bg"
+                                title="Remove logo"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => logoFileInputRef.current?.click()}
+                              className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-neutral-border bg-white px-4 py-3 text-sm font-medium text-neutral-text hover:border-electric-sapphire hover:bg-electric-sapphire/5 transition-colors"
+                            >
+                              <Upload className="h-4 w-4 text-electric-sapphire" />
+                              Upload logo image
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {!isPremium && (
+                        <p className="text-xs text-neutral-muted">
+                          <a href="/dashboard/billing" className="text-neon-pink hover:text-raspberry-plum font-semibold">
+                            Upgrade
+                          </a>{" "}
+                          to embed a logo in your QR codes.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </CollapsibleSection>
@@ -1193,7 +1237,8 @@ export function LinkCreationPage({
                   <div className="space-y-4 pt-4">
                     <div className="p-3 rounded-xl bg-gradient-to-r from-electric-sapphire/5 to-bright-indigo/5 border border-electric-sapphire/10">
                       <p className="text-xs text-neutral-muted">
-                        Customize how your link appears when shared. <span className="font-semibold text-electric-sapphire">Premium feature</span>
+                        Controls how your short link looks when pasted into Slack, iMessage, Twitter, LinkedIn, etc.{" "}
+                        <span className="font-semibold text-electric-sapphire">Not shown when scanning a QR code</span> — scanners open the destination URL.
                       </p>
                     </div>
 
@@ -1307,33 +1352,20 @@ export function LinkCreationPage({
             )}
 
             {error && (
-              <div className="p-4 rounded-xl bg-red-50 border-2 border-red-200">
+              <div className="p-4 rounded-2xl bg-red-50 border border-red-200">
                 <p className="text-sm font-medium text-red-600">{error}</p>
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-6">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="h-11 px-6 rounded-xl border-2 border-neutral-border text-neutral-text text-sm font-semibold hover:bg-neutral-bg hover:border-neutral-text transition-all active:scale-[0.98]"
-              >
+            <div className="flex flex-wrap gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={() => router.back()}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading || !url}
-                className={cn(
-                  "h-11 px-6 rounded-xl bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold",
-                  "hover:from-bright-indigo hover:to-vivid-royal disabled:opacity-30 disabled:cursor-not-allowed",
-                  "transition-all active:scale-[0.98] flex items-center gap-2 shadow-button"
-                )}
-              >
+              </Button>
+              <Button type="submit" disabled={loading || !url}>
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating...
+                    Creating…
                   </>
                 ) : (
                   <>
@@ -1341,63 +1373,64 @@ export function LinkCreationPage({
                     <ChevronRight className="h-4 w-4" />
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
-      </div>
-
-      {/* Preview Panel */}
-      <div className="w-80 bg-white border-l border-neutral-border p-6 overflow-y-auto flex-shrink-0">
-        <div className="mb-6">
-          <h3 className="text-lg font-bold text-neutral-text mb-1">Preview</h3>
-          <p className="text-xs text-neutral-muted">See how your link will look</p>
-        </div>
-        <div className="space-y-6">
-          {generateQR && previewQR ? (
-            <div className="bg-gradient-to-br from-neutral-bg to-white rounded-2xl p-8 flex flex-col items-center justify-center border-2 border-neutral-border shadow-soft">
-              <div className="text-center mb-4">
-                <img src={previewQR} alt="QR Code Preview" className="w-48 h-48 mx-auto mb-4 rounded-xl shadow-soft" />
-                <p className="text-xs font-semibold text-neutral-text">QR Code</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleDownloadQR}
-                className="w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold hover:from-bright-indigo hover:to-vivid-royal transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-button"
-              >
-                <Download className="h-4 w-4" />
-                Download QR Code
-              </button>
-            </div>
-          ) : generateQR ? (
-            <div className="bg-gradient-to-br from-neutral-bg to-white rounded-2xl p-8 flex items-center justify-center h-64 border-2 border-neutral-border shadow-soft">
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center mx-auto mb-4">
-                  <QrCode className="h-8 w-8 text-electric-sapphire/60" />
+        </>
+      }
+      preview={
+        <>
+          <FormPreviewHeader
+            title="Preview"
+            description="See how your link will look"
+          />
+          <div className="space-y-4">
+            {generateQR && previewQR ? (
+              <PreviewPanel className="!p-6">
+                <img
+                  src={previewQR}
+                  alt="QR Code Preview"
+                  className="w-44 h-44 mx-auto mb-4 rounded-2xl shadow-soft"
+                />
+                <p className="text-xs font-semibold text-neutral-muted mb-4">QR Code</p>
+                <Button type="button" onClick={handleDownloadQR} className="w-full">
+                  <Download className="h-4 w-4" />
+                  Download QR Code
+                </Button>
+              </PreviewPanel>
+            ) : generateQR ? (
+              <PreviewPanel className="h-56">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                  <QrCode className="h-7 w-7 text-primary/70" />
                 </div>
-                <p className="text-sm font-semibold text-neutral-muted">Enter URL to see QR preview</p>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-gradient-to-br from-neutral-bg to-white rounded-2xl p-8 flex items-center justify-center h-64 border-2 border-neutral-border shadow-soft">
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center mx-auto mb-4">
-                  <Link2 className="h-8 w-8 text-electric-sapphire/60" />
+                <p className="text-sm font-medium text-neutral-muted text-center">
+                  Enter URL to see QR preview
+                </p>
+              </PreviewPanel>
+            ) : (
+              <PreviewPanel className="h-56">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                  <Link2 className="h-7 w-7 text-primary/70" />
                 </div>
-                <p className="text-sm font-semibold text-neutral-muted">Enable QR generation to see preview</p>
+                <p className="text-sm font-medium text-neutral-muted text-center px-2">
+                  Enable QR generation to see preview
+                </p>
+              </PreviewPanel>
+            )}
+            {previewUrl && (
+              <div className="p-4 rounded-card bg-primary/5 border border-primary/10 shadow-soft">
+                <p className="text-[11px] font-semibold text-neutral-muted mb-1.5 uppercase tracking-wide">
+                  Short URL
+                </p>
+                <p className="text-sm text-primary font-mono break-all font-semibold">
+                  {previewUrl}
+                </p>
               </div>
-            </div>
-          )}
-          {previewUrl && (
-            <div className="p-4 rounded-xl bg-gradient-to-r from-electric-sapphire/5 to-bright-indigo/5 border border-electric-sapphire/10">
-              <p className="text-xs font-semibold text-neutral-muted mb-2 uppercase tracking-wide">Short URL</p>
-              <p className="text-sm text-electric-sapphire font-mono break-all font-semibold">
-                {previewUrl}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+            )}
+          </div>
+        </>
+      }
+    />
 
       {/* Success Modal */}
       {createdLink && (
@@ -1429,7 +1462,7 @@ export function LinkCreationPage({
           }
         }}
       />
-    </div>
+    </>
   );
 }
 
@@ -1445,13 +1478,13 @@ function CollapsibleSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-xl overflow-hidden shadow-soft border border-neutral-border">
+    <div className="bg-white rounded-card overflow-hidden shadow-soft border border-neutral-border/80">
       <button
         type="button"
         onClick={() => onToggle(!isOpen)}
-        className="w-full px-5 py-4 flex items-center justify-between hover:bg-neutral-bg transition-colors"
+        className="w-full px-5 py-4 flex items-center justify-between hover:bg-neutral-bg/50 transition-colors"
       >
-        <span className="text-sm font-bold text-neutral-text">{title}</span>
+        <span className="text-sm font-semibold text-neutral-text tracking-tight">{title}</span>
         <ChevronDown className={cn(
           "h-4 w-4 text-neutral-muted transition-transform duration-200",
           isOpen && "rotate-180"

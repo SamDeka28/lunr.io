@@ -2,10 +2,12 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { QrCode, Download, Trash2, ExternalLink, Copy, Check, Share2, MoreVertical, Calendar, Tag, BarChart3 } from "lucide-react";
+import { QrCode, Download, Trash2, ExternalLink, Copy, Check, Share2, MoreVertical, Calendar, Tag, BarChart3, Plus } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
 
 interface QRCodeListProps {
   qrCodes: any[];
@@ -134,28 +136,25 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
 
   if (qrCodes.length === 0) {
     return (
-      <div className="text-center py-20 bg-white rounded-card shadow-soft border border-neutral-border">
-        <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center mx-auto mb-6">
-          <QrCode className="h-12 w-12 text-electric-sapphire/60" />
-        </div>
-        <h3 className="text-2xl font-bold text-neutral-text mb-3">
-          No QR codes yet
-        </h3>
-        <p className="text-sm text-neutral-muted mb-8 max-w-sm mx-auto">
-          {canCreate
+      <EmptyState
+        icon={<QrCode className="h-6 w-6" />}
+        title="No QR codes yet"
+        description={
+          canCreate
             ? "Generate your first QR code to get started."
-            : "You've reached your free QR code limit. Upgrade for more."}
-        </p>
-        {canCreate && (
-          <Link
-            href="/dashboard/qr/new"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold hover:from-bright-indigo hover:to-vivid-royal transition-all active:scale-[0.98] shadow-button"
-          >
-            <span className="text-lg">+</span>
-            Generate Your First QR Code
-          </Link>
-        )}
-      </div>
+            : "You've reached your free QR code limit. Upgrade for more."
+        }
+        action={
+          canCreate ? (
+            <Link href="/dashboard/qr/new">
+              <Button>
+                <Plus className="h-4 w-4" />
+                Generate Your First QR Code
+              </Button>
+            </Link>
+          ) : undefined
+        }
+      />
     );
   }
 
@@ -170,7 +169,7 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
             <div
               key={qr.id}
               className={cn(
-                "bg-white rounded-card border border-neutral-border p-4 hover:shadow-soft transition-all",
+                "bg-white rounded-card border border-neutral-border/80 p-4 shadow-soft hover:shadow-hover hover:-translate-y-0.5 transition-all",
                 isSelected && "ring-2 ring-electric-sapphire"
               )}
             >
@@ -208,7 +207,7 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
                 </button>
                 <Link
                   href={`/dashboard/qr/${qr.id}/analytics`}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white hover:from-bright-indigo hover:to-vivid-royal transition-all"
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold bg-primary text-white shadow-button hover:bg-bright-indigo transition-all"
                 >
                   Analytics
                 </Link>
@@ -230,7 +229,7 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
             <div
               key={qr.id}
               className={cn(
-                "bg-white rounded-card border border-neutral-border p-5 hover:shadow-soft transition-all",
+                "bg-white rounded-card border border-neutral-border/80 p-5 shadow-soft hover:shadow-hover hover:-translate-y-0.5 transition-all",
                 isSelected && "ring-2 ring-electric-sapphire"
               )}
             >
@@ -280,7 +279,7 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
                 </button>
                 <Link
                   href={`/dashboard/qr/${qr.id}/analytics`}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white hover:from-bright-indigo hover:to-vivid-royal transition-all"
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold bg-primary text-white shadow-button hover:bg-bright-indigo transition-all"
                 >
                   View Analytics
                 </Link>
@@ -294,8 +293,8 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
 
   // Default list view
   return (
-    <div className="space-y-0">
-      {processedQRCodes.map((qr, index) => {
+    <div className="space-y-3">
+      {processedQRCodes.map((qr) => {
         const isCopied = copiedId === qr.id;
         const isSelected = selectedQRCodes.has(qr.id);
 
@@ -303,15 +302,15 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
           <div
             key={qr.id}
             className={cn(
-              "bg-white border-b border-neutral-border p-5",
-              "hover:bg-neutral-bg transition-colors",
-              index === 0 && "rounded-t-card border-t",
-              index === processedQRCodes.length - 1 && "rounded-b-card border-b"
+              "bg-white border border-neutral-border/80 rounded-card p-4 sm:p-5 shadow-soft",
+              "hover:shadow-hover hover:-translate-y-0.5 transition-all",
+              isSelected && "ring-2 ring-electric-sapphire"
             )}
           >
-            <div className="flex items-start gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
               {/* Checkbox */}
-              <div className="pt-1">
+              <div className="pt-1 shrink-0">
                 <input
                   type="checkbox"
                   checked={isSelected}
@@ -322,7 +321,7 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
 
               {/* QR Code Preview */}
               <div className="flex-shrink-0">
-                <div className="w-32 h-32 rounded-xl bg-gradient-to-br from-neutral-bg to-white p-3 border-2 border-neutral-border flex items-center justify-center">
+                <div className="w-20 h-20 sm:w-32 sm:h-32 rounded-xl bg-gradient-to-br from-neutral-bg to-white p-2 sm:p-3 border-2 border-neutral-border flex items-center justify-center">
                   <img 
                     src={qr.qr_data} 
                     alt="QR Code" 
@@ -335,14 +334,14 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
               <div className="flex-1 min-w-0">
                 {/* Title and Link */}
                 <div className="mb-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-sm font-semibold text-neutral-text">
+                  <div className="flex items-center gap-2 mb-2 min-w-0">
+                    <h3 className="text-sm font-semibold text-neutral-text min-w-0 truncate">
                       {qr.shortUrl ? (
                         <Link
                           href={qr.shortUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-mono text-sm text-electric-sapphire hover:text-bright-indigo font-semibold"
+                          className="font-mono text-sm text-electric-sapphire hover:text-bright-indigo font-semibold truncate block"
                         >
                           {qr.shortUrl}
                         </Link>
@@ -354,7 +353,7 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
                       <button
                         onClick={() => handleCopy(qr.shortUrl!, qr.id)}
                         className={cn(
-                          "p-1 rounded-lg transition-colors",
+                          "p-1 rounded-lg transition-colors shrink-0",
                           isCopied
                             ? "text-blue-energy bg-blue-energy/10"
                             : "text-neutral-muted hover:text-electric-sapphire hover:bg-electric-sapphire/10"
@@ -370,22 +369,22 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
                     )}
                   </div>
                   {qr.links && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <a
                         href={qr.links.original_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-neutral-muted hover:text-neutral-text flex items-center gap-1.5"
+                        className="text-xs text-neutral-muted hover:text-neutral-text flex items-center gap-1.5 min-w-0"
                       >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        <span className="truncate max-w-md">{qr.links.original_url}</span>
+                        <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{qr.links.original_url}</span>
                       </a>
                     </div>
                   )}
                 </div>
 
                 {/* Metadata */}
-                <div className="flex items-center gap-4 text-xs text-neutral-muted">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-muted">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="h-3.5 w-3.5" />
                     <span>{qr.createdDate}</span>
@@ -396,9 +395,10 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
                   </div>
                 </div>
               </div>
+              </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-1 flex-shrink-0">
+              <div className="flex items-center gap-1 flex-shrink-0 self-end sm:self-start">
                 <Link
                   href={`/dashboard/qr/${qr.id}/analytics`}
                   className="p-2 rounded-xl text-neutral-muted hover:text-bright-indigo hover:bg-bright-indigo/10 transition-colors"
@@ -427,7 +427,7 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
-                <button className="p-2 rounded-xl text-neutral-muted hover:text-neutral-text hover:bg-neutral-bg transition-colors">
+                <button className="hidden sm:inline-flex p-2 rounded-xl text-neutral-muted hover:text-neutral-text hover:bg-neutral-bg transition-colors">
                   <MoreVertical className="h-4 w-4" />
                 </button>
               </div>

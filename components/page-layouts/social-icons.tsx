@@ -1,4 +1,9 @@
 import { PageLayoutProps } from "./types";
+import {
+  getKnownSocialUrl,
+  getOtherSocialLinks,
+  hasAnySocialLinks,
+} from "@/lib/utils/social-links";
 
 interface SocialIconsProps {
   socialLinks: PageLayoutProps["socialLinks"];
@@ -14,6 +19,17 @@ interface SocialIconsProps {
   Globe: React.ComponentType<any>;
 }
 
+const KNOWN_ORDER = [
+  "email",
+  "twitter",
+  "instagram",
+  "linkedin",
+  "github",
+  "youtube",
+  "facebook",
+  "website",
+];
+
 export function SocialIcons({
   socialLinks,
   socialIcons,
@@ -27,7 +43,7 @@ export function SocialIcons({
   buttonTextColor,
   Globe,
 }: SocialIconsProps) {
-  if (!Object.keys(socialLinks).some((key) => socialLinks[key])) {
+  if (!hasAnySocialLinks(socialLinks)) {
     return null;
   }
 
@@ -44,6 +60,7 @@ export function SocialIcons({
       justifyContent: "center",
       transition: "all 0.2s",
       padding: `${socialIconPadding}px`,
+      overflow: "hidden",
     };
 
     if (socialIconStyle === "filled") {
@@ -66,6 +83,9 @@ export function SocialIcons({
     return baseStyle;
   };
 
+  const others = getOtherSocialLinks(socialLinks);
+  const iconStyle = getIconStyle();
+
   return (
     <div
       className="flex flex-wrap items-center justify-center max-w-full"
@@ -73,7 +93,8 @@ export function SocialIcons({
         gap: `clamp(${Math.max(8, Math.round(socialIconGap * 0.75))}px, 2vw, ${socialIconGap}px)`,
       }}
     >
-      {Object.entries(socialLinks).map(([platform, url]: [string, any]) => {
+      {KNOWN_ORDER.map((platform) => {
+        const url = getKnownSocialUrl(socialLinks, platform);
         if (!url) return null;
         const Icon = socialIcons[platform.toLowerCase()] || Globe;
 
@@ -84,10 +105,45 @@ export function SocialIcons({
             target={platform === "email" ? "_self" : "_blank"}
             rel="noopener noreferrer"
             className="transition-all hover:opacity-100 hover:scale-110"
-            style={getIconStyle()}
+            style={iconStyle}
             title={platform}
           >
             <Icon style={{ width: `${socialIconSize}px`, height: `${socialIconSize}px` }} />
+          </a>
+        );
+      })}
+
+      {others.map((item) => {
+        if (!item.url.trim()) return null;
+        return (
+          <a
+            key={item.id}
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-all hover:opacity-100 hover:scale-110"
+            style={{
+              ...iconStyle,
+              padding: item.iconUrl ? 0 : iconStyle.padding,
+            }}
+            title={item.label || "Link"}
+          >
+            {item.iconUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.iconUrl}
+                alt={item.label || ""}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
+            ) : (
+              <Globe
+                style={{ width: `${socialIconSize}px`, height: `${socialIconSize}px` }}
+              />
+            )}
           </a>
         );
       })}

@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { DashboardContainer } from "@/components/ui/dashboard-container";
+import { PageHeader } from "@/components/ui/page-header";
 import { createClient } from "@/lib/supabase/server";
 import { getCachedUser } from "@/lib/supabase/auth";
 import { CampaignForm } from "../campaign-form";
@@ -12,16 +14,13 @@ export default async function NewCampaignPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-neutral-text mb-2">Create Campaign</h1>
-        <p className="text-sm text-neutral-muted">
-          Organize your links into marketing campaigns
-        </p>
-      </div>
-
+    <DashboardContainer>
+      <PageHeader
+        title="Create Campaign"
+        description="Organize your links into marketing campaigns"
+      />
       <CampaignForm userId={user.id} />
-    </div>
+    </DashboardContainer>
   );
 }
 

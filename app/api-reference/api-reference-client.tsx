@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { CodeEditor } from "@/components/code-editor";
 import { BrandLogo } from "@/components/brand-logo";
+import { MobileBottomNav, MobileBottomNavItem } from "@/components/mobile-bottom-nav";
 
 type Language = "curl" | "javascript" | "python" | "php";
 
@@ -1015,29 +1016,70 @@ export function ApiReferenceClient() {
 
   const currentCategory = apiCategories.find((cat) => cat.id === selectedCategory) || apiCategories[0];
 
+  const selectApiSection = (categoryId: string, tab?: "getting-started" | "endpoints") => {
+    setSelectedCategory(categoryId);
+    if (categoryId === "webhooks" && tab) {
+      setWebhookTab(tab);
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const bottomNavItems: Array<{
+    id: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    active: boolean;
+    onClick: () => void;
+  }> = [
+    ...apiCategories
+      .filter((category) => category.id !== "webhooks")
+      .map((category) => ({
+        id: category.id,
+        label: category.category === "Getting Started" ? "Start" : category.category === "Usage Analytics" ? "Usage" : category.category,
+        icon: category.icon,
+        active: selectedCategory === category.id,
+        onClick: () => selectApiSection(category.id),
+      })),
+    {
+      id: "webhooks-start",
+      label: "Webhooks",
+      icon: Code,
+      active: selectedCategory === "webhooks" && webhookTab === "getting-started",
+      onClick: () => selectApiSection("webhooks", "getting-started"),
+    },
+    {
+      id: "webhooks-endpoints",
+      label: "Hooks API",
+      icon: Radio,
+      active: selectedCategory === "webhooks" && webhookTab === "endpoints",
+      onClick: () => selectApiSection("webhooks", "endpoints"),
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-neutral-bg">
-      {/* Header */}
-      <header className="border-b border-neutral-border bg-white sticky top-0 z-50">
+    <div className="min-h-screen bg-neutral-bg pb-20 lg:pb-0">
+      <header className="border-b border-neutral-border/70 bg-white/85 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-3">
-              <BrandLogo href={null} variant="full" size="md" />
-              <span className="text-sm text-neutral-muted">API Reference</span>
+          <div className="flex items-center justify-between h-14 sm:h-16 gap-3">
+            <Link href="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <BrandLogo href={null} variant="full" size="sm" className="sm:hidden" />
+              <BrandLogo href={null} variant="full" size="md" className="hidden sm:block" />
+              <span className="text-sm text-neutral-muted shrink-0">API</span>
+              <span className="text-sm text-neutral-muted hidden sm:inline shrink-0">Reference</span>
             </Link>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
               <Link
                 href="/docs"
-                className="text-sm font-medium text-neutral-muted hover:text-electric-sapphire transition-colors"
+                className="text-sm font-medium text-neutral-muted hover:text-primary transition-colors hidden sm:inline"
               >
                 Documentation
               </Link>
               <Link
                 href="/login"
                 className={cn(
-                  "px-5 py-2.5 rounded-xl font-semibold text-white text-sm",
-                  "bg-gradient-to-r from-electric-sapphire to-bright-indigo",
-                  "hover:from-bright-indigo hover:to-vivid-royal",
+                  "px-3 sm:px-5 py-2 sm:py-2.5 rounded-full font-semibold text-white text-sm",
+                  "bg-primary",
+                  "hover:bg-bright-indigo",
                   "transition-all active:scale-[0.98] shadow-button"
                 )}
               >
@@ -1048,15 +1090,27 @@ export function ApiReferenceClient() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid lg:grid-cols-12 gap-8">
-          {/* Sidebar Navigation */}
-          <aside className="lg:col-span-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Mobile auth tip */}
+        <div className="lg:hidden mb-6 bg-white rounded-card p-4 border border-neutral-border/80 shadow-soft">
+          <div className="flex items-center gap-2 mb-2">
+            <Key className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-sm text-neutral-text">Authentication</h3>
+          </div>
+          <p className="text-xs text-neutral-muted mb-2">
+            All requests require an API key in the Authorization header.
+          </p>
+          <pre className="bg-neutral-bg border border-neutral-border p-2 rounded text-xs overflow-x-auto">
+            <code className="text-neutral-text font-mono">Bearer sk_...</code>
+          </pre>
+        </div>
+
+        <div className="grid lg:grid-cols-12 gap-6 lg:gap-8">
+          <aside className="hidden lg:block lg:col-span-3">
             <div className="sticky top-24 space-y-6">
-              {/* Authentication Section */}
-              <div className="bg-white rounded-xl p-4 border border-neutral-border shadow-soft">
+              <div className="bg-white rounded-card p-4 border border-neutral-border/80 shadow-soft">
                 <div className="flex items-center gap-2 mb-3">
-                  <Key className="h-4 w-4 text-electric-sapphire" />
+                  <Key className="h-4 w-4 text-primary" />
                   <h3 className="font-semibold text-sm text-neutral-text">Authentication</h3>
                 </div>
                 <p className="text-xs text-neutral-muted mb-3">
@@ -1079,7 +1133,6 @@ export function ApiReferenceClient() {
                 </div>
               </div>
 
-              {/* Category Navigation */}
               <nav className="space-y-1">
                 <div className="text-xs font-semibold text-neutral-muted uppercase tracking-wider px-3 mb-2">
                   API Sections
@@ -1092,11 +1145,11 @@ export function ApiReferenceClient() {
                     return (
                       <button
                         key={category.id}
-                        onClick={() => setSelectedCategory(category.id)}
+                        onClick={() => selectApiSection(category.id)}
                         className={cn(
                           "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                           isActive
-                            ? "bg-gradient-to-r from-electric-sapphire/10 to-bright-indigo/10 text-electric-sapphire border border-electric-sapphire/20"
+                            ? "bg-primary/10 text-primary border border-primary/20"
                             : "text-neutral-muted hover:text-neutral-text hover:bg-neutral-bg"
                         )}
                       >
@@ -1105,22 +1158,18 @@ export function ApiReferenceClient() {
                       </button>
                     );
                   })}
-                
-                {/* Webhooks Main Category */}
+
                 <div className="mt-4 pt-4 border-t border-neutral-border">
                   <div className="text-xs font-semibold text-neutral-muted uppercase tracking-wider px-3 mb-2">
                     Webhooks
                   </div>
                   <div className="space-y-1">
                     <button
-                      onClick={() => {
-                        setSelectedCategory("webhooks");
-                        setWebhookTab("getting-started");
-                      }}
+                      onClick={() => selectApiSection("webhooks", "getting-started")}
                       className={cn(
                         "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left",
                         selectedCategory === "webhooks" && webhookTab === "getting-started"
-                          ? "bg-gradient-to-r from-electric-sapphire/10 to-bright-indigo/10 text-electric-sapphire border border-electric-sapphire/20"
+                          ? "bg-primary/10 text-primary border border-primary/20"
                           : "text-neutral-muted hover:text-neutral-text hover:bg-neutral-bg"
                       )}
                     >
@@ -1128,14 +1177,11 @@ export function ApiReferenceClient() {
                       <span>Getting Started</span>
                     </button>
                     <button
-                      onClick={() => {
-                        setSelectedCategory("webhooks");
-                        setWebhookTab("endpoints");
-                      }}
+                      onClick={() => selectApiSection("webhooks", "endpoints")}
                       className={cn(
                         "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left",
                         selectedCategory === "webhooks" && webhookTab === "endpoints"
-                          ? "bg-gradient-to-r from-electric-sapphire/10 to-bright-indigo/10 text-electric-sapphire border border-electric-sapphire/20"
+                          ? "bg-primary/10 text-primary border border-primary/20"
                           : "text-neutral-muted hover:text-neutral-text hover:bg-neutral-bg"
                       )}
                     >
@@ -1146,17 +1192,16 @@ export function ApiReferenceClient() {
                 </div>
               </nav>
 
-              {/* Quick Links */}
-              <div className="bg-gradient-to-br from-electric-sapphire/5 to-bright-indigo/5 rounded-xl p-4 border border-electric-sapphire/20">
+              <div className="bg-primary/[0.04] rounded-xl p-4 border border-primary/20">
                 <div className="flex items-center gap-2 mb-2">
-                  <BookOpen className="h-4 w-4 text-electric-sapphire" />
+                  <BookOpen className="h-4 w-4 text-primary" />
                   <h3 className="font-semibold text-sm text-neutral-text">Resources</h3>
                 </div>
                 <div className="space-y-2 text-xs">
-                  <Link href="/docs" className="block text-electric-sapphire hover:underline">
+                  <Link href="/docs" className="block text-primary hover:underline">
                     Full Documentation
                   </Link>
-                  <Link href="/dashboard/settings" className="block text-electric-sapphire hover:underline">
+                  <Link href="/dashboard/settings" className="block text-primary hover:underline">
                     Manage API Keys
                   </Link>
                 </div>
@@ -1164,23 +1209,22 @@ export function ApiReferenceClient() {
             </div>
           </aside>
 
-          {/* Main Content */}
-          <main className="lg:col-span-9">
+          <main className="lg:col-span-9 min-w-0">
             {/* Getting Started Content */}
             {selectedCategory === "getting-started" ? (
-              <div className="bg-white rounded-xl border border-neutral-border shadow-soft p-8">
+              <div className="bg-white rounded-card border border-neutral-border/80 shadow-soft p-4 sm:p-8">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center">
-                    <Code className="h-5 w-5 text-electric-sapphire" />
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Code className="h-5 w-5 text-primary" />
                   </div>
-                  <h1 className="text-3xl font-bold text-neutral-text">Getting Started</h1>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-neutral-text">Getting Started</h1>
                 </div>
                 
                 <div className="space-y-8">
                   <div>
                     <h2 className="text-xl font-semibold text-neutral-text mb-3">1. Create an API Key</h2>
                     <p className="text-sm text-neutral-muted mb-3">
-                      API access is available on Enterprise plans. Go to <Link href="/dashboard/settings" className="text-electric-sapphire hover:underline font-medium">Settings → API Keys</Link> to create your first API key.
+                      API access is available on Enterprise plans. Go to <Link href="/dashboard/settings" className="text-primary hover:underline font-medium">Settings → API Keys</Link> to create your first API key.
                     </p>
                     <p className="text-xs text-neutral-muted">
                       <strong>Important:</strong> Save your API key securely when created - you won't be able to see it again!
@@ -1278,11 +1322,11 @@ export function ApiReferenceClient() {
                 {/* Webhooks Category Header */}
                 <div className="mb-6">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center">
-                      <Radio className="h-5 w-5 text-electric-sapphire" />
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Radio className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h1 className="text-3xl font-bold text-neutral-text">Webhooks</h1>
+                      <h1 className="text-2xl sm:text-3xl font-bold text-neutral-text">Webhooks</h1>
                       <p className="text-neutral-muted mt-1">Receive real-time notifications when events occur in your account.</p>
                     </div>
                   </div>
@@ -1294,7 +1338,7 @@ export function ApiReferenceClient() {
                       className={cn(
                         "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
                         webhookTab === "getting-started"
-                          ? "text-electric-sapphire border-electric-sapphire"
+                          ? "text-primary border-primary"
                           : "text-neutral-muted border-transparent hover:text-neutral-text"
                       )}
                     >
@@ -1305,7 +1349,7 @@ export function ApiReferenceClient() {
                       className={cn(
                         "px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
                         webhookTab === "endpoints"
-                          ? "text-electric-sapphire border-electric-sapphire"
+                          ? "text-primary border-primary"
                           : "text-neutral-muted border-transparent hover:text-neutral-text"
                       )}
                     >
@@ -1316,7 +1360,7 @@ export function ApiReferenceClient() {
 
                 {/* Webhooks Getting Started Tab */}
                 {webhookTab === "getting-started" && (
-                  <div className="bg-white rounded-xl border border-neutral-border shadow-soft p-8">
+                  <div className="bg-white rounded-card border border-neutral-border/80 shadow-soft p-8">
                     <div className="space-y-8">
                       <div>
                         <h2 className="text-xl font-semibold text-neutral-text mb-3">What are Webhooks?</h2>
@@ -1441,19 +1485,19 @@ def handle_webhook():
                             <h3 className="text-sm font-semibold text-neutral-text mb-2">Link Events</h3>
                             <div className="space-y-2">
                               <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                                <code className="text-sm font-mono text-electric-sapphire">link.created</code>
+                                <code className="text-sm font-mono text-primary">link.created</code>
                                 <p className="text-xs text-neutral-muted mt-1">Triggered when a link is created</p>
                               </div>
                               <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                                <code className="text-sm font-mono text-electric-sapphire">link.updated</code>
+                                <code className="text-sm font-mono text-primary">link.updated</code>
                                 <p className="text-xs text-neutral-muted mt-1">Triggered when a link is updated</p>
                               </div>
                               <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                                <code className="text-sm font-mono text-electric-sapphire">link.deleted</code>
+                                <code className="text-sm font-mono text-primary">link.deleted</code>
                                 <p className="text-xs text-neutral-muted mt-1">Triggered when a link is deleted</p>
                               </div>
                               <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                                <code className="text-sm font-mono text-electric-sapphire">link.clicked</code>
+                                <code className="text-sm font-mono text-primary">link.clicked</code>
                                 <p className="text-xs text-neutral-muted mt-1">Triggered when a link is clicked</p>
                               </div>
                             </div>
@@ -1462,45 +1506,45 @@ def handle_webhook():
                             <h3 className="text-sm font-semibold text-neutral-text mb-2">QR Code Events</h3>
                             <div className="space-y-2">
                               <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                                <code className="text-sm font-mono text-electric-sapphire">qr.created</code>
+                                <code className="text-sm font-mono text-primary">qr.created</code>
                                 <p className="text-xs text-neutral-muted mt-1">Triggered when a QR code is created</p>
                               </div>
                               <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                                <code className="text-sm font-mono text-electric-sapphire">qr.updated</code>
+                                <code className="text-sm font-mono text-primary">qr.updated</code>
                                 <p className="text-xs text-neutral-muted mt-1">Triggered when a QR code is updated</p>
                               </div>
                               <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                                <code className="text-sm font-mono text-electric-sapphire">qr.deleted</code>
+                                <code className="text-sm font-mono text-primary">qr.deleted</code>
                                 <p className="text-xs text-neutral-muted mt-1">Triggered when a QR code is deleted</p>
                               </div>
                             </div>
                             <h3 className="text-sm font-semibold text-neutral-text mb-2 mt-4">Page Events</h3>
                             <div className="space-y-2">
                               <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                                <code className="text-sm font-mono text-electric-sapphire">page.created</code>
+                                <code className="text-sm font-mono text-primary">page.created</code>
                                 <p className="text-xs text-neutral-muted mt-1">Triggered when a page is created</p>
                               </div>
                               <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                                <code className="text-sm font-mono text-electric-sapphire">page.updated</code>
+                                <code className="text-sm font-mono text-primary">page.updated</code>
                                 <p className="text-xs text-neutral-muted mt-1">Triggered when a page is updated</p>
                               </div>
                               <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                                <code className="text-sm font-mono text-electric-sapphire">page.deleted</code>
+                                <code className="text-sm font-mono text-primary">page.deleted</code>
                                 <p className="text-xs text-neutral-muted mt-1">Triggered when a page is deleted</p>
                               </div>
                             </div>
                             <h3 className="text-sm font-semibold text-neutral-text mb-2 mt-4">Campaign Events</h3>
                             <div className="space-y-2">
                               <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                                <code className="text-sm font-mono text-electric-sapphire">campaign.created</code>
+                                <code className="text-sm font-mono text-primary">campaign.created</code>
                                 <p className="text-xs text-neutral-muted mt-1">Triggered when a campaign is created</p>
                               </div>
                               <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                                <code className="text-sm font-mono text-electric-sapphire">campaign.updated</code>
+                                <code className="text-sm font-mono text-primary">campaign.updated</code>
                                 <p className="text-xs text-neutral-muted mt-1">Triggered when a campaign is updated</p>
                               </div>
                               <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                                <code className="text-sm font-mono text-electric-sapphire">campaign.deleted</code>
+                                <code className="text-sm font-mono text-primary">campaign.deleted</code>
                                 <p className="text-xs text-neutral-muted mt-1">Triggered when a campaign is deleted</p>
                               </div>
                             </div>
@@ -1515,19 +1559,19 @@ def handle_webhook():
                         </p>
                         <div className="space-y-2 mb-4">
                           <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                            <code className="text-sm font-mono text-electric-sapphire">X-Webhook-Event</code>
+                            <code className="text-sm font-mono text-primary">X-Webhook-Event</code>
                             <p className="text-xs text-neutral-muted mt-1">The event type (e.g., "link.created", "link.clicked")</p>
                           </div>
                           <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                            <code className="text-sm font-mono text-electric-sapphire">X-Webhook-Signature</code>
+                            <code className="text-sm font-mono text-primary">X-Webhook-Signature</code>
                             <p className="text-xs text-neutral-muted mt-1">HMAC SHA256 signature for verification (hex encoded)</p>
                           </div>
                           <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                            <code className="text-sm font-mono text-electric-sapphire">X-Webhook-Id</code>
+                            <code className="text-sm font-mono text-primary">X-Webhook-Id</code>
                             <p className="text-xs text-neutral-muted mt-1">The unique webhook ID that triggered this event</p>
                           </div>
                           <div className="bg-neutral-bg border border-neutral-border rounded-lg p-3">
-                            <code className="text-sm font-mono text-electric-sapphire">Content-Type</code>
+                            <code className="text-sm font-mono text-primary">Content-Type</code>
                             <p className="text-xs text-neutral-muted mt-1">Always "application/json"</p>
                           </div>
                         </div>
@@ -1603,7 +1647,7 @@ def handle_webhook():
                         return (
                           <div
                             key={endpointId}
-                            className="bg-white rounded-xl border border-neutral-border shadow-soft overflow-hidden"
+                            className="bg-white rounded-card border border-neutral-border/80 shadow-soft overflow-hidden"
                           >
                             {/* Endpoint Header */}
                             <div
@@ -1688,7 +1732,7 @@ def handle_webhook():
                                         className={cn(
                                           "px-4 py-2 text-xs font-medium transition-colors border-b-2 -mb-px",
                                           selectedLang === example.language
-                                            ? "text-electric-sapphire border-electric-sapphire"
+                                            ? "text-primary border-primary"
                                             : "text-neutral-muted border-transparent hover:text-neutral-text"
                                         )}
                                       >
@@ -1746,13 +1790,13 @@ def handle_webhook():
                 {(() => {
                   const Icon = currentCategory.icon;
                   return (
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center">
-                      <Icon className="h-5 w-5 text-electric-sapphire" />
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Icon className="h-5 w-5 text-primary" />
                     </div>
                   );
                 })()}
                 <div>
-                  <h1 className="text-3xl font-bold text-neutral-text">{currentCategory.category}</h1>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-neutral-text">{currentCategory.category}</h1>
                   <p className="text-neutral-muted mt-1">{currentCategory.description}</p>
                 </div>
               </div>
@@ -1769,11 +1813,11 @@ def handle_webhook():
                 return (
                   <div
                     key={endpointId}
-                    className="bg-white rounded-xl border border-neutral-border shadow-soft overflow-hidden"
+                    className="bg-white rounded-card border border-neutral-border/80 shadow-soft overflow-hidden"
                   >
                     {/* Endpoint Header */}
                     <div
-                      className="p-6 cursor-pointer hover:bg-neutral-bg/50 transition-colors"
+                      className="p-4 sm:p-6 cursor-pointer hover:bg-neutral-bg/50 transition-colors"
                       onClick={() => toggleEndpoint(endpointId)}
                     >
                       <div className="flex items-start justify-between gap-4">
@@ -1815,7 +1859,7 @@ def handle_webhook():
                               {endpoint.parameters.map((param, paramIdx) => (
                                 <div key={paramIdx} className="bg-white rounded-lg p-3 border border-neutral-border">
                                   <div className="flex items-start gap-2 mb-1">
-                                    <code className="text-sm font-mono text-electric-sapphire font-semibold">
+                                    <code className="text-sm font-mono text-primary font-semibold">
                                       {param.name}
                                     </code>
                                     <span className="text-xs text-neutral-muted">({param.type})</span>
@@ -1843,9 +1887,9 @@ def handle_webhook():
 
                         {/* Code Examples */}
                         <div>
-                          <div className="flex items-center justify-between mb-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                             <h4 className="text-sm font-semibold text-neutral-text">Code Examples</h4>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                               {endpoint.examples.map((example) => (
                                 <button
                                   key={example.language}
@@ -1853,7 +1897,7 @@ def handle_webhook():
                                   className={cn(
                                     "px-3 py-1 text-xs font-medium rounded-lg transition-colors",
                                     selectedLang === example.language
-                                      ? "bg-electric-sapphire text-white"
+                                      ? "bg-primary text-white"
                                       : "bg-white border border-neutral-border text-neutral-muted hover:text-neutral-text"
                                   )}
                                 >
@@ -1906,6 +1950,21 @@ def handle_webhook():
           </main>
         </div>
       </div>
+
+      <MobileBottomNav>
+        {bottomNavItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <MobileBottomNavItem
+              key={item.id}
+              active={item.active}
+              onClick={item.onClick}
+              icon={<Icon />}
+              label={item.label}
+            />
+          );
+        })}
+      </MobileBottomNav>
     </div>
   );
 }

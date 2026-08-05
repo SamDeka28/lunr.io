@@ -375,19 +375,17 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
       )}
       
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Main Form - Single Column with Better Spacing */}
-        <div className="max-w-7xl mx-auto space-y-6">
+        {/* Main Form */}
+        <div className="space-y-6">
           {/* Top Row - Basic Info and Links Side by Side */}
           <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
             {/* Basic Information - Takes 3 columns */}
             <div className="xl:col-span-3 space-y-6">
               {/* Basic Information */}
-              <div className="bg-white rounded-card shadow-soft border border-neutral-border p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center">
-                    <Monitor className="h-5 w-5 text-electric-sapphire" />
-                  </div>
-                  <h3 className="text-lg font-bold text-neutral-text">Basic Information</h3>
+              <div className="bg-white rounded-xl border border-neutral-border p-5">
+                <div className="flex items-center gap-3 mb-5">
+                  <Monitor className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-neutral-text">Basic information</h3>
                 </div>
                 <div className="space-y-5">
                   {/* Campaign Name */}
@@ -826,11 +824,11 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
         </div>
 
         {/* Actions */}
-        <div className="bg-white rounded-card shadow-soft border border-neutral-border p-6">
+        <div className="bg-white rounded-xl border border-neutral-border p-5">
           <div className="flex items-center justify-between">
             <Link
               href="/dashboard/campaigns"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-neutral-border hover:border-electric-sapphire hover:text-electric-sapphire text-sm font-semibold text-neutral-text transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-border hover:bg-neutral-bg text-sm font-medium text-neutral-text transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
               Cancel
@@ -839,10 +837,10 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
               type="submit"
               disabled={loading || !name.trim()}
               className={cn(
-                "px-6 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] shadow-button",
+                "px-5 py-2 rounded-lg text-sm font-medium transition-colors",
                 loading || !name.trim()
                   ? "bg-neutral-border text-neutral-muted cursor-not-allowed"
-                  : "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white hover:from-bright-indigo hover:to-vivid-royal"
+                  : "bg-primary text-white hover:bg-bright-indigo"
               )}
             >
               {loading ? (

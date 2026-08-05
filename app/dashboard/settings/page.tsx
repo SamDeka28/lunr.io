@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCachedUser } from "@/lib/supabase/auth";
-import { Crown } from "lucide-react";
 import { PlanInfo } from "../plan-info";
 import { SettingsClient } from "./settings-client";
+import { PageHeader } from "@/components/ui/page-header";
+import { DashboardContainer } from "@/components/ui/dashboard-container";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -13,9 +14,6 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  // Get user's plan and usage. `getUserPlan` and `getUsageLimits` are independent
-  // reads, so run them in parallel, and derive `hasApiAccess` from the plan we
-  // already fetched instead of issuing a third profile lookup via `hasFeature`.
   const { PlanService } = await import("@/lib/services/plan.service");
   const planService = new PlanService(supabase);
   const [userPlanData, limits] = await Promise.all([
@@ -34,17 +32,17 @@ export default async function SettingsPage() {
   const hasApiAccess = (features as Record<string, boolean>)["api_access"] === true;
 
   return (
-    <div className="max-w-7xl mx-auto w-full">
-      <h1 className="text-4xl font-bold text-neutral-text mb-8">Settings</h1>
+    <DashboardContainer>
+      <PageHeader
+        title="Settings"
+        description="Account, security, and developer integrations."
+      />
 
-      <div className="grid lg:grid-cols-12 gap-6">
-        {/* Main Settings Content */}
-        <div className="lg:col-span-9">
+      <div className="grid lg:grid-cols-12 gap-5">
+        <div className="lg:col-span-8 xl:col-span-9">
           <SettingsClient userId={user.id} hasApiAccess={hasApiAccess} user={user} />
         </div>
-
-        {/* Sidebar - Plan Info */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-4 xl:col-span-3">
           {userPlanData?.plan ? (
             <PlanInfo
               planName={userPlanData.plan.name}
@@ -56,16 +54,12 @@ export default async function SettingsPage() {
               usedQRCodes={limits.used_qr_codes}
             />
           ) : (
-            <div className="bg-white rounded-card p-6 shadow-soft border border-neutral-border">
-              <div className="text-center py-8">
-                <Crown className="h-12 w-12 text-neutral-muted mx-auto mb-4" />
-                <p className="text-sm text-neutral-muted">Plan information not available</p>
-              </div>
+            <div className="bg-white rounded-card p-5 border border-neutral-border/80 shadow-soft">
+              <p className="text-sm text-neutral-muted">Plan information not available</p>
             </div>
           )}
         </div>
       </div>
-    </div>
+    </DashboardContainer>
   );
 }
-

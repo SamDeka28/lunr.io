@@ -1,6 +1,7 @@
+import { DashboardContainer } from "@/components/ui/dashboard-container";
 export default function BillingLoading() {
   return (
-    <div className="max-w-7xl mx-auto w-full">
+    <DashboardContainer>
       {/* Header Skeleton */}
       <div className="mb-8 space-y-2">
         <div className="h-8 w-40 bg-neutral-border rounded-lg animate-pulse" />
@@ -36,6 +37,6 @@ export default function BillingLoading() {
           </div>
         ))}
       </div>
-    </div>
+    </DashboardContainer>
   );
 }

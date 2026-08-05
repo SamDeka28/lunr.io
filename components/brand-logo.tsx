@@ -9,12 +9,12 @@ type BrandLogoProps = {
   variant?: "full" | "mark";
   /** compact | default | large */
   size?: "sm" | "md" | "lg";
-  /** Use on dark backgrounds (hero, etc.) — shows mark + light wordmark */
+  /** Use on dark backgrounds — light wordmark asset */
   onDark?: boolean;
   href?: string | null;
   className?: string;
   priority?: boolean;
-  /** Optional subtitle under the mark when variant is mark + showWordmark */
+  /** Optional subtitle under the mark when variant is mark */
   subtitle?: string;
   showWordmark?: boolean;
 };
@@ -24,6 +24,9 @@ const SIZE = {
   md: { fullH: 36, mark: 36 },
   lg: { fullH: 44, mark: 48 },
 } as const;
+
+const FULL_RATIO = 838 / 240;
+const DARK_FULL_RATIO = 764 / 182;
 
 export function BrandLogo({
   variant = "full",
@@ -37,74 +40,65 @@ export function BrandLogo({
 }: BrandLogoProps) {
   const dims = SIZE[size];
 
-  // Dark surfaces: icon mark reads cleanly; full wordmark has dark "lunr" glyphs
-  const useMark = variant === "mark" || onDark;
-  const withText = onDark || showWordmark || !!subtitle;
-
-  const mark = (
-    <Image
-      src="/lunr-mark.png"
-      alt="lunr.to"
-      width={dims.mark}
-      height={dims.mark}
-      className="h-full w-auto object-contain"
-      priority={priority}
-    />
-  );
-
-  const full = (
-    <Image
-      src="/lunr-logo.png"
-      alt="lunr.to"
-      width={Math.round(dims.fullH * (838 / 240))}
-      height={dims.fullH}
-      className="h-full w-auto object-contain"
-      priority={priority}
-    />
-  );
-
-  const content = useMark ? (
-    <span className={cn("inline-flex items-center gap-2.5", className)}>
-      <span
-        className="relative shrink-0 overflow-hidden"
-        style={{ width: dims.mark, height: dims.mark }}
-      >
-        {mark}
-      </span>
-      {withText && (
-        <span className="flex flex-col leading-tight min-w-0">
-          <span
-            className={cn(
-              "font-bold tracking-tight",
-              size === "sm" && "text-sm",
-              size === "md" && "text-base",
-              size === "lg" && "text-xl",
-              onDark ? "text-white" : "text-neutral-text"
-            )}
-          >
-            lunr.to
-          </span>
-          {subtitle ? (
+  const content =
+    variant === "mark" ? (
+      <span className={cn("inline-flex items-center gap-2.5", className)}>
+        <span
+          className="relative shrink-0 overflow-hidden"
+          style={{ width: dims.mark, height: dims.mark }}
+        >
+          <Image
+            src="/lunr-mark.png"
+            alt="lunr.to"
+            width={dims.mark}
+            height={dims.mark}
+            className="h-full w-auto object-contain"
+            priority={priority}
+          />
+        </span>
+        {(showWordmark || subtitle) && (
+          <span className="flex flex-col leading-tight min-w-0">
             <span
               className={cn(
-                "text-xs truncate",
-                onDark ? "text-white/70" : "text-neutral-muted"
+                "font-bold tracking-tight",
+                size === "sm" && "text-sm",
+                size === "md" && "text-base",
+                size === "lg" && "text-xl",
+                onDark ? "text-white" : "text-neutral-text"
               )}
             >
-              {subtitle}
+              lunr.to
             </span>
-          ) : null}
-        </span>
-      )}
-    </span>
-  ) : (
-    <span
-      className={cn("inline-flex items-center", className)}
-      style={{ height: dims.fullH }}
-    >
-      {full}
-    </span>
-  );
+            {subtitle ? (
+              <span
+                className={cn(
+                  "text-xs truncate",
+                  onDark ? "text-white/70" : "text-neutral-muted"
+                )}
+              >
+                {subtitle}
+              </span>
+            ) : null}
+          </span>
+        )}
+      </span>
+    ) : (
+      <span
+        className={cn("inline-flex items-center", className)}
+        style={{ height: dims.fullH }}
+      >
+        <Image
+          src={onDark ? "/lunr-logo-dark.png" : "/lunr-logo.png"}
+          alt="lunr.to"
+          width={Math.round(
+            dims.fullH * (onDark ? DARK_FULL_RATIO : FULL_RATIO)
+          )}
+          height={dims.fullH}
+          className="h-full w-auto object-contain"
+          priority={priority}
+        />
+      </span>
+    );
 
   if (href === null) return content;
 

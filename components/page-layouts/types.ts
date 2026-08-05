@@ -1,9 +1,11 @@
+import type { SocialLinksMap } from "@/lib/utils/social-links";
+
 export interface PageLayoutProps {
   // Content
   title?: string;
   description?: string;
   pageLinks: Array<{ id: string; title: string; url: string }>;
-  socialLinks: Record<string, string>;
+  socialLinks: SocialLinksMap | Record<string, any>;
   
   // Design
   fontFamily: string;

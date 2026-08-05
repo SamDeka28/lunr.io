@@ -8,6 +8,13 @@ import { toast } from "sonner";
 import QRCodeLib from "qrcode";
 import { usePlan } from "@/hooks/use-plan";
 import { SuccessModal } from "@/components/success-modal";
+import { ColorPickerWithInput } from "@/components/color-picker-with-input";
+import { Button } from "@/components/ui/button";
+import {
+  FormWithPreviewShell,
+  FormPreviewHeader,
+  PreviewPanel,
+} from "@/components/ui/form-with-preview";
 
 export default function QRCodeForm({
   userId,
@@ -354,27 +361,17 @@ export default function QRCodeForm({
   const selectedLink = linkId ? links.find(l => l.id === linkId) : null;
 
   return (
-    <div className="flex h-[calc(100vh-73px)]">
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-3xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h1 className="text-3xl font-bold text-neutral-text mb-2">Generate QR Code</h1>
-                <p className="text-sm text-neutral-muted">
-                  Create a QR code for any URL or existing link
-                </p>
-              </div>
-              <button 
-                type="button"
-                className="px-4 py-2 rounded-xl border-2 border-neutral-border hover:border-electric-sapphire hover:text-electric-sapphire text-sm font-semibold text-neutral-text transition-colors flex items-center gap-2"
-              >
-                <Upload className="h-4 w-4" />
-                Bulk upload
-              </button>
-            </div>
+    <>
+    <FormWithPreviewShell
+      form={
+        <>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-semibold text-neutral-text tracking-tight">
+              Generate QR Code
+            </h1>
+            <p className="text-sm text-neutral-muted mt-1.5 leading-relaxed">
+              Create a QR code for an existing link or URL
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -506,77 +503,27 @@ export default function QRCodeForm({
                 )}
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
-                    QR Code Color
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={qrColor}
-                      onChange={(e) => {
-                        if (!isPremium) return;
-                        setQrColor(e.target.value);
-                      }}
-                      className={cn(
-                        "w-16 h-12 rounded-xl border-2 border-neutral-border transition-all",
-                        isPremium ? "cursor-pointer" : "cursor-not-allowed opacity-50"
-                      )}
-                      disabled={!isPremium}
-                    />
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={qrColor}
-                        onChange={(e) => {
-                          if (!isPremium) return;
-                          setQrColor(e.target.value);
-                        }}
-                        placeholder="#000000"
-                        className={cn(
-                          "w-full h-12 px-4 rounded-xl border-2 text-sm font-mono font-medium transition-all",
-                          isPremium ? "bg-white border-neutral-border text-neutral-text focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire" : "bg-neutral-bg border-neutral-border text-neutral-muted cursor-not-allowed opacity-50"
-                        )}
-                        disabled={!isPremium}
-                      />
-                    </div>
-                  </div>
+                  <ColorPickerWithInput
+                    label="QR Code Color"
+                    value={qrColor}
+                    onChange={(c) => {
+                      if (!isPremium) return;
+                      setQrColor(c);
+                    }}
+                    disabled={!isPremium}
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
-                    Background Color
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={qrBgColor}
-                      onChange={(e) => {
-                        if (!isPremium) return;
-                        setQrBgColor(e.target.value);
-                      }}
-                      className={cn(
-                        "w-16 h-12 rounded-xl border-2 border-neutral-border transition-all",
-                        isPremium ? "cursor-pointer" : "cursor-not-allowed opacity-50"
-                      )}
-                      disabled={!isPremium}
-                    />
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={qrBgColor}
-                        onChange={(e) => {
-                          if (!isPremium) return;
-                          setQrBgColor(e.target.value);
-                        }}
-                        placeholder="#FFFFFF"
-                        className={cn(
-                          "w-full h-12 px-4 rounded-xl border-2 text-sm font-mono font-medium transition-all",
-                          isPremium ? "bg-white border-neutral-border text-neutral-text focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire" : "bg-neutral-bg border-neutral-border text-neutral-muted cursor-not-allowed opacity-50"
-                        )}
-                        disabled={!isPremium}
-                      />
-                    </div>
-                  </div>
+                  <ColorPickerWithInput
+                    label="Background Color"
+                    value={qrBgColor}
+                    onChange={(c) => {
+                      if (!isPremium) return;
+                      setQrBgColor(c);
+                    }}
+                    disabled={!isPremium}
+                  />
                 </div>
 
                 <div>
@@ -601,31 +548,63 @@ export default function QRCodeForm({
                   </select>
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-neon-pink/5 to-raspberry-plum/5 border border-neon-pink/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-pink/10 to-raspberry-plum/10 flex items-center justify-center">
-                      <Crown className="h-5 w-5 text-neon-pink" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-neutral-text">Add Logo to QR Code</div>
-                      <div className="text-xs text-neutral-muted">
-                        Embed your logo in the center of the QR code
+                <div
+                  className={cn(
+                    "rounded-xl border p-4 space-y-3",
+                    isPremium
+                      ? "bg-neutral-bg/60 border-neutral-border"
+                      : "bg-gradient-to-r from-neon-pink/5 to-raspberry-plum/5 border-neon-pink/10"
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                          isPremium
+                            ? "bg-white border border-neutral-border"
+                            : "bg-gradient-to-br from-neon-pink/10 to-raspberry-plum/10"
+                        )}
+                      >
+                        {isPremium ? (
+                          <Upload className="h-5 w-5 text-electric-sapphire" />
+                        ) : (
+                          <Crown className="h-5 w-5 text-neon-pink" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-neutral-text">Add Logo to QR Code</div>
+                        <div className="text-xs text-neutral-muted">
+                          {isPremium
+                            ? "Upload a logo below, then turn this on"
+                            : "Embed your logo in the center of the QR code"}
+                        </div>
                       </div>
                     </div>
+                    <ToggleSwitch 
+                      enabled={addLogo} 
+                      onChange={async (val) => {
+                        if (!isPremium) return;
+                        if (val && !previewImageUrl) {
+                          toast.error("Upload a logo image first");
+                          fileInputRef.current?.click();
+                          return;
+                        }
+                        setAddLogo(val);
+                      }} 
+                      isPremium={!isPremium}
+                      disabled={!isPremium}
+                    />
                   </div>
-                  <ToggleSwitch 
-                    enabled={addLogo} 
-                    onChange={async (val) => {
-                      if (!isPremium) return;
-                      if (val && !previewImageUrl) {
-                        toast.error("Please upload an image first");
-                        return;
-                      }
-                      setAddLogo(val);
-                    }} 
-                    isPremium={!isPremium}
-                    disabled={!previewImageUrl && isPremium}
-                  />
+
+                  {!isPremium && (
+                    <p className="text-xs text-neutral-muted">
+                      <a href="/dashboard/billing" className="text-neon-pink hover:text-raspberry-plum font-semibold">
+                        Upgrade
+                      </a>{" "}
+                      to embed a logo in your QR codes.
+                    </p>
+                  )}
                 </div>
 
                 {isPremium && (
@@ -694,33 +673,20 @@ export default function QRCodeForm({
             </CollapsibleSection>
 
             {error && (
-              <div className="p-4 rounded-xl bg-red-50 border-2 border-red-200">
+              <div className="p-4 rounded-2xl bg-red-50 border border-red-200">
                 <p className="text-sm font-medium text-red-600">{error}</p>
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-6">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="h-11 px-6 rounded-xl border-2 border-neutral-border text-neutral-text text-sm font-semibold hover:bg-neutral-bg hover:border-neutral-text transition-all active:scale-[0.98]"
-              >
+            <div className="flex flex-wrap gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={() => router.back()}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading || (!linkId && !url)}
-                className={cn(
-                  "h-11 px-6 rounded-xl bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold",
-                  "hover:from-bright-indigo hover:to-vivid-royal disabled:opacity-30 disabled:cursor-not-allowed",
-                  "transition-all active:scale-[0.98] flex items-center gap-2 shadow-button"
-                )}
-              >
+              </Button>
+              <Button type="submit" disabled={loading || (!linkId && !url)}>
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Generating...
+                    Generating…
                   </>
                 ) : (
                   <>
@@ -728,48 +694,44 @@ export default function QRCodeForm({
                     <ChevronRight className="h-4 w-4" />
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
-      </div>
-
-      {/* Preview Panel */}
-      <div className="w-80 bg-white border-l border-neutral-border p-6 overflow-y-auto flex-shrink-0">
-        <div className="mb-6">
-          <h3 className="text-lg font-bold text-neutral-text mb-1">Preview</h3>
-          <p className="text-xs text-neutral-muted">See how your QR code will look</p>
-        </div>
-        <div className="space-y-6">
+        </>
+      }
+      preview={
+        <>
+          <FormPreviewHeader
+            title="Preview"
+            description="See how your QR code will look"
+          />
           {previewQR ? (
-            <div className="bg-gradient-to-br from-neutral-bg to-white rounded-2xl p-8 flex flex-col items-center justify-center border-2 border-neutral-border shadow-soft">
-              <div className="text-center mb-4">
-                <img src={previewQR} alt="QR Code Preview" className="w-48 h-48 mx-auto mb-4 rounded-xl shadow-soft" />
-                <p className="text-xs font-semibold text-neutral-text">QR Code</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleDownloadQR}
-                className="w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold hover:from-bright-indigo hover:to-vivid-royal transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-button"
-              >
+            <PreviewPanel className="!p-6 shadow-premium">
+              <img
+                src={previewQR}
+                alt="QR Code Preview"
+                className="w-48 h-48 mx-auto mb-4 rounded-2xl shadow-soft"
+              />
+              <p className="text-xs font-semibold text-neutral-muted mb-4">QR Code</p>
+              <Button type="button" onClick={handleDownloadQR} className="w-full">
                 <Download className="h-4 w-4" />
                 Download QR
-              </button>
-            </div>
+              </Button>
+            </PreviewPanel>
           ) : (
-            <div className="bg-gradient-to-br from-neutral-bg to-white rounded-2xl p-8 flex items-center justify-center h-64 border-2 border-neutral-border shadow-soft">
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center mx-auto mb-4">
-                  <QrCode className="h-8 w-8 text-electric-sapphire/60" />
-                </div>
-                <p className="text-sm font-semibold text-neutral-muted">Enter URL or select link to see preview</p>
+            <PreviewPanel className="h-64">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                <QrCode className="h-7 w-7 text-primary/70" />
               </div>
-            </div>
+              <p className="text-sm font-medium text-neutral-muted text-center px-2">
+                Enter URL or select link to see preview
+              </p>
+            </PreviewPanel>
           )}
-        </div>
-      </div>
+        </>
+      }
+    />
 
-      {/* Success Modal */}
       {createdQR && (
         <SuccessModal
           isOpen={showSuccessModal}
@@ -788,7 +750,7 @@ export default function QRCodeForm({
           onCreateAnother={handleCreateAnother}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -804,13 +766,13 @@ function CollapsibleSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-xl overflow-hidden shadow-soft border border-neutral-border">
+    <div className="bg-white rounded-card overflow-hidden shadow-soft border border-neutral-border/80">
       <button
         type="button"
         onClick={() => onToggle(!isOpen)}
-        className="w-full px-5 py-4 flex items-center justify-between hover:bg-neutral-bg transition-colors"
+        className="w-full px-5 py-4 flex items-center justify-between hover:bg-neutral-bg/50 transition-colors"
       >
-        <span className="text-sm font-bold text-neutral-text">{title}</span>
+        <span className="text-sm font-semibold text-neutral-text tracking-tight">{title}</span>
         <ChevronDown className={cn(
           "h-4 w-4 text-neutral-muted transition-transform duration-200",
           isOpen && "rotate-180"

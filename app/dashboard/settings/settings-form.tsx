@@ -1,41 +1,35 @@
 "use client";
 
-import { useState } from "react";
-import { toast } from "sonner";
 import { Mail } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 export function SettingsForm({ user }: { user: any }) {
-  const [loading, setLoading] = useState(false);
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Email Address
+        <label className="block text-[13px] font-medium text-neutral-muted mb-2">
+          Email address
         </label>
         <div className="relative">
-          <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-muted" />
           <input
             type="email"
             value={user.email || ""}
             disabled
             className={cn(
-              "w-full pl-12 pr-4 py-3 rounded-lg border-2",
-              "bg-gray-50 dark:bg-gray-700",
-              "border-gray-200 dark:border-gray-600",
-              "text-gray-600 dark:text-gray-400",
+              "w-full h-12 pl-11 pr-4 rounded-2xl border border-neutral-border/80",
+              "bg-neutral-bg/70 text-neutral-muted text-sm shadow-soft",
               "cursor-not-allowed"
             )}
           />
         </div>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
+        <p className="mt-2 text-xs text-neutral-muted leading-relaxed">
           Email cannot be changed at this time
         </p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label className="block text-[13px] font-medium text-neutral-muted mb-2">
           User ID
         </label>
         <input
@@ -43,10 +37,8 @@ export function SettingsForm({ user }: { user: any }) {
           value={user.id}
           disabled
           className={cn(
-            "w-full px-4 py-3 rounded-lg border-2",
-            "bg-gray-50 dark:bg-gray-700",
-            "border-gray-200 dark:border-gray-600",
-            "text-gray-600 dark:text-gray-400 font-mono text-sm",
+            "w-full h-12 px-4 rounded-2xl border border-neutral-border/80",
+            "bg-neutral-bg/70 text-neutral-muted text-sm font-mono shadow-soft",
             "cursor-not-allowed"
           )}
         />
@@ -54,4 +46,3 @@ export function SettingsForm({ user }: { user: any }) {
     </div>
   );
 }
-

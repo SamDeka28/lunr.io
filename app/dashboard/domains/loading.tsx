@@ -1,6 +1,7 @@
+import { DashboardContainer } from "@/components/ui/dashboard-container";
 export default function DomainsLoading() {
   return (
-    <div className="max-w-7xl mx-auto w-full">
+    <DashboardContainer>
       {/* Header Skeleton */}
       <div className="flex items-center justify-between mb-8">
         <div className="space-y-2">
@@ -29,6 +30,6 @@ export default function DomainsLoading() {
           </div>
         ))}
       </div>
-    </div>
+    </DashboardContainer>
   );
 }

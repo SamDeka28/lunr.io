@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { HelpCircle, Crown, Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { HelpCircle, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { usePathname } from "next/navigation";
@@ -11,6 +11,7 @@ import { UserMenu } from "./user-menu";
 import { PlanBadge } from "@/components/plan-badge";
 import { useUserStore } from "@/store/user-store";
 import { NavigationLoaderProvider } from "@/components/navigation/navigation-loader";
+import { Button } from "@/components/ui/button";
 
 export function DashboardLayoutClient({
   children,
@@ -19,8 +20,28 @@ export function DashboardLayoutClient({
   children: React.ReactNode;
   user: { email?: string | null };
 }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    setSidebarOpen(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setSidebarOpen(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+    if (!sidebarOpen || isDesktop) {
+      document.body.style.overflow = "";
+      return;
+    }
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
 
   const plan = useUserStore((state) => state.plan);
 
@@ -34,7 +55,7 @@ export function DashboardLayoutClient({
 
   return (
     <NavigationLoaderProvider>
-      <div className="min-h-screen bg-neutral-bg flex">
+      <div className="min-h-screen bg-neutral-bg flex overflow-x-hidden">
         <CollapsibleSidebar
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen(!sidebarOpen)}
@@ -45,46 +66,50 @@ export function DashboardLayoutClient({
 
         <div
           className={cn(
-            "flex-1 flex flex-col transition-all duration-300",
+            "flex-1 flex flex-col min-w-0 w-full transition-all duration-300",
             sidebarOpen ? "lg:ml-72" : "lg:ml-20"
           )}
         >
-          <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-lg border-b border-neutral-border">
-            <div className="w-full px-6 py-4 flex items-center justify-between">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 rounded-xl text-neutral-muted hover:bg-neutral-bg hover:text-electric-sapphire transition-colors lg:hidden"
-              >
-                {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </button>
+          <header className="sticky top-0 z-40 bg-white/75 backdrop-blur-xl border-b border-neutral-border/70">
+            <div className="w-full px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-2.5 rounded-2xl text-neutral-muted hover:bg-white hover:shadow-soft hover:text-neutral-text transition-all lg:hidden shrink-0"
+                  aria-label={sidebarOpen ? "Close menu" : "Open menu"}
+                >
+                  {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </button>
 
-              <div className="flex-1 max-w-md ml-4 lg:ml-0">
-                <HeaderSearch />
+                <div className="w-full max-w-md min-w-0">
+                  <HeaderSearch />
+                </div>
               </div>
 
-              <div className="flex items-center gap-3 ml-4">
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                 {userPlan ? (
                   <>
-                    <PlanBadge
-                      planName={userPlan.planName}
-                      planDisplayName={userPlan.planDisplayName}
-                      isPremium={userPlan.isPremium}
-                      showUpgrade={!userPlan.isPremium}
-                    />
+                    <div className="hidden md:block">
+                      <PlanBadge
+                        planName={userPlan.planName}
+                        planDisplayName={userPlan.planDisplayName}
+                        isPremium={userPlan.isPremium}
+                        showUpgrade={false}
+                      />
+                    </div>
                     {!userPlan.isPremium && (
-                      <Link
-                        href="/dashboard/billing"
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-neon-pink to-raspberry-plum text-white text-sm font-semibold hover:from-raspberry-plum hover:to-indigo-bloom transition-all active:scale-[0.98] flex items-center gap-2 shadow-button whitespace-nowrap"
-                      >
-                        <Crown className="h-4 w-4" />
-                        Upgrade
+                      <Link href="/dashboard/billing" className="hidden sm:inline-flex">
+                        <Button size="sm">Upgrade</Button>
                       </Link>
                     )}
                   </>
                 ) : (
-                  <div className="h-8 w-24 bg-neutral-border rounded-lg animate-pulse" />
+                  <div className="h-8 w-20 bg-neutral-border/60 rounded-full animate-pulse" />
                 )}
-                <button className="p-2 rounded-xl text-neutral-muted hover:bg-electric-sapphire/10 hover:text-electric-sapphire transition-colors">
+                <button
+                  className="hidden sm:inline-flex p-2.5 rounded-2xl text-neutral-muted hover:bg-white hover:shadow-soft hover:text-neutral-text transition-all"
+                  aria-label="Help"
+                >
                   <HelpCircle className="h-5 w-5" />
                 </button>
                 <UserMenu user={user} />
@@ -92,7 +117,17 @@ export function DashboardLayoutClient({
             </div>
           </header>
 
-          <main className="flex-1 overflow-auto p-6">{children}</main>
+          <main className="relative flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-64 opacity-80"
+              style={{
+                background:
+                  "radial-gradient(60% 80% at 15% 0%, rgba(67,97,238,0.08), transparent 55%), radial-gradient(50% 60% at 90% 10%, rgba(76,201,240,0.07), transparent 50%)",
+              }}
+            />
+            <div className="relative">{children}</div>
+          </main>
         </div>
       </div>
     </NavigationLoaderProvider>

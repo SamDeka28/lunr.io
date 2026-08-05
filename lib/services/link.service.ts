@@ -90,6 +90,8 @@ export class LinkService {
       short_code: shortCode!,
       original_url: validation.normalizedUrl,
       title: input.title || null,
+      description: input.description || null,
+      og_image_url: input.og_image_url || null,
       expires_at: input.expires_at || null,
       password: input.password || null,
       user_id: input.user_id || null,

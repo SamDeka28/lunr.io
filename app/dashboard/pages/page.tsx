@@ -1,4 +1,9 @@
 import { redirect } from "next/navigation";
+import { DashboardContainer } from "@/components/ui/dashboard-container";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+
 import { createClient } from "@/lib/supabase/server";
 import { getCachedUser } from "@/lib/supabase/auth";
 import { PagesPageClient } from "./pages-page-client";
@@ -84,39 +89,35 @@ export default async function PagesPage({
   const canCreatePage = limits.can_create_page && canUsePages;
 
   return (
-    <div className="max-w-7xl mx-auto w-full">
-      {/* Header Section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-neutral-text mb-2">Your Pages</h1>
-            <p className="text-sm text-neutral-muted">
-              {canUsePages 
-                ? `${pageCount} / ${limits.max_pages === -1 ? "∞" : limits.max_pages} pages used`
-                : "Pages feature requires Pro plan or higher"}
-            </p>
-          </div>
-          {canCreatePage && (
-            <Link
-              href="/dashboard/pages/new"
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold hover:from-bright-indigo hover:to-vivid-royal transition-all active:scale-[0.98] flex items-center gap-2 shadow-button"
-            >
-              <span className="text-lg">+</span>
-              Create Page
+    <DashboardContainer>
+      <PageHeader
+        title="Your Pages"
+        description={
+          canUsePages
+            ? `${pageCount} / ${limits.max_pages === -1 ? "∞" : limits.max_pages} pages used`
+            : "Pages feature requires Pro plan or higher"
+        }
+        actions={
+          canCreatePage ? (
+            <Link href="/dashboard/pages/new">
+              <Button>
+                <Plus className="h-4 w-4" />
+                Create Page
+              </Button>
             </Link>
-          )}
-        </div>
+          ) : undefined
+        }
+      />
 
-        <PagesPageClient
-          pages={pages || []}
-          canCreate={canCreatePage}
-          initialSearch={searchParams.search}
-          initialView={(searchParams.view as any) || "list"}
-          initialStatus={(searchParams.status as any) || "active"}
-          initialDateFilter={searchParams.dateFilter}
-        />
-      </div>
-    </div>
+      <PagesPageClient
+        pages={pages || []}
+        canCreate={canCreatePage}
+        initialSearch={searchParams.search}
+        initialView={(searchParams.view as any) || "list"}
+        initialStatus={(searchParams.status as any) || "active"}
+        initialDateFilter={searchParams.dateFilter}
+      />
+    </DashboardContainer>
   );
 }
 

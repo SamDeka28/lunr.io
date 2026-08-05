@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { DashboardContainer } from "@/components/ui/dashboard-container";
+
 import { createClient } from "@/lib/supabase/server";
 import { getCachedUser } from "@/lib/supabase/auth";
 import { CampaignForm } from "../../campaign-form";
@@ -30,7 +32,7 @@ export default async function EditCampaignPage({
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full">
+    <DashboardContainer>
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-neutral-text mb-2">Edit Campaign</h1>
         <p className="text-sm text-neutral-muted">
@@ -39,7 +41,7 @@ export default async function EditCampaignPage({
       </div>
 
       <CampaignForm userId={user.id} campaign={campaign} />
-    </div>
+    </DashboardContainer>
   );
 }
 

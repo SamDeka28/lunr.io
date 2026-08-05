@@ -59,6 +59,8 @@ export interface Link {
   short_code: string;
   original_url: string;
   title: string | null;
+  description: string | null;
+  og_image_url: string | null;
   created_at: string;
   expires_at: string | null;
   user_id: string | null;
@@ -163,6 +165,8 @@ export interface CreateLinkInput {
   original_url: string;
   short_code?: string;
   title?: string | null;
+  description?: string | null;
+  og_image_url?: string | null;
   expires_at?: string | null;
   password?: string | null;
   user_id?: string | null;

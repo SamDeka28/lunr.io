@@ -2,7 +2,19 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Link2, ExternalLink, Copy, Check, Edit, Trash2, TrendingUp, Share2, MoreVertical, Calendar, Tag, Lock, BarChart3, QrCode } from "lucide-react";
+import {
+  Link2,
+  ExternalLink,
+  Copy,
+  Check,
+  Edit,
+  Trash2,
+  Share2,
+  MoreVertical,
+  Lock,
+  BarChart3,
+  QrCode,
+} from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -14,60 +26,107 @@ interface LinksListProps {
   onSelectionChange?: (count: number) => void;
 }
 
+function hostnameOf(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+function faviconUrl(url: string) {
+  const host = hostnameOf(url);
+  if (!host) return null;
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
+}
+
+function Favicon({ url, title }: { url: string; title: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = faviconUrl(url);
+  const letter = (title || hostnameOf(url) || "?").charAt(0).toUpperCase();
+
+  if (!src || failed) {
+    return (
+      <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-neutral-surface text-[11px] font-semibold text-neutral-muted">
+        {letter}
+      </span>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      width={36}
+      height={36}
+      className="h-9 w-9 rounded-2xl bg-neutral-surface object-contain p-1.5"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 export function LinksList({ links, canCreate, viewType = "list", onSelectionChange }: LinksListProps) {
   const router = useRouter();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedLinks, setSelectedLinks] = useState<Set<string>>(new Set());
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [displayHost, setDisplayHost] = useState("");
 
-  // Update parent when selection changes
   useEffect(() => {
-    if (onSelectionChange) {
-      onSelectionChange(selectedLinks.size);
-    }
+    setDisplayHost(window.location.host);
+  }, []);
+
+  useEffect(() => {
+    if (onSelectionChange) onSelectionChange(selectedLinks.size);
   }, [selectedLinks, onSelectionChange]);
 
-  // Memoize processed links to avoid recalculating on every render
+  useEffect(() => {
+    if (!menuOpenId) return;
+    const close = () => setMenuOpenId(null);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, [menuOpenId]);
+
   const processedLinks = useMemo(() => {
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-    
+
     return links.map((link) => {
       const shortUrl = `${baseUrl}/${link.short_code}`;
-      const createdDate = new Date(link.created_at).toLocaleDateString("en-US", { 
-        month: "short", 
-        day: "numeric", 
-        year: "numeric" 
+      const createdDate = new Date(link.created_at).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
       });
-      
-      // Format expiration date if exists
-      let expirationDate = null;
+
+      let expirationDate: string | null = null;
       if (link.expires_at) {
-        expirationDate = new Date(link.expires_at).toLocaleDateString("en-US", { 
-          month: "short", 
-          day: "numeric", 
-          year: "numeric" 
+        expirationDate = new Date(link.expires_at).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
         });
       }
-      
-      // Calculate title once
+
       let title = link.title;
       if (!title) {
         try {
-          if (link.original_url) {
-            title = `${new URL(link.original_url).hostname} - untitled`;
-          } else {
-            title = "untitled";
-          }
+          title = link.original_url
+            ? `${new URL(link.original_url).hostname} — untitled`
+            : "Untitled";
         } catch {
-          title = "untitled";
+          title = "Untitled";
         }
       }
-      
+
       return {
         ...link,
         shortUrl,
+        shortPath: `/${link.short_code}`,
         createdDate,
         expirationDate,
         title,
+        host: hostnameOf(link.original_url || ""),
       };
     });
   }, [links]);
@@ -76,43 +135,35 @@ export function LinksList({ links, canCreate, viewType = "list", onSelectionChan
     try {
       await navigator.clipboard.writeText(shortUrl);
       setCopiedId(id);
-      toast.success("Link copied");
+      toast.success("Copied to clipboard");
       setTimeout(() => setCopiedId(null), 2000);
-    } catch (err) {
-      toast.error("Failed to copy");
+    } catch {
+      toast.error("Couldn't copy link");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this link?")) return;
-
+    if (!confirm("Delete this link? This can't be undone.")) return;
     try {
-      const response = await fetch(`/api/links/${id}`, {
-        method: "DELETE",
-      });
-
+      const response = await fetch(`/api/links/${id}`, { method: "DELETE" });
       if (response.ok) {
         toast.success("Link deleted");
         router.refresh();
       } else {
-        toast.error("Failed to delete");
+        toast.error("Couldn't delete link");
       }
-    } catch (error) {
-      toast.error("Failed to delete");
+    } catch {
+      toast.error("Couldn't delete link");
     }
   };
 
   const handleShare = async (shortUrl: string) => {
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: "Check out this link",
-          text: "Shortened link",
-          url: shortUrl,
-        });
-        toast.success("Link shared");
-      } catch (err) {
-        // User cancelled
+        await navigator.share({ title: "Check out this link", url: shortUrl });
+        toast.success("Shared");
+      } catch {
+        /* cancelled */
       }
     } else {
       handleCopy(shortUrl, "share");
@@ -120,129 +171,105 @@ export function LinksList({ links, canCreate, viewType = "list", onSelectionChan
   };
 
   const toggleSelect = (id: string) => {
-    const newSelected = new Set(selectedLinks);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedLinks(newSelected);
+    const next = new Set(selectedLinks);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedLinks(next);
   };
 
   if (links.length === 0) {
     return (
-      <div className="text-center py-20 bg-white rounded-card shadow-soft border border-neutral-border">
-        <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center mx-auto mb-6">
-          <Link2 className="h-12 w-12 text-electric-sapphire/60" />
+      <div className="rounded-card border border-neutral-border/80 bg-white px-6 py-16 text-center shadow-soft">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Link2 className="h-6 w-6" />
         </div>
-        <h3 className="text-2xl font-bold text-neutral-text mb-3">
-          No links yet
-        </h3>
-        <p className="text-sm text-neutral-muted mb-8 max-w-sm mx-auto">
+        <h3 className="mb-1 text-base font-semibold text-neutral-text tracking-tight">No links yet</h3>
+        <p className="mx-auto mb-5 max-w-xs text-sm text-neutral-muted leading-relaxed">
           {canCreate
-            ? "Create your first short link to get started."
-            : "You've reached your free link limit. Upgrade for more."}
+            ? "Create a short link to start tracking clicks."
+            : "You've hit your free link limit. Upgrade for more."}
         </p>
         {canCreate && (
           <Link
             href="/dashboard/links/new"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold hover:from-bright-indigo hover:to-vivid-royal transition-all active:scale-[0.98] shadow-button"
+            className="inline-flex items-center rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-button hover:bg-bright-indigo transition-all"
           >
-            <span className="text-lg">+</span>
-            Create Your First Link
+            Create link
           </Link>
         )}
       </div>
     );
   }
 
-  // Render based on view type
-  if (viewType === "grid") {
+  if (viewType === "grid" || viewType === "card") {
+    const cols =
+      viewType === "grid"
+        ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+        : "grid-cols-1 md:grid-cols-2";
+
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className={cn("grid gap-3", cols)}>
         {processedLinks.map((link) => {
           const isSelected = selectedLinks.has(link.id);
+          const isCopied = copiedId === link.id;
           const isPasswordProtected = !!link.password_hash;
-          const hasQRCode = link.qr_codes && Array.isArray(link.qr_codes) && link.qr_codes.filter((qr: any) => qr.is_active).length > 0;
+          const hasQRCode =
+            Array.isArray(link.qr_codes) &&
+            link.qr_codes.some((qr: any) => qr.is_active);
           const isExpired = link.expires_at && new Date(link.expires_at) < new Date();
 
           return (
             <div
               key={link.id}
               className={cn(
-                "bg-white rounded-card border border-neutral-border p-4 hover:shadow-soft transition-all",
-                isSelected && "ring-2 ring-electric-sapphire",
-                isExpired && "opacity-75"
+                "rounded-card border border-neutral-border/80 bg-white p-4 shadow-soft transition-all duration-200 hover:shadow-hover hover:-translate-y-0.5",
+                isSelected && "border-primary/40 bg-primary/[0.03] ring-1 ring-primary/15",
+                isExpired && "opacity-60"
               )}
             >
-              <div className="flex items-start gap-3 mb-3">
+              <div className="mb-3 flex items-start gap-3">
                 <input
                   type="checkbox"
                   checked={isSelected}
                   onChange={() => toggleSelect(link.id)}
-                  className="w-4 h-4 rounded border-neutral-border text-electric-sapphire focus:ring-electric-sapphire/40 cursor-pointer mt-1"
+                  className="mt-1.5 h-4 w-4 shrink-0 cursor-pointer rounded border-neutral-border text-electric-sapphire focus:ring-electric-sapphire/40"
                 />
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-neutral-text mb-2 line-clamp-1">
-                    {link.title}
-                  </h3>
-                  <p className="text-xs text-neutral-muted line-clamp-2 mb-2 font-mono break-all">
-                    {link.shortUrl}
-                  </p>
-                  
-                  {/* Badges */}
-                  <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                    {isPasswordProtected && (
-                      <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200">
-                        <Lock className="h-3 w-3 text-amber-600" />
-                      </div>
-                    )}
-                    {hasQRCode && (
-                      <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-electric-sapphire/10 border border-electric-sapphire/20">
-                        <QrCode className="h-3 w-3 text-electric-sapphire" />
-                      </div>
-                    )}
-                    {link.expirationDate && (
-                      <div className={cn(
-                        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded border",
-                        isExpired ? "bg-red-50 border-red-200" : "bg-blue-50 border-blue-200"
-                      )}>
-                        <Calendar className={cn(
-                          "h-3 w-3",
-                          isExpired ? "text-red-600" : "text-blue-600"
-                        )} />
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-3 text-xs text-neutral-muted">
-                    <span>{link.click_count || 0} clicks</span>
-                    <span>•</span>
-                    <span>{link.createdDate}</span>
-                  </div>
+                <Favicon url={link.original_url} title={link.title} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-neutral-text">{link.title}</p>
+                  <p className="truncate text-xs text-neutral-muted">{link.host}</p>
                 </div>
               </div>
-              <div className="flex items-center justify-between pt-3 border-t border-neutral-border">
-                <a
-                  href={link.shortUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-electric-sapphire hover:text-bright-indigo font-semibold truncate flex-1"
-                >
-                  View
-                </a>
-                <div className="flex items-center gap-1">
+
+              <button
+                type="button"
+                onClick={() => handleCopy(link.shortUrl, link.id)}
+                className="mb-3 flex w-full items-center justify-between gap-2 rounded-lg bg-neutral-bg px-3 py-2 text-left transition-colors hover:bg-neutral-border/50"
+              >
+                <span className="truncate font-mono text-sm font-medium text-electric-sapphire">
+                  {link.shortPath}
+                </span>
+                {isCopied ? (
+                  <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5 shrink-0 text-neutral-muted" />
+                )}
+              </button>
+
+              <div className="flex items-center justify-between text-xs text-neutral-muted">
+                <span>{link.click_count || 0} clicks</span>
+                <div className="flex items-center gap-2">
+                  {isPasswordProtected && <Lock className="h-3.5 w-3.5" />}
+                  {hasQRCode && <QrCode className="h-3.5 w-3.5" />}
                   <Link
                     href={`/dashboard/links/${link.id}/analytics`}
-                    className="p-1.5 rounded-lg text-neutral-muted hover:text-bright-indigo hover:bg-bright-indigo/10 transition-colors"
-                    title="Analytics"
+                    className="rounded-md p-1 hover:bg-white hover:text-neutral-text"
                   >
                     <BarChart3 className="h-3.5 w-3.5" />
                   </Link>
                   <Link
                     href={`/dashboard/links/${link.id}/edit`}
-                    className="p-1.5 rounded-lg text-neutral-muted hover:text-electric-sapphire hover:bg-electric-sapphire/10 transition-colors"
-                    title="Edit"
+                    className="rounded-md p-1 hover:bg-white hover:text-neutral-text"
                   >
                     <Edit className="h-3.5 w-3.5" />
                   </Link>
@@ -255,338 +282,187 @@ export function LinksList({ links, canCreate, viewType = "list", onSelectionChan
     );
   }
 
-  if (viewType === "card") {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {processedLinks.map((link) => {
-          const isSelected = selectedLinks.has(link.id);
-          const isPasswordProtected = !!link.password_hash;
-          const hasQRCode = link.qr_codes && Array.isArray(link.qr_codes) && link.qr_codes.filter((qr: any) => qr.is_active).length > 0;
-          const isExpired = link.expires_at && new Date(link.expires_at) < new Date();
-
-          return (
-            <div
-              key={link.id}
-              className={cn(
-                "bg-white rounded-card border border-neutral-border p-6 hover:shadow-soft transition-all group",
-                isSelected && "ring-2 ring-electric-sapphire",
-                isExpired && "opacity-75"
-              )}
-            >
-              <div className="flex items-start gap-3 mb-4">
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => toggleSelect(link.id)}
-                  className="w-4 h-4 rounded border-neutral-border text-electric-sapphire focus:ring-electric-sapphire/40 cursor-pointer mt-1"
-                />
-                <div className="flex-1 min-w-0">
-                  {/* Title */}
-                  <h3 className="text-base font-semibold text-neutral-text mb-3 line-clamp-2">
-                    {link.title}
-                  </h3>
-                  
-                  {/* Short URL with Copy */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <a
-                      href={link.shortUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono text-sm text-electric-sapphire hover:text-bright-indigo font-semibold truncate flex-1"
-                    >
-                      {link.shortUrl}
-                    </a>
-                    <button
-                      onClick={() => handleCopy(link.shortUrl, link.id)}
-                      className={cn(
-                        "p-1.5 rounded-lg transition-colors flex-shrink-0",
-                        copiedId === link.id
-                          ? "text-blue-energy bg-blue-energy/10"
-                          : "text-neutral-muted hover:text-electric-sapphire hover:bg-electric-sapphire/10"
-                      )}
-                      title="Copy"
-                    >
-                      {copiedId === link.id ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Original URL */}
-                  <a
-                    href={link.original_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-neutral-muted hover:text-electric-sapphire flex items-center gap-1.5 mb-4 truncate block"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span className="truncate">{link.original_url}</span>
-                  </a>
-
-                  {/* Badges Row */}
-                  <div className="flex flex-wrap items-center gap-2 mb-4">
-                    {/* Password Protection Badge */}
-                    {isPasswordProtected && (
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200">
-                        <Lock className="h-3.5 w-3.5 text-amber-600" />
-                        <span className="text-xs font-medium text-amber-700">Password Protected</span>
-                      </div>
-                    )}
-                    
-                    {/* QR Code Badge */}
-                    {hasQRCode && (
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-electric-sapphire/10 border border-electric-sapphire/20">
-                        <QrCode className="h-3.5 w-3.5 text-electric-sapphire" />
-                        <span className="text-xs font-medium text-electric-sapphire">QR Code</span>
-                      </div>
-                    )}
-
-                    {/* Expiration Badge */}
-                    {link.expirationDate && (
-                      <div className={cn(
-                        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border",
-                        isExpired 
-                          ? "bg-red-50 border-red-200"
-                          : "bg-blue-50 border-blue-200"
-                      )}>
-                        <Calendar className={cn(
-                          "h-3.5 w-3.5",
-                          isExpired ? "text-red-600" : "text-blue-600"
-                        )} />
-                        <span className={cn(
-                          "text-xs font-medium",
-                          isExpired ? "text-red-700" : "text-blue-700"
-                        )}>
-                          {isExpired ? "Expired" : "Expires"} {link.expirationDate}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Metadata Row */}
-                  <div className="flex items-center gap-4 text-xs text-neutral-muted pb-4 border-b border-neutral-border">
-                    <div className="flex items-center gap-1.5">
-                      <BarChart3 className="h-3.5 w-3.5" />
-                      <span className="font-medium">{link.click_count || 0} clicks</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5" />
-                      <span>{link.createdDate}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-4">
-                <Link
-                  href={`/dashboard/links/${link.id}/edit`}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-muted hover:text-electric-sapphire hover:bg-electric-sapphire/10 transition-colors"
-                >
-                  Edit
-                </Link>
-                <Link
-                  href={`/dashboard/links/${link.id}/analytics`}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-muted hover:text-bright-indigo hover:bg-bright-indigo/10 transition-colors"
-                >
-                  Analytics
-                </Link>
-                <a
-                  href={link.shortUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white hover:from-bright-indigo hover:to-vivid-royal transition-all"
-                >
-                  View
-                </a>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // Default list view
+  // List view — dense continuous panel
   return (
-    <div className="space-y-0">
+    <div className="overflow-hidden rounded-card border border-neutral-border/80 bg-white shadow-soft">
       {processedLinks.map((link, index) => {
         const isCopied = copiedId === link.id;
         const isSelected = selectedLinks.has(link.id);
+        const isPasswordProtected = !!link.password_hash;
+        const hasQRCode =
+          Array.isArray(link.qr_codes) &&
+          link.qr_codes.some((qr: any) => qr.is_active);
+        const isExpired = link.expires_at && new Date(link.expires_at) < new Date();
+        const menuOpen = menuOpenId === link.id;
 
         return (
           <div
             key={link.id}
             className={cn(
-              "bg-white border-b border-neutral-border p-5",
-              "hover:bg-neutral-bg transition-colors",
-              index === 0 && "rounded-t-card border-t",
-              index === processedLinks.length - 1 && "rounded-b-card border-b"
+              "group relative px-3 py-3.5 sm:px-4 sm:py-4 transition-colors",
+              index > 0 && "border-t border-neutral-border/70",
+              "hover:bg-neutral-bg/60",
+              isSelected && "bg-primary/[0.03]",
+              isExpired && "opacity-60"
             )}
           >
-            <div className="flex items-start gap-4">
-              {/* Checkbox */}
-              <div className="pt-1">
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => toggleSelect(link.id)}
-                  className="w-4 h-4 rounded border-neutral-border text-electric-sapphire focus:ring-electric-sapphire/40 cursor-pointer"
-                />
-              </div>
+            <div className="flex items-center gap-3 sm:gap-4">
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => toggleSelect(link.id)}
+                className="h-4 w-4 shrink-0 cursor-pointer rounded border-neutral-border text-electric-sapphire focus:ring-electric-sapphire/40"
+              />
 
-              {/* Main Content */}
-              <div className="flex-1 min-w-0">
-                {/* Title and Short Link */}
-                <div className="mb-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-sm font-semibold text-neutral-text">
-                      {link.title}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <a
-                      href={link.shortUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono text-sm text-electric-sapphire hover:text-bright-indigo font-semibold"
-                    >
-                      {link.shortUrl}
-                    </a>
-                    <button
-                      onClick={() => handleCopy(link.shortUrl, link.id)}
-                      className={cn(
-                        "p-1 rounded-lg transition-colors",
-                        isCopied
-                          ? "text-blue-energy bg-blue-energy/10"
-                          : "text-neutral-muted hover:text-electric-sapphire hover:bg-electric-sapphire/10"
+              <Favicon url={link.original_url} title={link.title} />
+
+              {/* Main */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(link.shortUrl, link.id)}
+                    className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md text-left transition-colors hover:opacity-80"
+                    title="Copy short link"
+                  >
+                    <span className="truncate font-mono text-sm font-semibold text-electric-sapphire">
+                      {displayHost ? `${displayHost}${link.shortPath}` : link.shortPath}
+                    </span>
+                    {isCopied ? (
+                      <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5 shrink-0 text-neutral-muted opacity-0 transition-opacity group-hover:opacity-100" />
+                    )}
+                  </button>
+
+                  {(isPasswordProtected || hasQRCode || link.expirationDate) && (
+                    <span className="hidden items-center gap-1.5 sm:inline-flex">
+                      {isPasswordProtected && (
+                        <span title="Password protected">
+                          <Lock className="h-3 w-3 text-neutral-muted" />
+                        </span>
                       )}
-                      title="Copy"
-                    >
-                      {isCopied ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
+                      {hasQRCode && (
+                        <span title="Has QR code">
+                          <QrCode className="h-3 w-3 text-neutral-muted" />
+                        </span>
                       )}
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={link.original_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-neutral-muted hover:text-neutral-text flex items-center gap-1.5"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      <span className="truncate max-w-md">{link.original_url}</span>
-                    </a>
-                  </div>
-                </div>
-
-                {/* Badges Row */}
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                  {/* Password Protection Badge */}
-                  {link.password_hash && (
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200">
-                      <Lock className="h-3.5 w-3.5 text-amber-600" />
-                      <span className="text-xs font-medium text-amber-700">Password Protected</span>
-                    </div>
-                  )}
-                  
-                  {/* QR Code Badge */}
-                  {link.qr_codes && Array.isArray(link.qr_codes) && link.qr_codes.filter((qr: any) => qr.is_active).length > 0 && (
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-electric-sapphire/10 border border-electric-sapphire/20">
-                      <QrCode className="h-3.5 w-3.5 text-electric-sapphire" />
-                      <span className="text-xs font-medium text-electric-sapphire">QR Code</span>
-                    </div>
-                  )}
-
-                  {/* Expiration Badge */}
-                  {link.expirationDate && (
-                    <div className={cn(
-                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border",
-                      new Date(link.expires_at) < new Date()
-                        ? "bg-red-50 border-red-200"
-                        : "bg-blue-50 border-blue-200"
-                    )}>
-                      <Calendar className={cn(
-                        "h-3.5 w-3.5",
-                        new Date(link.expires_at) < new Date() ? "text-red-600" : "text-blue-600"
-                      )} />
-                      <span className={cn(
-                        "text-xs font-medium",
-                        new Date(link.expires_at) < new Date() ? "text-red-700" : "text-blue-700"
-                      )}>
-                        {new Date(link.expires_at) < new Date() ? "Expired" : "Expires"} {link.expirationDate}
-                      </span>
-                    </div>
+                      {link.expirationDate && (
+                        <span
+                          title={isExpired ? "Expired" : `Expires ${link.expirationDate}`}
+                          className={cn(
+                            "text-[10px] font-medium uppercase tracking-wide",
+                            isExpired ? "text-red-500" : "text-neutral-muted"
+                          )}
+                        >
+                          {isExpired ? "Expired" : "Timed"}
+                        </span>
+                      )}
+                    </span>
                   )}
                 </div>
 
-                {/* Metadata */}
-                <div className="flex items-center gap-4 text-xs text-neutral-muted">
-                  <div className="flex items-center gap-1.5">
-                    <BarChart3 className="h-3.5 w-3.5" />
-                    <span className="font-medium">{link.click_count || 0} clicks</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span>{link.createdDate}</span>
-                  </div>
+                <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-neutral-muted">
+                  <span className="truncate font-medium text-neutral-text/70">{link.title}</span>
+                  <span className="shrink-0 text-neutral-border">→</span>
+                  <a
+                    href={link.original_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-w-0 items-center gap-1 truncate hover:text-neutral-text"
+                  >
+                    <span className="truncate">{link.host || link.original_url}</span>
+                    <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
+                  </a>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-1 flex-shrink-0">
+              {/* Clicks */}
+              <div className="hidden w-16 shrink-0 text-right sm:block">
+                <p className="text-sm font-semibold tabular-nums text-neutral-text">
+                  {link.click_count || 0}
+                </p>
+                <p className="text-[10px] uppercase tracking-wide text-neutral-muted">clicks</p>
+              </div>
+
+              {/* Date */}
+              <div className="hidden w-[5.5rem] shrink-0 text-right md:block">
+                <p className="text-xs text-neutral-muted">{link.createdDate}</p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex shrink-0 items-center gap-0.5">
+                <span className="mr-1 text-xs font-medium tabular-nums text-neutral-muted sm:hidden">
+                  {link.click_count || 0}
+                </span>
+                <Link
+                  href={`/dashboard/links/${link.id}/analytics`}
+                  className="rounded-lg p-2 text-neutral-muted transition-colors hover:bg-neutral-bg hover:text-neutral-text"
+                  title="Analytics"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                </Link>
                 <Link
                   href={`/dashboard/links/${link.id}/edit`}
-                  className="p-2 rounded-xl text-neutral-muted hover:text-electric-sapphire hover:bg-electric-sapphire/10 transition-colors"
+                  className="rounded-lg p-2 text-neutral-muted transition-colors hover:bg-neutral-bg hover:text-neutral-text"
                   title="Edit"
                 >
                   <Edit className="h-4 w-4" />
                 </Link>
                 <button
+                  type="button"
                   onClick={() => handleShare(link.shortUrl)}
-                  className="p-2 rounded-xl text-neutral-muted hover:text-blue-energy hover:bg-blue-energy/10 transition-colors"
+                  className="hidden rounded-lg p-2 text-neutral-muted transition-colors hover:bg-neutral-bg hover:text-neutral-text sm:inline-flex"
                   title="Share"
                 >
                   <Share2 className="h-4 w-4" />
                 </button>
-                <Link
-                  href={`/dashboard/links/${link.id}/analytics`}
-                  className="p-2 rounded-xl text-neutral-muted hover:text-bright-indigo hover:bg-bright-indigo/10 transition-colors"
-                  title="Analytics"
-                >
-                  <BarChart3 className="h-4 w-4" />
-                </Link>
-                <button
-                  onClick={() => handleDelete(link.id)}
-                  className="p-2 rounded-xl text-neutral-muted hover:text-red-600 hover:bg-red-50 transition-colors"
-                  title="Delete"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-                <button className="p-2 rounded-xl text-neutral-muted hover:text-neutral-text hover:bg-neutral-bg transition-colors">
-                  <MoreVertical className="h-4 w-4" />
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpenId(menuOpen ? null : link.id);
+                    }}
+                    className="rounded-lg p-2 text-neutral-muted transition-colors hover:bg-neutral-bg hover:text-neutral-text"
+                    title="More"
+                    aria-expanded={menuOpen}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                  {menuOpen && (
+                    <div
+                      className="absolute right-0 top-full z-20 mt-1 w-36 overflow-hidden rounded-xl border border-neutral-border bg-white py-1 shadow-hover"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <a
+                        href={link.shortUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-neutral-text hover:bg-neutral-bg"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Open
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpenId(null);
+                          handleDelete(link.id);
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         );
       })}
-
-      {/* End of Links Indicator */}
-      {processedLinks.length > 0 && (
-        <div className="text-center py-6">
-          <div className="inline-flex items-center gap-3 text-sm text-neutral-muted">
-            <div className="h-px w-12 bg-neutral-border" />
-            <span>You've reached the end of your links</span>
-            <div className="h-px w-12 bg-neutral-border" />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

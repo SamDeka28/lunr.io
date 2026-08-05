@@ -20,6 +20,8 @@ export class LinkRepository {
         short_code: data.short_code,
         original_url: data.original_url,
         title: data.title || null,
+        description: data.description || null,
+        og_image_url: data.og_image_url || null,
         expires_at: data.expires_at || null,
         password_hash: data.password ? hashPasswordUtil(data.password) : null,
         user_id: data.user_id || null,

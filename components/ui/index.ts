@@ -25,6 +25,19 @@ export type { EmptyStateProps } from "./empty-state";
 export { PageHeader } from "./page-header";
 export type { PageHeaderProps } from "./page-header";
 
+export { SectionLabel } from "./section-label";
+export type {
+  SectionLabelProps,
+  SectionLabelAlign,
+  SectionLabelTone,
+} from "./section-label";
+
+export { DashboardContainer } from "./dashboard-container";
+export type {
+  DashboardContainerProps,
+  DashboardContainerSize,
+} from "./dashboard-container";
+
 export { StatCard } from "./stat-card";
 export type { StatCardProps } from "./stat-card";
 

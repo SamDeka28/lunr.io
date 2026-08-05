@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { DashboardContainer } from "@/components/ui/dashboard-container";
+
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -248,7 +250,7 @@ export function CampaignAnalyticsClient({
 
   return (
     <div className="min-h-[calc(100vh-73px)] bg-gradient-to-br from-neutral-bg via-white to-neutral-bg">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <DashboardContainer size="wide">
         {/* Header */}
         <div className="mb-8">
           <Link
@@ -836,7 +838,7 @@ export function CampaignAnalyticsClient({
             </div>
           </div>
         )}
-      </div>
+      </DashboardContainer>
     </div>
   );
 }

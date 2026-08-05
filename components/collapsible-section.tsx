@@ -35,7 +35,7 @@ export function CollapsibleSection({
   };
 
   return (
-    <div className="bg-white rounded-card border border-neutral-border p-6 shadow-soft mb-6">
+    <div className="bg-white rounded-card border border-neutral-border/80 p-6 shadow-soft mb-6">
       <button
         type="button"
         onClick={handleToggle}
@@ -45,7 +45,7 @@ export function CollapsibleSection({
           {Icon && (
             <Icon className="h-4 w-4 text-neutral-muted group-hover:text-electric-sapphire transition-colors" />
           )}
-          <span className="text-base font-bold text-neutral-text">{title}</span>
+          <span className="text-base font-semibold text-neutral-text">{title}</span>
         </div>
         <ChevronDown
           className={cn(

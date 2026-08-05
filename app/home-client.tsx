@@ -14,8 +14,6 @@ import {
   Check,
   ArrowRight,
   Star,
-  Sparkles,
-  TrendingUp,
   Users,
   Building2,
   Crown,
@@ -23,7 +21,6 @@ import {
   Lock,
   Palette,
   Layout,
-  Target,
   Activity,
   Award,
   ChevronDown,
@@ -46,16 +43,19 @@ import {
   LineChart,
   Info,
   X,
+  Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
+import { SectionLabel } from "@/components/ui/section-label";
 
 export default function HomePageClient() {
   const router = useRouter();
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -65,6 +65,27 @@ export default function HomePageClient() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileNavOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [mobileNavOpen]);
+
+  const navLinkClass = (scrolled: boolean) =>
+    cn(
+      "text-sm font-medium transition-colors",
+      scrolled
+        ? "text-neutral-muted hover:text-primary"
+        : "text-white/90 hover:text-white"
+    );
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -176,100 +197,124 @@ export default function HomePageClient() {
   // ];
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-neutral-bg">
       {/* Navigation - Transparent initially, white when scrolled */}
       <nav 
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-          isScrolled 
-            ? "bg-white/95 backdrop-blur-md border-b border-neutral-border shadow-sm" 
+          isScrolled || mobileNavOpen
+            ? "bg-white/85 backdrop-blur-xl border-b border-neutral-border/70 shadow-soft" 
             : "bg-transparent border-b border-transparent"
         )}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center group">
-              {isScrolled ? (
-                <BrandLogo href={null} variant="full" size="md" priority className="group-hover:opacity-90 transition-opacity" />
+          <div className="flex items-center justify-between h-16 gap-3">
+            <Link href="/" className="flex items-center group min-w-0 shrink">
+              {isScrolled || mobileNavOpen ? (
+                <BrandLogo href={null} variant="full" size="sm" priority className="sm:hidden group-hover:opacity-90 transition-opacity" />
               ) : (
-                <BrandLogo
-                  href={null}
-                  variant="mark"
-                  size="md"
-                  onDark
-                  showWordmark
-                  priority
-                  className="group-hover:opacity-90 transition-opacity"
-                />
+                <BrandLogo href={null} variant="full" size="sm" onDark priority className="sm:hidden group-hover:opacity-90 transition-opacity" />
+              )}
+              {isScrolled || mobileNavOpen ? (
+                <BrandLogo href={null} variant="full" size="md" priority className="hidden sm:block group-hover:opacity-90 transition-opacity" />
+              ) : (
+                <BrandLogo href={null} variant="full" size="md" onDark priority className="hidden sm:block group-hover:opacity-90 transition-opacity" />
               )}
             </Link>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/docs"
-                className={cn(
-                  "text-sm font-medium transition-colors relative group",
-                  isScrolled
-                    ? "text-neutral-muted hover:text-electric-sapphire"
-                    : "text-white/90 hover:text-white"
-                )}
-              >
+
+            {/* Desktop links */}
+            <div className="hidden md:flex items-center gap-4 lg:gap-6">
+              <Link href="/docs" className={cn(navLinkClass(isScrolled), "relative group")}>
                 Documentation
                 <span className={cn(
-                  "absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300",
-                  isScrolled ? "bg-electric-sapphire" : "bg-white",
-                  "group-hover:w-full"
-                )}></span>
+                  "absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full",
+                  isScrolled ? "bg-primary" : "bg-white"
+                )} />
               </Link>
-              <Link
-                href="/api-reference"
-                className={cn(
-                  "text-sm font-medium transition-colors relative group",
-                  isScrolled
-                    ? "text-neutral-muted hover:text-electric-sapphire"
-                    : "text-white/90 hover:text-white"
-                )}
-              >
+              <Link href="/api-reference" className={cn(navLinkClass(isScrolled), "relative group")}>
                 API Reference
                 <span className={cn(
-                  "absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300",
-                  isScrolled ? "bg-electric-sapphire" : "bg-white",
-                  "group-hover:w-full"
-                )}></span>
+                  "absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full",
+                  isScrolled ? "bg-primary" : "bg-white"
+                )} />
               </Link>
-              <Link
-                href="/login"
-                className={cn(
-                  "text-sm font-medium transition-colors relative group",
-                  isScrolled
-                    ? "text-neutral-muted hover:text-electric-sapphire"
-                    : "text-white/90 hover:text-white"
-                )}
-              >
+              <Link href="/login" className={cn(navLinkClass(isScrolled), "relative group")}>
                 Sign In
                 <span className={cn(
-                  "absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300",
-                  isScrolled ? "bg-electric-sapphire" : "bg-white",
-                  "group-hover:w-full"
-                )}></span>
+                  "absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full",
+                  isScrolled ? "bg-primary" : "bg-white"
+                )} />
               </Link>
               <Link
                 href="/login"
                 className={cn(
-                  "px-5 py-2.5 rounded-xl font-semibold text-sm transition-all active:scale-[0.98] shadow-button hover:shadow-lg hover:scale-105",
+                  "px-5 py-2.5 rounded-full font-semibold text-sm transition-all active:scale-[0.98] shadow-button hover:shadow-hover",
                   isScrolled
-                    ? "text-white bg-gradient-to-r from-electric-sapphire to-bright-indigo hover:from-bright-indigo hover:to-vivid-royal"
-                    : "text-electric-sapphire bg-white hover:bg-white/90"
+                    ? "text-white bg-primary hover:bg-bright-indigo"
+                    : "text-primary bg-white hover:bg-white/90"
                 )}
               >
                 Get Started
               </Link>
             </div>
+
+            {/* Mobile menu toggle */}
+            <button
+              type="button"
+              className={cn(
+                "md:hidden p-2 rounded-xl transition-colors",
+                isScrolled || mobileNavOpen
+                  ? "text-neutral-text hover:bg-neutral-bg"
+                  : "text-white hover:bg-white/10"
+              )}
+              aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileNavOpen}
+              onClick={() => setMobileNavOpen((o) => !o)}
+            >
+              {mobileNavOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile menu panel */}
+        {mobileNavOpen && (
+          <div className="md:hidden border-t border-neutral-border bg-white">
+            <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
+              <Link
+                href="/docs"
+                onClick={() => setMobileNavOpen(false)}
+                className="px-4 py-3 rounded-xl text-sm font-medium text-neutral-text hover:bg-neutral-bg hover:text-primary"
+              >
+                Documentation
+              </Link>
+              <Link
+                href="/api-reference"
+                onClick={() => setMobileNavOpen(false)}
+                className="px-4 py-3 rounded-xl text-sm font-medium text-neutral-text hover:bg-neutral-bg hover:text-primary"
+              >
+                API Reference
+              </Link>
+              <Link
+                href="/login"
+                onClick={() => setMobileNavOpen(false)}
+                className="px-4 py-3 rounded-xl text-sm font-medium text-neutral-text hover:bg-neutral-bg hover:text-primary"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/login"
+                onClick={() => setMobileNavOpen(false)}
+                className="mt-2 px-4 py-3 rounded-full text-center font-semibold text-sm text-white bg-primary shadow-button"
+              >
+                Get Started
+              </Link>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section - Two Column with Playful Elements */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-electric-sapphire via-bright-indigo to-vivid-royal pt-32 pb-24 sm:pt-40 sm:pb-32 lg:pt-48 lg:pb-40">
+      <section className="relative overflow-hidden bg-primary pt-32 pb-24 sm:pt-40 sm:pb-32 lg:pt-48 lg:pb-40">
         {/* Animated background elements - Similar to CTA */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-10 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-float"></div>
@@ -302,55 +347,50 @@ export default function HomePageClient() {
           />
         </svg>
         
-        {/* Floating sparkles - Similar to CTA */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${i * 0.2}s`,
-                animationDuration: `${1 + Math.random() * 2}s`,
-                opacity: 0.6 + Math.random() * 0.4,
-              }}
-            />
-          ))}
-        </div>
-        
-        {/* Orbiting elements - Similar to CTA */}
-        <div className="absolute top-1/4 right-20 w-32 h-32 border-2 border-white/10 rounded-full animate-orbit"></div>
-        <div className="absolute bottom-1/4 left-20 w-24 h-24 border-2 border-white/10 rounded-full animate-orbit" style={{ animationDirection: 'reverse', animationDuration: '20s' }}></div>
-        
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left Column - Content */}
             <div className="relative">
               {/* Floating decorative element */}
-              <div className="absolute -top-8 -left-8 w-16 h-16 bg-electric-sapphire/10 rounded-full blur-xl animate-pulse hidden lg:block"></div>
+              <div className="absolute -top-8 -left-8 w-16 h-16 bg-primary/10 rounded-full blur-xl animate-pulse hidden lg:block"></div>
               
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold mb-6 animate-fade-in">
-                <Star className="h-4 w-4 fill-white animate-spin-slow" />
-                <span>Link Infrastructure Platform</span>
-              </div>
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight animate-fade-in-up">
+              {/* <SectionLabel tone="onDark" align="left" className="mb-4 animate-fade-in">Link infrastructure platform</SectionLabel> */}
+              <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-6 leading-tight animate-fade-in-up">
               Link Infrastructure
               <br />
                 <span className="text-white">
                   for Modern Campaigns
               </span>
             </h1>
-              <p className="text-xl text-white/90 mb-8 leading-relaxed animate-fade-in-up delay-100">
-                Complete link infrastructure platform: URL shortening, QR codes, campaign management, and developer APIs. Build, track, and scale your link strategy with enterprise-grade tools.
-            </p>
-              <div className="flex flex-col sm:flex-row gap-4 mb-8 animate-fade-in-up delay-200">
+              <div className="mb-8 space-y-5 animate-fade-in-up delay-100">
+                <p className="text-base sm:text-xl text-white/75 leading-relaxed max-w-xl">
+                  Build, track, and scale your link strategy with enterprise-grade tools.
+                </p>
+                <ul className="flex flex-wrap items-center gap-y-2 text-sm sm:text-base font-semibold text-white tracking-tight">
+                  {[
+                    "URL shortening",
+                    "QR codes",
+                    "Campaign management",
+                    "Developer APIs",
+                  ].map((feature, index, list) => (
+                    <li key={feature} className="inline-flex items-center">
+                      <span>{feature}</span>
+                      {index < list.length - 1 && (
+                        <span className="mx-2.5 sm:mx-3 text-white/40 select-none" aria-hidden>
+                          ·
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8 animate-fade-in-up delay-200">
               <Link
                 href="/login"
                 className={cn(
-                    "px-8 py-4 rounded-xl font-semibold text-electric-sapphire text-lg",
-                    "bg-white hover:bg-neutral-bg hover:scale-105",
-                    "transition-all active:scale-[0.98] shadow-2xl hover:shadow-3xl",
+                    "px-6 sm:px-8 py-3.5 sm:py-4 rounded-full font-semibold text-primary text-base sm:text-lg",
+                    "bg-white hover:bg-neutral-bg",
+                    "transition-all active:scale-[0.98] shadow-button hover:shadow-hover",
                     "flex items-center justify-center gap-2 group relative overflow-hidden"
                   )}
                 >
@@ -358,9 +398,9 @@ export default function HomePageClient() {
                 Get Started Free
                     <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-electric-sapphire/10 to-bright-indigo/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
               </Link>
-                <button className="px-8 py-4 rounded-xl font-semibold text-white border-2 border-white/30 hover:border-white/50 hover:bg-white/10 transition-all flex items-center justify-center gap-2 group hover:scale-105 backdrop-blur-sm">
+                <button className="px-6 sm:px-8 py-3.5 sm:py-4 rounded-full font-semibold text-white border border-white/30 hover:border-white/50 hover:bg-white/10 transition-all flex items-center justify-center gap-2 group backdrop-blur-sm text-base sm:text-lg">
                   <Play className="h-5 w-5 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300" />
                 Watch Demo
               </button>
@@ -373,35 +413,35 @@ export default function HomePageClient() {
             {/* Right Column - Visual with Playful Animations */}
             <div className="relative group">
               {/* Animated decorative elements */}
-              <div className="absolute -top-4 -right-4 w-24 h-24 bg-electric-sapphire/10 rounded-full blur-2xl group-hover:scale-150 group-hover:animate-pulse transition-transform duration-500"></div>
-              <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-bright-indigo/10 rounded-full blur-2xl group-hover:scale-125 group-hover:animate-pulse transition-transform duration-500 delay-100"></div>
+              <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:scale-150 group-hover:animate-pulse transition-transform duration-500"></div>
+              <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-primary/10 rounded-full blur-2xl group-hover:scale-125 group-hover:animate-pulse transition-transform duration-500 delay-100"></div>
               
-              <div className="relative bg-gradient-to-br from-electric-sapphire/10 via-bright-indigo/10 to-vivid-royal/10 rounded-3xl p-8 border border-electric-sapphire/20 shadow-2xl group-hover:shadow-3xl group-hover:rotate-1 transition-all duration-300">
+              <div className="relative bg-primary/10 rounded-3xl p-8 border border-primary/20 shadow-2xl group-hover:shadow-3xl group-hover:rotate-1 transition-all duration-300">
                 {/* Mock Dashboard Preview */}
                 <div className="bg-white rounded-2xl p-6 shadow-xl group-hover:scale-[1.02] transition-transform duration-300">
                   <div className="flex items-center gap-3 mb-6">
                     <BrandLogo href={null} variant="mark" size="md" />
                     <div>
-                      <div className="h-3 w-24 bg-neutral-border rounded mb-2 group-hover:bg-gradient-to-r group-hover:from-electric-sapphire/20 group-hover:to-bright-indigo/20 transition-all duration-300"></div>
-                      <div className="h-2 w-16 bg-neutral-border rounded group-hover:bg-gradient-to-r group-hover:from-electric-sapphire/20 group-hover:to-bright-indigo/20 transition-all duration-300"></div>
+                      <div className="h-3 w-24 bg-neutral-border rounded mb-2 group-hover:bg-primary/15 transition-all duration-300"></div>
+                      <div className="h-2 w-16 bg-neutral-border rounded group-hover:bg-primary/15 transition-all duration-300"></div>
                     </div>
                   </div>
                   <div className="space-y-4">
-                    <div className="h-4 w-full bg-gradient-to-r from-electric-sapphire/20 to-bright-indigo/20 rounded group-hover:from-electric-sapphire/30 group-hover:to-bright-indigo/30 transition-all duration-300"></div>
-                    <div className="h-4 w-3/4 bg-gradient-to-r from-electric-sapphire/20 to-bright-indigo/20 rounded group-hover:from-electric-sapphire/30 group-hover:to-bright-indigo/30 transition-all duration-300"></div>
-                    <div className="h-4 w-5/6 bg-gradient-to-r from-electric-sapphire/20 to-bright-indigo/20 rounded group-hover:from-electric-sapphire/30 group-hover:to-bright-indigo/30 transition-all duration-300"></div>
+                    <div className="h-4 w-full bg-primary/15 rounded group-hover:bg-primary/25 transition-all duration-300"></div>
+                    <div className="h-4 w-3/4 bg-primary/15 rounded group-hover:bg-primary/25 transition-all duration-300"></div>
+                    <div className="h-4 w-5/6 bg-primary/15 rounded group-hover:bg-primary/25 transition-all duration-300"></div>
                   </div>
                   <div className="mt-6 grid grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-neutral-bg rounded-xl group-hover:bg-gradient-to-br group-hover:from-electric-sapphire/10 group-hover:to-bright-indigo/10 group-hover:scale-110 transition-all duration-300">
-                      <div className="h-8 w-8 bg-electric-sapphire/20 rounded-lg mx-auto mb-2 group-hover:rotate-6 transition-transform duration-300"></div>
+                    <div className="text-center p-4 bg-neutral-bg rounded-xl group-hover:bg-primary/10 group-hover:scale-110 transition-all duration-300">
+                      <div className="h-8 w-8 bg-primary/15 rounded-lg mx-auto mb-2 group-hover:rotate-6 transition-transform duration-300"></div>
                       <div className="h-2 w-12 bg-neutral-border rounded mx-auto"></div>
                     </div>
-                    <div className="text-center p-4 bg-neutral-bg rounded-xl group-hover:bg-gradient-to-br group-hover:from-bright-indigo/10 group-hover:to-vivid-royal/10 group-hover:scale-110 transition-all duration-300">
-                      <div className="h-8 w-8 bg-bright-indigo/20 rounded-lg mx-auto mb-2 group-hover:-rotate-6 transition-transform duration-300"></div>
+                    <div className="text-center p-4 bg-neutral-bg rounded-xl group-hover:bg-primary/10 group-hover:scale-110 transition-all duration-300">
+                      <div className="h-8 w-8 bg-primary/15 rounded-lg mx-auto mb-2 group-hover:-rotate-6 transition-transform duration-300"></div>
                       <div className="h-2 w-12 bg-neutral-border rounded mx-auto"></div>
                     </div>
-                    <div className="text-center p-4 bg-neutral-bg rounded-xl group-hover:bg-gradient-to-br group-hover:from-vivid-royal/10 group-hover:to-neon-pink/10 group-hover:scale-110 transition-all duration-300">
-                      <div className="h-8 w-8 bg-vivid-royal/20 rounded-lg mx-auto mb-2 group-hover:rotate-6 transition-transform duration-300"></div>
+                    <div className="text-center p-4 bg-neutral-bg rounded-xl group-hover:bg-primary/10 group-hover:scale-110 transition-all duration-300">
+                      <div className="h-8 w-8 bg-primary/15 rounded-lg mx-auto mb-2 group-hover:rotate-6 transition-transform duration-300"></div>
                       <div className="h-2 w-12 bg-neutral-border rounded mx-auto"></div>
                     </div>
                   </div>
@@ -429,7 +469,7 @@ export default function HomePageClient() {
       </section> */}
 
       {/* Features Section - Two Column with Interactive Visuals */}
-      <section className="py-24 bg-white relative overflow-hidden">
+      <section id="features" className="py-24 bg-white relative overflow-hidden scroll-mt-20">
         {/* Animated background with curved lines */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <svg className="absolute inset-0 w-full h-full opacity-10" preserveAspectRatio="none">
@@ -460,19 +500,14 @@ export default function HomePageClient() {
           </svg>
           
           {/* Orbiting elements */}
-          <div className="absolute top-1/4 right-20 w-32 h-32 border-2 border-electric-sapphire/10 rounded-full animate-orbit"></div>
-          <div className="absolute bottom-1/4 left-20 w-24 h-24 border-2 border-bright-indigo/10 rounded-full animate-orbit" style={{ animationDirection: 'reverse', animationDuration: '20s' }}></div>
         </div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-electric-sapphire/10 text-electric-sapphire text-xs font-semibold mb-4">
-              <Sparkles className="h-3 w-3" />
-              <span>FEATURES</span>
-            </div>
+            <SectionLabel>Features</SectionLabel>
             <h2 className="text-4xl sm:text-5xl font-bold text-neutral-text mb-4">
               Complete Link{" "}
-              <span className="bg-gradient-to-r from-electric-sapphire to-bright-indigo bg-clip-text text-transparent">
+              <span className="text-primary">
                 Infrastructure
               </span>
             </h2>
@@ -484,13 +519,10 @@ export default function HomePageClient() {
           {/* Feature 1 - Two Column with Visual on Right */}
           <div className="grid lg:grid-cols-2 gap-16 items-center mb-24 relative">
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-electric-sapphire/10 text-electric-sapphire text-xs font-semibold mb-4">
-                <Link2 className="h-3 w-3 animate-pulse" />
-                <span>LINK SHORTENING</span>
-              </div>
+              <SectionLabel align="left">Link shortening</SectionLabel>
               <h3 className="text-3xl font-bold text-neutral-text mb-4">
                 URL Shortening{" "}
-                <span className="bg-gradient-to-r from-electric-sapphire to-bright-indigo bg-clip-text text-transparent">
+                <span className="text-primary">
                   Infrastructure
                 </span>
               </h3>
@@ -499,50 +531,50 @@ export default function HomePageClient() {
               </p>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-electric-sapphire/10 group-hover:bg-electric-sapphire/20 transition-colors">
-                    <Check className="h-4 w-4 text-electric-sapphire" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Custom back-halves for branded links</span>
                 </li>
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-electric-sapphire/10 group-hover:bg-electric-sapphire/20 transition-colors">
-                    <Check className="h-4 w-4 text-electric-sapphire" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Set expiration dates for temporary campaigns</span>
                 </li>
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-electric-sapphire/10 group-hover:bg-electric-sapphire/20 transition-colors">
-                    <Check className="h-4 w-4 text-electric-sapphire" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Password protection for sensitive links</span>
                 </li>
               </ul>
             </div>
             <div className="relative group">
-              <div className="absolute -top-4 -right-4 w-20 h-20 bg-bright-indigo/20 rounded-full blur-2xl group-hover:scale-150 group-hover:animate-pulse transition-transform duration-500"></div>
-              <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-electric-sapphire/20 rounded-full blur-xl group-hover:scale-125 group-hover:animate-pulse transition-transform duration-500 delay-100"></div>
+              <div className="absolute -top-4 -right-4 w-20 h-20 bg-primary/15 rounded-full blur-2xl group-hover:scale-150 group-hover:animate-pulse transition-transform duration-500"></div>
+              <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-primary/15 rounded-full blur-xl group-hover:scale-125 group-hover:animate-pulse transition-transform duration-500 delay-100"></div>
               
-              <div className="relative bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 rounded-3xl p-8 border border-electric-sapphire/20 group-hover:border-electric-sapphire/40 transition-all duration-300 group-hover:shadow-2xl group-hover:-rotate-1">
+              <div className="relative bg-primary/10 rounded-3xl p-8 border border-primary/20 group-hover:border-primary/40 transition-all duration-300 group-hover:shadow-2xl group-hover:-rotate-1">
                 <div className="bg-white rounded-2xl p-6 shadow-xl group-hover:scale-[1.02] transition-transform duration-300">
                   <div className="space-y-4">
-                    <div className="p-4 bg-neutral-bg rounded-xl group-hover:bg-gradient-to-r group-hover:from-electric-sapphire/5 group-hover:to-bright-indigo/5 transition-all duration-300 group-hover:border group-hover:border-electric-sapphire/20">
+                    <div className="p-4 bg-neutral-bg rounded-xl group-hover:bg-primary/5 transition-all duration-300 group-hover:border group-hover:border-primary/20">
                       <div className="text-xs text-neutral-muted mb-2 flex items-center gap-1">
                         <span>Original URL</span>
-                        <div className="w-1 h-1 bg-electric-sapphire rounded-full animate-pulse"></div>
+                        <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
                       </div>
-                      <div className="text-sm font-mono text-neutral-text break-all group-hover:text-electric-sapphire transition-colors">
+                      <div className="text-sm font-mono text-neutral-text break-all group-hover:text-primary transition-colors">
                         https://example.com/very/long/url/path/that/needs/shortening
                       </div>
                     </div>
                     <div className="flex items-center justify-center">
-                      <div className="p-2 rounded-full bg-electric-sapphire/10 group-hover:bg-electric-sapphire/20 group-hover:rotate-12 group-hover:scale-110 transition-all duration-300">
-                        <ArrowRight className="h-6 w-6 text-electric-sapphire group-hover:translate-x-1 transition-transform" />
+                      <div className="p-2 rounded-full bg-primary/10 group-hover:bg-primary/15 group-hover:rotate-12 group-hover:scale-110 transition-all duration-300">
+                        <ArrowRight className="h-6 w-6 text-primary group-hover:translate-x-1 transition-transform" />
                       </div>
                     </div>
-                    <div className="p-4 bg-gradient-to-r from-electric-sapphire/10 to-bright-indigo/10 rounded-xl border border-electric-sapphire/20 group-hover:shadow-lg group-hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-electric-sapphire/0 via-electric-sapphire/10 to-electric-sapphire/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                    <div className="p-4 bg-primary/10 rounded-xl border border-primary/20 group-hover:shadow-lg group-hover:scale-105 transition-all duration-300 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-primary/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                       <div className="text-xs text-neutral-muted mb-2 relative z-10">Shortened Link</div>
-                      <div className="text-lg font-mono font-bold text-electric-sapphire relative z-10 group-hover:scale-105 transition-transform duration-300 inline-block">
+                      <div className="text-lg font-mono font-bold text-primary relative z-10 group-hover:scale-105 transition-transform duration-300 inline-block">
                         lunr.to/abc123
                       </div>
                     </div>
@@ -555,42 +587,39 @@ export default function HomePageClient() {
           {/* Feature 2 - Reversed Layout with Visual on Left */}
           <div className="grid lg:grid-cols-2 gap-16 items-center mb-24 relative">
             <div className="relative group order-2 lg:order-1">
-              <div className="absolute -top-6 -left-6 w-24 h-24 bg-bright-indigo/20 rounded-full blur-2xl group-hover:scale-150 group-hover:animate-pulse transition-transform duration-700"></div>
-              <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-vivid-royal/20 rounded-full blur-xl group-hover:scale-125 group-hover:animate-pulse transition-transform duration-700 delay-100"></div>
+              <div className="absolute -top-6 -left-6 w-24 h-24 bg-primary/15 rounded-full blur-2xl group-hover:scale-150 group-hover:animate-pulse transition-transform duration-700"></div>
+              <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-primary/15 rounded-full blur-xl group-hover:scale-125 group-hover:animate-pulse transition-transform duration-700 delay-100"></div>
               
-              <div className="relative bg-gradient-to-br from-bright-indigo/10 to-vivid-royal/10 rounded-3xl p-8 border border-bright-indigo/20 group-hover:border-bright-indigo/40 transition-all duration-300 group-hover:shadow-2xl group-hover:rotate-1">
+              <div className="relative bg-primary/10 rounded-3xl p-8 border border-primary/20 group-hover:border-primary/40 transition-all duration-300 group-hover:shadow-2xl group-hover:rotate-1">
                 <div className="bg-white rounded-2xl p-6 shadow-xl group-hover:scale-[1.02] transition-transform duration-300">
                   <div className="text-center mb-6">
-                    <div className="w-32 h-32 bg-gradient-to-br from-electric-sapphire/20 to-bright-indigo/20 rounded-2xl mx-auto flex items-center justify-center mb-4 group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 relative">
-                      <QrCode className="h-16 w-16 text-electric-sapphire relative z-10" />
-                      <div className="absolute inset-0 bg-electric-sapphire/20 rounded-2xl blur-xl group-hover:blur-2xl group-hover:scale-150 transition-all duration-500"></div>
+                    <div className="w-32 h-32 bg-primary/15 rounded-2xl mx-auto flex items-center justify-center mb-4 group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 relative">
+                      <QrCode className="h-16 w-16 text-primary relative z-10" />
+                      <div className="absolute inset-0 bg-primary/15 rounded-2xl blur-xl group-hover:blur-2xl group-hover:scale-150 transition-all duration-500"></div>
                     </div>
-                    <div className="text-sm text-neutral-muted group-hover:text-bright-indigo transition-colors flex items-center justify-center gap-1">
+                    <div className="text-sm text-neutral-muted group-hover:text-primary transition-colors flex items-center justify-center gap-1">
                       <span>Scan to visit</span>
-                      <div className="w-1 h-1 bg-bright-indigo rounded-full animate-pulse"></div>
+                      <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-neutral-bg rounded-lg group-hover:bg-gradient-to-br group-hover:from-electric-sapphire/10 group-hover:to-bright-indigo/10 group-hover:scale-110 transition-all duration-300">
+                    <div className="text-center p-3 bg-neutral-bg rounded-lg group-hover:bg-primary/10 group-hover:scale-110 transition-all duration-300">
                       <div className="text-xs text-neutral-muted mb-1">Downloads</div>
-                      <div className="text-lg font-bold text-neutral-text group-hover:text-electric-sapphire group-hover:animate-bounce transition-colors">1.2K</div>
+                      <div className="text-lg font-bold text-neutral-text group-hover:text-primary group-hover:animate-bounce transition-colors">1.2K</div>
                     </div>
-                    <div className="text-center p-3 bg-neutral-bg rounded-lg group-hover:bg-gradient-to-br group-hover:from-bright-indigo/10 group-hover:to-vivid-royal/10 group-hover:scale-110 transition-all duration-300">
+                    <div className="text-center p-3 bg-neutral-bg rounded-lg group-hover:bg-primary/10 group-hover:scale-110 transition-all duration-300">
                       <div className="text-xs text-neutral-muted mb-1">Scans</div>
-                      <div className="text-lg font-bold text-neutral-text group-hover:text-bright-indigo group-hover:animate-bounce transition-colors">856</div>
+                      <div className="text-lg font-bold text-neutral-text group-hover:text-primary group-hover:animate-bounce transition-colors">856</div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
             <div className="relative z-10 order-1 lg:order-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-bright-indigo/10 text-bright-indigo text-xs font-semibold mb-4">
-                <QrCode className="h-3 w-3 animate-pulse" />
-                <span>QR CODE GENERATION</span>
-              </div>
+              <SectionLabel align="left">QR code generation</SectionLabel>
               <h3 className="text-3xl font-bold text-neutral-text mb-4">
                 QR Code{" "}
-                <span className="bg-gradient-to-r from-bright-indigo to-vivid-royal bg-clip-text text-transparent">
+                <span className="text-primary">
                   Infrastructure
                 </span>
               </h3>
@@ -599,20 +628,20 @@ export default function HomePageClient() {
               </p>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-bright-indigo/10 group-hover:bg-bright-indigo/20 group-hover:rotate-12 transition-all duration-300">
-                    <Check className="h-4 w-4 text-bright-indigo" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 group-hover:rotate-12 transition-all duration-300">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">High-resolution QR codes in multiple formats</span>
                 </li>
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-bright-indigo/10 group-hover:bg-bright-indigo/20 group-hover:rotate-12 transition-all duration-300">
-                    <Check className="h-4 w-4 text-bright-indigo" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 group-hover:rotate-12 transition-all duration-300">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Track QR code scans separately from link clicks</span>
                 </li>
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-bright-indigo/10 group-hover:bg-bright-indigo/20 group-hover:rotate-12 transition-all duration-300">
-                    <Check className="h-4 w-4 text-bright-indigo" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 group-hover:rotate-12 transition-all duration-300">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Customizable styling to match your brand</span>
                 </li>
@@ -623,13 +652,10 @@ export default function HomePageClient() {
           {/* Feature 3 - Two Column with Visual on Right */}
           <div className="grid lg:grid-cols-2 gap-16 items-center relative">
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-vivid-royal/10 text-vivid-royal text-xs font-semibold mb-4">
-                <BarChart3 className="h-3 w-3 animate-pulse" />
-                <span>ANALYTICS</span>
-              </div>
+              <SectionLabel align="left">Analytics</SectionLabel>
               <h3 className="text-3xl font-bold text-neutral-text mb-4">
                 Understand your{" "}
-                <span className="bg-gradient-to-r from-vivid-royal to-neon-pink bg-clip-text text-transparent">
+                <span className="text-primary">
                   audience
                 </span>
               </h3>
@@ -638,49 +664,49 @@ export default function HomePageClient() {
               </p>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-vivid-royal/10 group-hover:bg-vivid-royal/20 group-hover:-rotate-12 transition-all duration-300">
-                    <Check className="h-4 w-4 text-vivid-royal" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 group-hover:-rotate-12 transition-all duration-300">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Real-time click tracking and analytics</span>
                 </li>
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-vivid-royal/10 group-hover:bg-vivid-royal/20 group-hover:-rotate-12 transition-all duration-300">
-                    <Check className="h-4 w-4 text-vivid-royal" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 group-hover:-rotate-12 transition-all duration-300">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Device breakdowns · Geographic data coming soon</span>
                 </li>
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-vivid-royal/10 group-hover:bg-vivid-royal/20 group-hover:-rotate-12 transition-all duration-300">
-                    <Check className="h-4 w-4 text-vivid-royal" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 group-hover:-rotate-12 transition-all duration-300">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">UTM parameter tracking for campaigns</span>
                 </li>
               </ul>
             </div>
             <div className="relative group">
-              <div className="absolute -top-6 -right-6 w-24 h-24 bg-vivid-royal/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-              <div className="absolute -bottom-6 -left-6 w-20 h-20 bg-neon-pink/20 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700"></div>
+              <div className="absolute -top-6 -right-6 w-24 h-24 bg-primary/15 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+              <div className="absolute -bottom-6 -left-6 w-20 h-20 bg-primary/15 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700"></div>
               
-              <div className="relative bg-gradient-to-br from-vivid-royal/10 to-neon-pink/10 rounded-3xl p-8 border border-vivid-royal/20 group-hover:border-vivid-royal/40 transition-all duration-300 group-hover:shadow-2xl group-hover:-rotate-1">
+              <div className="relative bg-primary/10 rounded-3xl p-8 border border-primary/20 group-hover:border-primary/40 transition-all duration-300 group-hover:shadow-2xl group-hover:-rotate-1">
                 <div className="bg-white rounded-2xl p-6 shadow-xl group-hover:scale-[1.02] transition-transform duration-300">
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-4">
-                      <div className="h-3 w-24 bg-neutral-border rounded group-hover:bg-gradient-to-r group-hover:from-vivid-royal/20 group-hover:to-neon-pink/20 transition-all duration-300"></div>
-                      <div className="h-3 w-16 bg-neutral-border rounded group-hover:bg-gradient-to-r group-hover:from-vivid-royal/20 group-hover:to-neon-pink/20 transition-all duration-300"></div>
+                      <div className="h-3 w-24 bg-neutral-border rounded group-hover:bg-primary/15 transition-all duration-300"></div>
+                      <div className="h-3 w-16 bg-neutral-border rounded group-hover:bg-primary/15 transition-all duration-300"></div>
                     </div>
-                    <div className="h-40 bg-gradient-to-t from-electric-sapphire/20 via-bright-indigo/20 to-vivid-royal/20 rounded-xl group-hover:shadow-lg transition-all duration-300"></div>
+                    <div className="h-40 bg-primary/15 rounded-xl group-hover:shadow-lg transition-all duration-300"></div>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-2 rounded-lg group-hover:bg-electric-sapphire/5 group-hover:scale-110 transition-all duration-300">
-                      <div className="text-2xl font-bold text-electric-sapphire mb-1 group-hover:animate-bounce">1.2K</div>
+                    <div className="text-center p-2 rounded-lg group-hover:bg-primary/5 group-hover:scale-110 transition-all duration-300">
+                      <div className="text-2xl font-bold text-primary mb-1 group-hover:animate-bounce">1.2K</div>
                       <div className="text-xs text-neutral-muted">Total Clicks</div>
                     </div>
-                    <div className="text-center p-2 rounded-lg group-hover:bg-bright-indigo/5 group-hover:scale-110 transition-all duration-300">
-                      <div className="text-2xl font-bold text-bright-indigo mb-1 group-hover:animate-bounce">856</div>
+                    <div className="text-center p-2 rounded-lg group-hover:bg-primary/5 group-hover:scale-110 transition-all duration-300">
+                      <div className="text-2xl font-bold text-primary mb-1 group-hover:animate-bounce">856</div>
                       <div className="text-xs text-neutral-muted">Unique</div>
                     </div>
-                    <div className="text-center p-2 rounded-lg group-hover:bg-vivid-royal/5 group-hover:scale-110 transition-all duration-300">
-                      <div className="text-2xl font-bold text-vivid-royal mb-1 group-hover:animate-bounce">71%</div>
+                    <div className="text-center p-2 rounded-lg group-hover:bg-primary/5 group-hover:scale-110 transition-all duration-300">
+                      <div className="text-2xl font-bold text-primary mb-1 group-hover:animate-bounce">71%</div>
                       <div className="text-xs text-neutral-muted">CTR</div>
                     </div>
                   </div>
@@ -692,21 +718,21 @@ export default function HomePageClient() {
           {/* Feature 4 - Campaign Infrastructure */}
           <div className="grid lg:grid-cols-2 gap-16 items-center mb-24 relative mt-24">
             <div className="relative group order-2 lg:order-1">
-              <div className="absolute -top-6 -left-6 w-24 h-24 bg-electric-sapphire/20 rounded-full blur-2xl group-hover:scale-150 group-hover:animate-pulse transition-transform duration-700"></div>
-              <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-bright-indigo/20 rounded-full blur-xl group-hover:scale-125 group-hover:animate-pulse transition-transform duration-700 delay-100"></div>
+              <div className="absolute -top-6 -left-6 w-24 h-24 bg-primary/15 rounded-full blur-2xl group-hover:scale-150 group-hover:animate-pulse transition-transform duration-700"></div>
+              <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-primary/15 rounded-full blur-xl group-hover:scale-125 group-hover:animate-pulse transition-transform duration-700 delay-100"></div>
               
-              <div className="relative bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 rounded-3xl p-8 border border-electric-sapphire/20 group-hover:border-electric-sapphire/40 transition-all duration-300 group-hover:shadow-2xl group-hover:rotate-1">
+              <div className="relative bg-primary/10 rounded-3xl p-8 border border-primary/20 group-hover:border-primary/40 transition-all duration-300 group-hover:shadow-2xl group-hover:rotate-1">
                 <div className="bg-white rounded-2xl p-6 shadow-xl group-hover:scale-[1.02] transition-transform duration-300">
                   <div className="mb-4">
-                    <div className="h-4 w-32 bg-neutral-border rounded mb-2 group-hover:bg-gradient-to-r group-hover:from-electric-sapphire/20 group-hover:to-bright-indigo/20 transition-all duration-300"></div>
-                    <div className="h-4 w-24 bg-neutral-border rounded group-hover:bg-gradient-to-r group-hover:from-electric-sapphire/20 group-hover:to-bright-indigo/20 transition-all duration-300"></div>
+                    <div className="h-4 w-32 bg-neutral-border rounded mb-2 group-hover:bg-primary/15 transition-all duration-300"></div>
+                    <div className="h-4 w-24 bg-neutral-border rounded group-hover:bg-primary/15 transition-all duration-300"></div>
                   </div>
                   <div className="space-y-3">
-                    <div className="p-3 bg-gradient-to-r from-electric-sapphire/10 to-bright-indigo/10 rounded-lg border border-electric-sapphire/20 group-hover:shadow-lg group-hover:scale-105 transition-all duration-300">
+                    <div className="p-3 bg-primary/10 rounded-lg border border-primary/20 group-hover:shadow-lg group-hover:scale-105 transition-all duration-300">
                       <div className="text-sm font-semibold text-neutral-text mb-1">Summer Campaign</div>
                       <div className="text-xs text-neutral-muted">12 links • 2.4K clicks</div>
                     </div>
-                    <div className="p-3 bg-gradient-to-r from-bright-indigo/10 to-vivid-royal/10 rounded-lg border border-bright-indigo/20 group-hover:shadow-lg group-hover:scale-105 transition-all duration-300">
+                    <div className="p-3 bg-primary/10 rounded-lg border border-primary/20 group-hover:shadow-lg group-hover:scale-105 transition-all duration-300">
                       <div className="text-sm font-semibold text-neutral-text mb-1">Product Launch</div>
                       <div className="text-xs text-neutral-muted">8 links • 1.8K clicks</div>
                     </div>
@@ -715,13 +741,10 @@ export default function HomePageClient() {
               </div>
             </div>
             <div className="relative z-10 order-1 lg:order-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-electric-sapphire/10 text-electric-sapphire text-xs font-semibold mb-4">
-                <Monitor className="h-3 w-3 animate-pulse" />
-                <span>CAMPAIGN INFRASTRUCTURE</span>
-              </div>
+              <SectionLabel align="left">Campaign infrastructure</SectionLabel>
               <h3 className="text-3xl font-bold text-neutral-text mb-4">
                 Campaign Management{" "}
-                <span className="bg-gradient-to-r from-electric-sapphire to-bright-indigo bg-clip-text text-transparent">
+                <span className="text-primary">
                   at Scale
                 </span>
               </h3>
@@ -730,20 +753,20 @@ export default function HomePageClient() {
               </p>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-electric-sapphire/10 group-hover:bg-electric-sapphire/20 transition-colors">
-                    <Check className="h-4 w-4 text-electric-sapphire" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Organize links into campaign groups</span>
                 </li>
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-electric-sapphire/10 group-hover:bg-electric-sapphire/20 transition-colors">
-                    <Check className="h-4 w-4 text-electric-sapphire" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Bulk UTM parameter management</span>
                 </li>
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-electric-sapphire/10 group-hover:bg-electric-sapphire/20 transition-colors">
-                    <Check className="h-4 w-4 text-electric-sapphire" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Campaign-level analytics and reporting</span>
                 </li>
@@ -754,13 +777,10 @@ export default function HomePageClient() {
           {/* Feature 5 - API Infrastructure */}
           <div className="grid lg:grid-cols-2 gap-16 items-center relative">
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-bright-indigo/10 text-bright-indigo text-xs font-semibold mb-4">
-                <Zap className="h-3 w-3 animate-pulse" />
-                <span>API INFRASTRUCTURE</span>
-              </div>
+              <SectionLabel align="left">API infrastructure</SectionLabel>
               <h3 className="text-3xl font-bold text-neutral-text mb-4">
                 Developer{" "}
-                <span className="bg-gradient-to-r from-bright-indigo to-vivid-royal bg-clip-text text-transparent">
+                <span className="text-primary">
                   APIs & Webhooks
                 </span>
               </h3>
@@ -769,30 +789,30 @@ export default function HomePageClient() {
               </p>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-bright-indigo/10 group-hover:bg-bright-indigo/20 transition-colors">
-                    <Check className="h-4 w-4 text-bright-indigo" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">RESTful API for all link operations</span>
                 </li>
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-bright-indigo/10 group-hover:bg-bright-indigo/20 transition-colors">
-                    <Check className="h-4 w-4 text-bright-indigo" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Real-time webhooks for link events</span>
                 </li>
                 <li className="flex items-start gap-3 group">
-                  <div className="p-1 rounded-lg bg-bright-indigo/10 group-hover:bg-bright-indigo/20 transition-colors">
-                    <Check className="h-4 w-4 text-bright-indigo" />
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                    <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Usage analytics and API rate limiting</span>
                 </li>
               </ul>
             </div>
             <div className="relative group">
-              <div className="absolute -top-6 -right-6 w-24 h-24 bg-bright-indigo/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-              <div className="absolute -bottom-6 -left-6 w-20 h-20 bg-vivid-royal/20 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700"></div>
+              <div className="absolute -top-6 -right-6 w-24 h-24 bg-primary/15 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+              <div className="absolute -bottom-6 -left-6 w-20 h-20 bg-primary/15 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700"></div>
               
-              <div className="relative bg-gradient-to-br from-bright-indigo/10 to-vivid-royal/10 rounded-3xl p-8 border border-bright-indigo/20 group-hover:border-bright-indigo/40 transition-all duration-300 group-hover:shadow-2xl group-hover:-rotate-1">
+              <div className="relative bg-primary/10 rounded-3xl p-8 border border-primary/20 group-hover:border-primary/40 transition-all duration-300 group-hover:shadow-2xl group-hover:-rotate-1">
                 <div className="bg-neutral-900 rounded-2xl p-6 shadow-xl group-hover:scale-[1.02] transition-transform duration-300">
                   <div className="text-green-400 font-mono text-sm space-y-1">
                     <div className="mb-2">$ curl -X POST \</div>
@@ -807,18 +827,18 @@ export default function HomePageClient() {
         </div>
         
         {/* Section connector */}
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-bright-indigo/30 to-transparent"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-primary/20"></div>
       </section>
 
       {/* How It Works - Bold Diagonal/Zigzag Layout with Playful Elements */}
       <section className="py-24 bg-neutral-bg relative overflow-hidden">
         {/* Section connector from features */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-24 bg-gradient-to-b from-bright-indigo/30 to-transparent"></div>
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-24 bg-primary/20"></div>
         {/* Animated background with dynamic elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-20 w-96 h-96 bg-electric-sapphire/5 rounded-full blur-3xl animate-float"></div>
-          <div className="absolute bottom-20 right-20 w-80 h-80 bg-bright-indigo/5 rounded-full blur-3xl animate-float-reverse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-vivid-royal/3 rounded-full blur-3xl animate-drift"></div>
+          <div className="absolute top-20 left-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute bottom-20 right-20 w-80 h-80 bg-primary/5 rounded-full blur-3xl animate-float-reverse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/[0.03] rounded-full blur-3xl animate-drift"></div>
         </div>
         
         {/* Curved connecting lines between steps */}
@@ -871,7 +891,7 @@ export default function HomePageClient() {
                 }}
               >
                 <div 
-                  className="border-2 border-electric-sapphire/10 rounded-full animate-pulse-glow"
+                  className="border-2 border-primary/10 rounded-full animate-pulse-glow"
                   style={{ width: `${size * 4}px`, height: `${size * 4}px` }}
                 ></div>
               </div>
@@ -881,10 +901,7 @@ export default function HomePageClient() {
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-electric-sapphire/10 text-electric-sapphire text-xs font-semibold mb-4 animate-fade-in">
-              <Target className="h-3 w-3 animate-spin-slow" />
-              <span>PROCESS</span>
-            </div>
+            <SectionLabel>Process</SectionLabel>
             <h2 className="text-4xl sm:text-5xl font-bold text-neutral-text mb-4 animate-fade-in-up">
               How It Works
             </h2>
@@ -896,36 +913,33 @@ export default function HomePageClient() {
           {/* Step 1 - Large Left Card with Playful Elements */}
           <div className="relative mb-32 group">
             {/* Floating decorative blobs */}
-            <div className="absolute -top-8 -left-8 w-24 h-24 bg-electric-sapphire/10 rounded-full blur-xl animate-pulse hidden lg:block"></div>
-            <div className="absolute -bottom-8 -right-8 w-20 h-20 bg-bright-indigo/10 rounded-full blur-xl animate-pulse delay-500 hidden lg:block"></div>
+            <div className="absolute -top-8 -left-8 w-24 h-24 bg-primary/10 rounded-full blur-xl animate-pulse hidden lg:block"></div>
+            <div className="absolute -bottom-8 -right-8 w-20 h-20 bg-primary/10 rounded-full blur-xl animate-pulse delay-500 hidden lg:block"></div>
             
             <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-12">
               {/* Large Step Number Badge with Playful Animation */}
               <div className="relative flex-shrink-0 group/badge">
-                <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-3xl bg-gradient-to-br from-electric-sapphire to-bright-indigo flex items-center justify-center text-white font-bold text-4xl lg:text-5xl shadow-2xl group-hover/badge:scale-125 group-hover/badge:rotate-12 group-hover/badge:animate-bounce transition-all duration-500 relative z-20 cursor-pointer">
+                <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-3xl bg-primary flex items-center justify-center text-white font-bold text-4xl lg:text-5xl shadow-2xl group-hover/badge:scale-125 group-hover/badge:rotate-12 group-hover/badge:animate-bounce transition-all duration-500 relative z-20 cursor-pointer">
                   <span className="relative z-10">01</span>
-                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-electric-sapphire/0 via-white/20 to-bright-indigo/0 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-500"></div>
+                  <div className="absolute inset-0 rounded-3xl bg-white/20 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-500"></div>
                 </div>
-                <div className="absolute inset-0 bg-electric-sapphire/30 rounded-3xl blur-2xl group-hover/badge:blur-3xl group-hover/badge:scale-150 transition-all duration-500 animate-pulse"></div>
+                <div className="absolute inset-0 bg-primary/30 rounded-3xl blur-2xl group-hover/badge:blur-3xl group-hover/badge:scale-150 transition-all duration-500 animate-pulse"></div>
                 {/* Sparkle effect */}
-                <div className="absolute -top-2 -right-2 w-4 h-4 bg-electric-sapphire rounded-full opacity-0 group-hover/badge:opacity-100 group-hover/badge:animate-ping"></div>
-                <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-bright-indigo rounded-full opacity-0 group-hover/badge:opacity-100 group-hover/badge:animate-ping delay-200"></div>
+                <div className="absolute -top-2 -right-2 w-4 h-4 bg-primary rounded-full opacity-0 group-hover/badge:opacity-100 group-hover/badge:animate-ping"></div>
+                <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-primary rounded-full opacity-0 group-hover/badge:opacity-100 group-hover/badge:animate-ping delay-200"></div>
               </div>
               
               {/* Content Card */}
-              <div className="flex-1 bg-white rounded-3xl border-2 border-neutral-border p-8 lg:p-10 shadow-xl hover:shadow-2xl hover:border-electric-sapphire/50 transition-all duration-300 group/card relative overflow-hidden hover:-translate-y-2">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 rounded-bl-full group-hover/card:scale-125 transition-transform duration-500"></div>
+              <div className="flex-1 bg-white rounded-3xl border-2 border-neutral-border p-8 lg:p-10 shadow-xl hover:shadow-2xl hover:border-primary/50 transition-all duration-300 group/card relative overflow-hidden hover:-translate-y-2">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-bl-full group-hover/card:scale-125 transition-transform duration-500"></div>
                 {/* Floating corner decoration */}
-                <div className="absolute top-4 right-4 w-8 h-8 bg-electric-sapphire/10 rounded-full blur-sm opacity-0 group-hover/card:opacity-100 group-hover/card:animate-pulse"></div>
+                <div className="absolute top-4 right-4 w-8 h-8 bg-primary/10 rounded-full blur-sm opacity-0 group-hover/card:opacity-100 group-hover/card:animate-pulse"></div>
                 
                 <div className="relative z-10">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-electric-sapphire/10 text-electric-sapphire text-xs font-semibold mb-4 group-hover/card:bg-electric-sapphire/20 transition-colors">
-                    <Link2 className="h-3 w-3 animate-pulse group-hover/card:rotate-12 transition-transform" />
-                    <span>STEP 1</span>
-                  </div>
-                  <h3 className="text-3xl lg:text-4xl font-bold text-neutral-text mb-4 group-hover/card:text-electric-sapphire transition-colors">
+                  <SectionLabel align="left">Step 1</SectionLabel>
+                  <h3 className="text-3xl lg:text-4xl font-bold text-neutral-text mb-4 group-hover/card:text-primary transition-colors">
                     Create your{" "}
-                    <span className="bg-gradient-to-r from-electric-sapphire to-bright-indigo bg-clip-text text-transparent">
+                    <span className="text-primary">
                       first link
                     </span>
                   </h3>
@@ -934,24 +948,24 @@ export default function HomePageClient() {
                   </p>
                   
                   {/* Interactive Visual */}
-                  <div className="bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 rounded-2xl p-6 border border-electric-sapphire/20 group-hover/card:shadow-lg group-hover/card:scale-105 transition-all duration-300 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-electric-sapphire/0 via-electric-sapphire/10 to-electric-sapphire/0 translate-x-[-100%] group-hover/card:translate-x-[100%] transition-transform duration-1000"></div>
+                  <div className="bg-primary/10 rounded-2xl p-6 border border-primary/20 group-hover/card:shadow-lg group-hover/card:scale-105 transition-all duration-300 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-primary/5 translate-x-[-100%] group-hover/card:translate-x-[100%] transition-transform duration-1000"></div>
                     <div className="space-y-3 relative z-10">
-                      <div className="p-4 bg-white rounded-xl group-hover/card:bg-gradient-to-r group-hover/card:from-electric-sapphire/5 group-hover/card:to-bright-indigo/5 transition-all duration-300">
+                      <div className="p-4 bg-white rounded-xl group-hover/card:bg-primary/5 transition-all duration-300">
                         <div className="text-xs text-neutral-muted mb-1 flex items-center gap-1">
                           <span>Paste your URL</span>
-                          <div className="w-1 h-1 bg-electric-sapphire rounded-full animate-pulse"></div>
+                          <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
                         </div>
-                        <div className="text-sm font-mono text-neutral-text group-hover/card:text-electric-sapphire transition-colors">https://example.com/very/long/url</div>
+                        <div className="text-sm font-mono text-neutral-text group-hover/card:text-primary transition-colors">https://example.com/very/long/url</div>
                       </div>
                       <div className="flex items-center justify-center">
-                        <div className="p-2 rounded-full bg-electric-sapphire/10 group-hover/card:bg-electric-sapphire/20 group-hover/card:rotate-12 group-hover/card:scale-110 transition-all duration-300">
-                          <ArrowRight className="h-6 w-6 text-electric-sapphire group-hover/card:translate-x-2 transition-transform" />
+                        <div className="p-2 rounded-full bg-primary/10 group-hover/card:bg-primary/15 group-hover/card:rotate-12 group-hover/card:scale-110 transition-all duration-300">
+                          <ArrowRight className="h-6 w-6 text-primary group-hover/card:translate-x-2 transition-transform" />
                         </div>
                       </div>
-                      <div className="p-4 bg-gradient-to-r from-electric-sapphire/20 to-bright-indigo/20 rounded-xl group-hover/card:shadow-lg group-hover/card:scale-105 transition-all duration-300">
+                      <div className="p-4 bg-primary/15 rounded-xl group-hover/card:shadow-lg group-hover/card:scale-105 transition-all duration-300">
                         <div className="text-xs text-neutral-muted mb-1">Get your short link</div>
-                        <div className="text-lg font-mono font-bold text-electric-sapphire group-hover/card:animate-pulse">lunr.to/abc123</div>
+                        <div className="text-lg font-mono font-bold text-primary group-hover/card:animate-pulse">lunr.to/abc123</div>
                       </div>
                     </div>
                   </div>
@@ -960,45 +974,42 @@ export default function HomePageClient() {
             </div>
             
             {/* Animated Connecting Arrow */}
-            <div className="hidden lg:block absolute left-16 top-full mt-8 w-0.5 h-16 bg-gradient-to-b from-electric-sapphire to-bright-indigo group-hover:scale-y-150 transition-transform duration-500"></div>
-            <div className="hidden lg:block absolute left-16 top-full mt-20 w-16 h-0.5 bg-gradient-to-r from-bright-indigo to-vivid-royal group-hover:scale-x-150 transition-transform duration-500">
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-vivid-royal rounded-full animate-pulse"></div>
+            <div className="hidden lg:block absolute left-16 top-full mt-8 w-0.5 h-16 bg-primary group-hover:scale-y-150 transition-transform duration-500"></div>
+            <div className="hidden lg:block absolute left-16 top-full mt-20 w-16 h-0.5 bg-primary group-hover:scale-x-150 transition-transform duration-500">
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-primary rounded-full animate-pulse"></div>
             </div>
           </div>
 
           {/* Step 2 - Large Right Card (Reversed) with Playful Elements */}
           <div className="relative mb-32 lg:ml-32 group">
             {/* Floating decorative blobs */}
-            <div className="absolute -top-8 -right-8 w-24 h-24 bg-bright-indigo/10 rounded-full blur-xl animate-pulse delay-300 hidden lg:block"></div>
-            <div className="absolute -bottom-8 -left-8 w-20 h-20 bg-vivid-royal/10 rounded-full blur-xl animate-pulse delay-700 hidden lg:block"></div>
+            <div className="absolute -top-8 -right-8 w-24 h-24 bg-primary/10 rounded-full blur-xl animate-pulse delay-300 hidden lg:block"></div>
+            <div className="absolute -bottom-8 -left-8 w-20 h-20 bg-primary/10 rounded-full blur-xl animate-pulse delay-700 hidden lg:block"></div>
             
             <div className="flex flex-col lg:flex-row-reverse items-start gap-8 lg:gap-12">
               {/* Large Step Number Badge with Playful Animation */}
               <div className="relative flex-shrink-0 group/badge">
-                <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-3xl bg-gradient-to-br from-bright-indigo to-vivid-royal flex items-center justify-center text-white font-bold text-4xl lg:text-5xl shadow-2xl group-hover/badge:scale-125 group-hover/badge:-rotate-12 group-hover/badge:animate-bounce transition-all duration-500 relative z-20 cursor-pointer">
+                <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-3xl bg-primary flex items-center justify-center text-white font-bold text-4xl lg:text-5xl shadow-2xl group-hover/badge:scale-125 group-hover/badge:-rotate-12 group-hover/badge:animate-bounce transition-all duration-500 relative z-20 cursor-pointer">
                   <span className="relative z-10">02</span>
-                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-bright-indigo/0 via-white/20 to-vivid-royal/0 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-500"></div>
+                  <div className="absolute inset-0 rounded-3xl bg-white/20 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-500"></div>
                 </div>
-                <div className="absolute inset-0 bg-bright-indigo/30 rounded-3xl blur-2xl group-hover/badge:blur-3xl group-hover/badge:scale-150 transition-all duration-500 animate-pulse"></div>
+                <div className="absolute inset-0 bg-primary/20 rounded-3xl blur-2xl group-hover/badge:blur-3xl group-hover/badge:scale-150 transition-all duration-500 animate-pulse"></div>
                 {/* Sparkle effect */}
-                <div className="absolute -top-2 -left-2 w-4 h-4 bg-bright-indigo rounded-full opacity-0 group-hover/badge:opacity-100 group-hover/badge:animate-ping"></div>
-                <div className="absolute -bottom-2 -right-2 w-3 h-3 bg-vivid-royal rounded-full opacity-0 group-hover/badge:opacity-100 group-hover/badge:animate-ping delay-200"></div>
+                <div className="absolute -top-2 -left-2 w-4 h-4 bg-primary rounded-full opacity-0 group-hover/badge:opacity-100 group-hover/badge:animate-ping"></div>
+                <div className="absolute -bottom-2 -right-2 w-3 h-3 bg-primary rounded-full opacity-0 group-hover/badge:opacity-100 group-hover/badge:animate-ping delay-200"></div>
               </div>
               
               {/* Content Card */}
-              <div className="flex-1 bg-white rounded-3xl border-2 border-neutral-border p-8 lg:p-10 shadow-xl hover:shadow-2xl hover:border-bright-indigo/50 transition-all duration-300 group/card relative overflow-hidden hover:-translate-y-2">
-                <div className="absolute top-0 left-0 w-40 h-40 bg-gradient-to-br from-bright-indigo/10 to-vivid-royal/10 rounded-br-full group-hover/card:scale-125 transition-transform duration-500"></div>
+              <div className="flex-1 bg-white rounded-3xl border-2 border-neutral-border p-8 lg:p-10 shadow-xl hover:shadow-2xl hover:border-primary/40 transition-all duration-300 group/card relative overflow-hidden hover:-translate-y-2">
+                <div className="absolute top-0 left-0 w-40 h-40 bg-primary/10 rounded-br-full group-hover/card:scale-125 transition-transform duration-500"></div>
                 {/* Floating corner decoration */}
-                <div className="absolute top-4 left-4 w-8 h-8 bg-bright-indigo/10 rounded-full blur-sm opacity-0 group-hover/card:opacity-100 group-hover/card:animate-pulse"></div>
+                <div className="absolute top-4 left-4 w-8 h-8 bg-primary/10 rounded-full blur-sm opacity-0 group-hover/card:opacity-100 group-hover/card:animate-pulse"></div>
                 
                 <div className="relative z-10">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-bright-indigo/10 text-bright-indigo text-xs font-semibold mb-4 group-hover/card:bg-bright-indigo/20 transition-colors">
-                    <QrCode className="h-3 w-3 animate-pulse group-hover/card:-rotate-12 transition-transform" />
-                    <span>STEP 2</span>
-                  </div>
-                  <h3 className="text-3xl lg:text-4xl font-bold text-neutral-text mb-4 group-hover/card:text-bright-indigo transition-colors">
+                  <SectionLabel align="left">Step 2</SectionLabel>
+                  <h3 className="text-3xl lg:text-4xl font-bold text-neutral-text mb-4 group-hover/card:text-primary transition-colors">
                     Enhance and{" "}
-                    <span className="bg-gradient-to-r from-bright-indigo to-vivid-royal bg-clip-text text-transparent">
+                    <span className="text-primary">
                       customize
                     </span>
                   </h3>
@@ -1007,25 +1018,25 @@ export default function HomePageClient() {
                   </p>
                   
                   {/* Interactive Visual */}
-                  <div className="bg-gradient-to-br from-bright-indigo/10 to-vivid-royal/10 rounded-2xl p-6 border border-bright-indigo/20 group-hover/card:shadow-lg group-hover/card:scale-105 transition-all duration-300 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-bright-indigo/0 via-bright-indigo/10 to-vivid-royal/0 translate-x-[-100%] group-hover/card:translate-x-[100%] transition-transform duration-1000"></div>
+                  <div className="bg-primary/10 rounded-2xl p-6 border border-primary/20 group-hover/card:shadow-lg group-hover/card:scale-105 transition-all duration-300 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-primary/5 translate-x-[-100%] group-hover/card:translate-x-[100%] transition-transform duration-1000"></div>
                     <div className="grid grid-cols-2 gap-4 mb-4 relative z-10">
-                      <div className="p-4 bg-white rounded-xl text-center group-hover/card:bg-gradient-to-br group-hover/card:from-electric-sapphire/10 group-hover/card:to-bright-indigo/10 group-hover/card:scale-110 group-hover/card:rotate-3 transition-all duration-300">
+                      <div className="p-4 bg-white rounded-xl text-center group-hover/card:bg-primary/10 group-hover/card:scale-110 group-hover/card:rotate-3 transition-all duration-300">
                         <div className="group-hover/card:rotate-6 transition-transform duration-300">
-                          <QrCode className="h-8 w-8 text-electric-sapphire mx-auto mb-2" />
+                          <QrCode className="h-8 w-8 text-primary mx-auto mb-2" />
                         </div>
                         <div className="text-xs text-neutral-muted">QR Code</div>
                       </div>
-                      <div className="p-4 bg-white rounded-xl text-center group-hover/card:bg-gradient-to-br group-hover/card:from-bright-indigo/10 group-hover/card:to-vivid-royal/10 group-hover/card:scale-110 group-hover/card:-rotate-3 transition-all duration-300">
+                      <div className="p-4 bg-white rounded-xl text-center group-hover/card:bg-primary/10 group-hover/card:scale-110 group-hover/card:-rotate-3 transition-all duration-300">
                         <div className="group-hover/card:-rotate-6 transition-transform duration-300">
-                          <FileText className="h-8 w-8 text-bright-indigo mx-auto mb-2" />
+                          <FileText className="h-8 w-8 text-primary mx-auto mb-2" />
                         </div>
                         <div className="text-xs text-neutral-muted">Landing Page</div>
                       </div>
                     </div>
-                    <div className="p-4 bg-gradient-to-r from-electric-sapphire/20 to-bright-indigo/20 rounded-xl group-hover/card:shadow-lg group-hover/card:scale-105 transition-all duration-300 relative z-10">
+                    <div className="p-4 bg-primary/15 rounded-xl group-hover/card:shadow-lg group-hover/card:scale-105 transition-all duration-300 relative z-10">
                       <div className="text-xs text-neutral-muted mb-1">Campaign</div>
-                      <div className="text-sm font-semibold text-neutral-text group-hover/card:text-bright-indigo transition-colors">Summer Sale 2024</div>
+                      <div className="text-sm font-semibold text-neutral-text group-hover/card:text-primary transition-colors">Summer Sale 2024</div>
                     </div>
                   </div>
                 </div>
@@ -1033,45 +1044,42 @@ export default function HomePageClient() {
             </div>
             
             {/* Animated Connecting Arrow */}
-            <div className="hidden lg:block absolute right-16 top-full mt-8 w-0.5 h-16 bg-gradient-to-b from-vivid-royal to-neon-pink group-hover:scale-y-150 transition-transform duration-500"></div>
-            <div className="hidden lg:block absolute right-16 top-full mt-20 w-16 h-0.5 bg-gradient-to-l from-vivid-royal to-neon-pink group-hover:scale-x-150 transition-transform duration-500">
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-neon-pink rounded-full animate-pulse"></div>
+            <div className="hidden lg:block absolute right-16 top-full mt-8 w-0.5 h-16 bg-primary group-hover:scale-y-150 transition-transform duration-500"></div>
+            <div className="hidden lg:block absolute right-16 top-full mt-20 w-16 h-0.5 bg-primary group-hover:scale-x-150 transition-transform duration-500">
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-primary rounded-full animate-pulse"></div>
             </div>
           </div>
 
           {/* Step 3 - Large Left Card with Playful Elements */}
           <div className="relative group">
             {/* Floating decorative blobs */}
-            <div className="absolute -top-8 -left-8 w-24 h-24 bg-vivid-royal/10 rounded-full blur-xl animate-pulse delay-500 hidden lg:block"></div>
-            <div className="absolute -bottom-8 -right-8 w-20 h-20 bg-neon-pink/10 rounded-full blur-xl animate-pulse delay-1000 hidden lg:block"></div>
+            <div className="absolute -top-8 -left-8 w-24 h-24 bg-primary/10 rounded-full blur-xl animate-pulse delay-500 hidden lg:block"></div>
+            <div className="absolute -bottom-8 -right-8 w-20 h-20 bg-primary/10 rounded-full blur-xl animate-pulse delay-1000 hidden lg:block"></div>
             
             <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-12">
               {/* Large Step Number Badge with Playful Animation */}
               <div className="relative flex-shrink-0 group/badge">
-                <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-3xl bg-gradient-to-br from-vivid-royal to-neon-pink flex items-center justify-center text-white font-bold text-4xl lg:text-5xl shadow-2xl group-hover/badge:scale-125 group-hover/badge:rotate-12 group-hover/badge:animate-bounce transition-all duration-500 relative z-20 cursor-pointer">
+                <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-3xl bg-primary flex items-center justify-center text-white font-bold text-4xl lg:text-5xl shadow-2xl group-hover/badge:scale-125 group-hover/badge:rotate-12 group-hover/badge:animate-bounce transition-all duration-500 relative z-20 cursor-pointer">
                   <span className="relative z-10">03</span>
-                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-vivid-royal/0 via-white/20 to-neon-pink/0 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-500"></div>
+                  <div className="absolute inset-0 rounded-3xl bg-white/20 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-500"></div>
                 </div>
-                <div className="absolute inset-0 bg-vivid-royal/30 rounded-3xl blur-2xl group-hover/badge:blur-3xl group-hover/badge:scale-150 transition-all duration-500 animate-pulse"></div>
+                <div className="absolute inset-0 bg-primary/[0.03]0 rounded-3xl blur-2xl group-hover/badge:blur-3xl group-hover/badge:scale-150 transition-all duration-500 animate-pulse"></div>
                 {/* Sparkle effect */}
-                <div className="absolute -top-2 -right-2 w-4 h-4 bg-vivid-royal rounded-full opacity-0 group-hover/badge:opacity-100 group-hover/badge:animate-ping"></div>
-                <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-neon-pink rounded-full opacity-0 group-hover/badge:opacity-100 group-hover/badge:animate-ping delay-200"></div>
+                <div className="absolute -top-2 -right-2 w-4 h-4 bg-primary rounded-full opacity-0 group-hover/badge:opacity-100 group-hover/badge:animate-ping"></div>
+                <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-primary rounded-full opacity-0 group-hover/badge:opacity-100 group-hover/badge:animate-ping delay-200"></div>
               </div>
               
               {/* Content Card */}
-              <div className="flex-1 bg-white rounded-3xl border-2 border-neutral-border p-8 lg:p-10 shadow-xl hover:shadow-2xl hover:border-vivid-royal/50 transition-all duration-300 group/card relative overflow-hidden hover:-translate-y-2">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-vivid-royal/10 to-neon-pink/10 rounded-bl-full group-hover/card:scale-125 transition-transform duration-500"></div>
+              <div className="flex-1 bg-white rounded-3xl border-2 border-neutral-border p-8 lg:p-10 shadow-xl hover:shadow-2xl hover:border-primary/40 transition-all duration-300 group/card relative overflow-hidden hover:-translate-y-2">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-bl-full group-hover/card:scale-125 transition-transform duration-500"></div>
                 {/* Floating corner decoration */}
-                <div className="absolute top-4 right-4 w-8 h-8 bg-vivid-royal/10 rounded-full blur-sm opacity-0 group-hover/card:opacity-100 group-hover/card:animate-pulse"></div>
+                <div className="absolute top-4 right-4 w-8 h-8 bg-primary/10 rounded-full blur-sm opacity-0 group-hover/card:opacity-100 group-hover/card:animate-pulse"></div>
                 
                 <div className="relative z-10">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-vivid-royal/10 text-vivid-royal text-xs font-semibold mb-4 group-hover/card:bg-vivid-royal/20 transition-colors">
-                    <BarChart3 className="h-3 w-3 animate-pulse group-hover/card:rotate-12 transition-transform" />
-                    <span>STEP 3</span>
-                  </div>
-                  <h3 className="text-3xl lg:text-4xl font-bold text-neutral-text mb-4 group-hover/card:text-vivid-royal transition-colors">
+                  <SectionLabel align="left">Step 3</SectionLabel>
+                  <h3 className="text-3xl lg:text-4xl font-bold text-neutral-text mb-4 group-hover/card:text-primary transition-colors">
                     Analyze and{" "}
-                    <span className="bg-gradient-to-r from-vivid-royal to-neon-pink bg-clip-text text-transparent">
+                    <span className="text-primary">
                       optimize
                     </span>
                   </h3>
@@ -1080,26 +1088,26 @@ export default function HomePageClient() {
                   </p>
                   
                   {/* Interactive Visual */}
-                  <div className="bg-gradient-to-br from-vivid-royal/10 to-neon-pink/10 rounded-2xl p-6 border border-vivid-royal/20 group-hover/card:shadow-lg group-hover/card:scale-105 transition-all duration-300 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-vivid-royal/0 via-vivid-royal/10 to-neon-pink/0 translate-x-[-100%] group-hover/card:translate-x-[100%] transition-transform duration-1000"></div>
+                  <div className="bg-primary/10 rounded-2xl p-6 border border-primary/20 group-hover/card:shadow-lg group-hover/card:scale-105 transition-all duration-300 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-primary/5 translate-x-[-100%] group-hover/card:translate-x-[100%] transition-transform duration-1000"></div>
                     <div className="mb-4 relative z-10">
-                      <div className="h-32 bg-gradient-to-t from-electric-sapphire/20 via-bright-indigo/20 to-vivid-royal/20 rounded-xl group-hover/card:shadow-lg transition-all duration-300"></div>
+                      <div className="h-32 bg-primary/15 rounded-xl group-hover/card:shadow-lg transition-all duration-300"></div>
                     </div>
                     <div className="grid grid-cols-4 gap-2 relative z-10">
-                      <div className="text-center p-2 bg-white rounded-lg group-hover/card:bg-electric-sapphire/5 group-hover/card:scale-110 group-hover/card:animate-bounce transition-all duration-300">
-                        <div className="text-lg font-bold text-electric-sapphire">1.2K</div>
+                      <div className="text-center p-2 bg-white rounded-lg group-hover/card:bg-primary/5 group-hover/card:scale-110 group-hover/card:animate-bounce transition-all duration-300">
+                        <div className="text-lg font-bold text-primary">1.2K</div>
                         <div className="text-xs text-neutral-muted">Clicks</div>
                       </div>
-                      <div className="text-center p-2 bg-white rounded-lg group-hover/card:bg-bright-indigo/5 group-hover/card:scale-110 group-hover/card:animate-bounce transition-all duration-300 delay-100">
-                        <div className="text-lg font-bold text-bright-indigo">856</div>
+                      <div className="text-center p-2 bg-white rounded-lg group-hover/card:bg-primary/5 group-hover/card:scale-110 group-hover/card:animate-bounce transition-all duration-300 delay-100">
+                        <div className="text-lg font-bold text-primary">856</div>
                         <div className="text-xs text-neutral-muted">Unique</div>
                       </div>
-                      <div className="text-center p-2 bg-white rounded-lg group-hover/card:bg-vivid-royal/5 group-hover/card:scale-110 group-hover/card:animate-bounce transition-all duration-300 delay-200">
-                        <div className="text-lg font-bold text-vivid-royal">12</div>
+                      <div className="text-center p-2 bg-white rounded-lg group-hover/card:bg-primary/5 group-hover/card:scale-110 group-hover/card:animate-bounce transition-all duration-300 delay-200">
+                        <div className="text-lg font-bold text-primary">12</div>
                         <div className="text-xs text-neutral-muted">Countries</div>
                       </div>
-                      <div className="text-center p-2 bg-white rounded-lg group-hover/card:bg-neon-pink/5 group-hover/card:scale-110 group-hover/card:animate-bounce transition-all duration-300 delay-300">
-                        <div className="text-lg font-bold text-neon-pink">71%</div>
+                      <div className="text-center p-2 bg-white rounded-lg group-hover/card:bg-primary/5 group-hover/card:scale-110 group-hover/card:animate-bounce transition-all duration-300 delay-300">
+                        <div className="text-lg font-bold text-primary">71%</div>
                         <div className="text-xs text-neutral-muted">CTR</div>
                       </div>
                     </div>
@@ -1143,19 +1151,16 @@ export default function HomePageClient() {
           </svg>
           
           {/* Floating circles */}
-          <div className="absolute top-1/4 right-10 w-40 h-40 border-2 border-electric-sapphire/5 rounded-full animate-float"></div>
-          <div className="absolute bottom-1/4 left-10 w-32 h-32 border-2 border-bright-indigo/5 rounded-full animate-float-reverse delay-1000"></div>
+          <div className="absolute top-1/4 right-10 w-40 h-40 border-2 border-primary/5 rounded-full animate-float"></div>
+          <div className="absolute bottom-1/4 left-10 w-32 h-32 border-2 border-primary/5 rounded-full animate-float-reverse delay-1000"></div>
         </div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-electric-sapphire/10 text-electric-sapphire text-xs font-semibold mb-4">
-              <Users className="h-3 w-3" />
-              <span>USE CASES</span>
-            </div>
+            <SectionLabel>Use cases</SectionLabel>
             <h2 className="text-4xl sm:text-5xl font-bold text-neutral-text mb-4">
               Perfect for every{" "}
-              <span className="bg-gradient-to-r from-electric-sapphire to-bright-indigo bg-clip-text text-transparent">
+              <span className="text-primary">
                 use case
               </span>
             </h2>
@@ -1169,19 +1174,19 @@ export default function HomePageClient() {
             {/* Card 1 - Left Aligned with Playful Elements */}
             <div className="group relative">
               {/* Floating decorative blob */}
-              <div className="absolute -top-6 -left-6 w-24 h-24 bg-electric-sapphire/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+              <div className="absolute -top-6 -left-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
               
-              <div className="bg-white rounded-2xl border-2 border-neutral-border p-8 shadow-lg hover:shadow-2xl hover:border-electric-sapphire/50 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 rounded-bl-full group-hover:scale-125 transition-transform duration-500"></div>
+              <div className="bg-white rounded-2xl border-2 border-neutral-border p-8 shadow-lg hover:shadow-2xl hover:border-primary/50 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-bl-full group-hover:scale-125 transition-transform duration-500"></div>
                 <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
                   <div className="flex-shrink-0">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-electric-sapphire to-bright-indigo flex items-center justify-center shadow-lg group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 relative">
+                    <div className="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center shadow-lg group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 relative">
                       <Users className="h-10 w-10 text-white relative z-10" />
-                      <div className="absolute inset-0 bg-electric-sapphire/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
+                      <div className="absolute inset-0 bg-primary/15 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
                     </div>
                   </div>
                   <div className="flex-1 text-center md:text-left">
-                    <h3 className="text-2xl font-bold text-neutral-text mb-3 group-hover:text-electric-sapphire transition-colors">
+                    <h3 className="text-2xl font-bold text-neutral-text mb-3 group-hover:text-primary transition-colors">
                       Content Creators
                     </h3>
                     <p className="text-neutral-muted mb-4 leading-relaxed">
@@ -1191,7 +1196,7 @@ export default function HomePageClient() {
                       {["Social media links", "Bio link pages", "Click tracking", "QR codes"].map((feature, idx) => (
                         <span 
                           key={idx} 
-                          className="px-3 py-1 bg-electric-sapphire/10 text-electric-sapphire rounded-full text-sm font-medium group-hover:bg-electric-sapphire/20 group-hover:scale-110 transition-all duration-300"
+                          className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300"
                           style={{ transitionDelay: `${idx * 50}ms` }}
                         >
                           {feature}
@@ -1206,19 +1211,19 @@ export default function HomePageClient() {
             {/* Card 2 - Right Aligned with Playful Elements */}
             <div className="group relative md:ml-auto md:w-5/6">
               {/* Floating decorative blob */}
-              <div className="absolute -bottom-6 -right-6 w-28 h-28 bg-bright-indigo/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+              <div className="absolute -bottom-6 -right-6 w-28 h-28 bg-primary/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
               
-              <div className="bg-white rounded-2xl border-2 border-neutral-border p-8 shadow-lg hover:shadow-2xl hover:border-bright-indigo/50 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-bright-indigo/10 to-vivid-royal/10 rounded-br-full group-hover:scale-125 transition-transform duration-500"></div>
+              <div className="bg-white rounded-2xl border-2 border-neutral-border p-8 shadow-lg hover:shadow-2xl hover:border-primary/40 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-32 h-32 bg-primary/10 rounded-br-full group-hover:scale-125 transition-transform duration-500"></div>
                 <div className="relative z-10 flex flex-col md:flex-row-reverse gap-8 items-center">
                   <div className="flex-shrink-0">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-bright-indigo to-vivid-royal flex items-center justify-center shadow-lg group-hover:scale-125 group-hover:-rotate-12 transition-all duration-500 relative">
+                    <div className="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center shadow-lg group-hover:scale-125 group-hover:-rotate-12 transition-all duration-500 relative">
                       <Building2 className="h-10 w-10 text-white relative z-10" />
-                      <div className="absolute inset-0 bg-bright-indigo/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
+                      <div className="absolute inset-0 bg-primary/15 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
                     </div>
                   </div>
                   <div className="flex-1 text-center md:text-right">
-                    <h3 className="text-2xl font-bold text-neutral-text mb-3 group-hover:text-bright-indigo transition-colors">
+                    <h3 className="text-2xl font-bold text-neutral-text mb-3 group-hover:text-primary transition-colors">
                       Marketing Teams
                     </h3>
                     <p className="text-neutral-muted mb-4 leading-relaxed">
@@ -1233,7 +1238,7 @@ export default function HomePageClient() {
                       ].map((feature, idx) => (
                         <span 
                           key={idx} 
-                          className="px-3 py-1 bg-bright-indigo/10 text-bright-indigo rounded-full text-sm font-medium group-hover:bg-bright-indigo/20 group-hover:scale-110 transition-all duration-300"
+                          className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300"
                           style={{ transitionDelay: `${idx * 50}ms` }}
                         >
                           {feature.label}
@@ -1251,19 +1256,19 @@ export default function HomePageClient() {
             {/* Card 3 - Left Aligned with Playful Elements */}
             <div className="group relative md:w-5/6">
               {/* Floating decorative blob */}
-              <div className="absolute -top-6 -right-6 w-24 h-24 bg-vivid-royal/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+              <div className="absolute -top-6 -right-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
               
-              <div className="bg-white rounded-2xl border-2 border-neutral-border p-8 shadow-lg hover:shadow-2xl hover:border-vivid-royal/50 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-vivid-royal/10 to-neon-pink/10 rounded-bl-full group-hover:scale-125 transition-transform duration-500"></div>
+              <div className="bg-white rounded-2xl border-2 border-neutral-border p-8 shadow-lg hover:shadow-2xl hover:border-primary/40 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-bl-full group-hover:scale-125 transition-transform duration-500"></div>
                 <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
                   <div className="flex-shrink-0">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-vivid-royal to-neon-pink flex items-center justify-center shadow-lg group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 relative">
+                    <div className="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center shadow-lg group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 relative">
                       <Crown className="h-10 w-10 text-white relative z-10" />
-                      <div className="absolute inset-0 bg-vivid-royal/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
+                      <div className="absolute inset-0 bg-primary/15 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
                     </div>
                   </div>
                   <div className="flex-1 text-center md:text-left">
-                    <h3 className="text-2xl font-bold text-neutral-text mb-3 group-hover:text-vivid-royal transition-colors">
+                    <h3 className="text-2xl font-bold text-neutral-text mb-3 group-hover:text-primary transition-colors">
                       Enterprises
                     </h3>
                     <p className="text-neutral-muted mb-4 leading-relaxed">
@@ -1273,7 +1278,7 @@ export default function HomePageClient() {
                       {["API access", "Team collaboration", "Priority support", "Unlimited resources"].map((feature, idx) => (
                         <span 
                           key={idx} 
-                          className="px-3 py-1 bg-vivid-royal/10 text-vivid-royal rounded-full text-sm font-medium group-hover:bg-vivid-royal/20 group-hover:scale-110 transition-all duration-300"
+                          className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300"
                           style={{ transitionDelay: `${idx * 50}ms` }}
                         >
                           {feature}
@@ -1313,7 +1318,7 @@ export default function HomePageClient() {
                 </div>
                 <p className="text-neutral-text mb-6 leading-relaxed">"{testimonial.text}"</p>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-electric-sapphire to-bright-indigo flex items-center justify-center text-white font-semibold text-sm">
+                  <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-sm">
                     {testimonial.image}
                   </div>
                   <div>
@@ -1330,7 +1335,7 @@ export default function HomePageClient() {
       </section> */}
 
       {/* Security & Trust - Centered Visual Layout */}
-      <section className="py-24 bg-gradient-to-b from-neutral-bg via-white to-neutral-bg relative overflow-hidden">
+      <section id="security" className="py-24 bg-neutral-bg relative overflow-hidden scroll-mt-20">
         {/* Animated security pattern */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <svg className="absolute inset-0 w-full h-full opacity-5" preserveAspectRatio="none">
@@ -1360,19 +1365,14 @@ export default function HomePageClient() {
           </defs>
           
           {/* Orbiting security icons */}
-          <div className="absolute top-20 right-20 w-24 h-24 border border-electric-sapphire/10 rounded-full animate-orbit"></div>
-          <div className="absolute bottom-20 left-20 w-20 h-20 border border-bright-indigo/10 rounded-full animate-orbit" style={{ animationDirection: 'reverse', animationDuration: '18s' }}></div>
         </div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-electric-sapphire/10 text-electric-sapphire text-xs font-semibold mb-4">
-              <Shield className="h-3 w-3" />
-              <span>SECURITY</span>
-            </div>
+            <SectionLabel>Security</SectionLabel>
             <h2 className="text-4xl sm:text-5xl font-bold text-neutral-text mb-4">
               Enterprise-grade{" "}
-              <span className="bg-gradient-to-r from-electric-sapphire to-bright-indigo bg-clip-text text-transparent">
+              <span className="text-primary">
                 security
               </span>
             </h2>
@@ -1385,21 +1385,21 @@ export default function HomePageClient() {
           <div className="relative max-w-7xl mx-auto">
             <div className="bg-white rounded-3xl border-2 border-neutral-border p-12 shadow-2xl relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
               {/* Decorative Elements */}
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-electric-sapphire via-bright-indigo to-vivid-royal group-hover:h-3 transition-all duration-300"></div>
-              <div className="absolute -top-6 -right-6 w-24 h-24 bg-electric-sapphire/10 rounded-full blur-2xl group-hover:scale-150 group-hover:animate-pulse transition-transform duration-500"></div>
-              <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-bright-indigo/10 rounded-full blur-2xl group-hover:scale-125 group-hover:animate-pulse transition-transform duration-500 delay-100"></div>
+              <div className="absolute top-0 left-0 w-full h-2 bg-primary group-hover:h-3 transition-all duration-300"></div>
+              <div className="absolute -top-6 -right-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:scale-150 group-hover:animate-pulse transition-transform duration-500"></div>
+              <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-primary/10 rounded-full blur-2xl group-hover:scale-125 group-hover:animate-pulse transition-transform duration-500 delay-100"></div>
               
               <div className="relative z-10">
                 <div className="grid md:grid-cols-3 gap-8">
                   <div className="text-center group/item relative">
                     {/* Floating element */}
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-electric-sapphire/10 rounded-full blur-lg opacity-0 group-hover/item:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-primary/10 rounded-full blur-lg opacity-0 group-hover/item:opacity-100 transition-opacity duration-300"></div>
                     
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-electric-sapphire/20 to-bright-indigo/20 mb-4 group-hover/item:scale-125 group-hover/item:rotate-12 transition-all duration-500 relative">
-                      <Shield className="h-8 w-8 text-electric-sapphire relative z-10" />
-                      <div className="absolute inset-0 bg-electric-sapphire/20 rounded-2xl blur-xl group-hover/item:blur-2xl group-hover/item:scale-150 transition-all duration-500"></div>
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/15 mb-4 group-hover/item:scale-125 group-hover/item:rotate-12 transition-all duration-500 relative">
+                      <Shield className="h-8 w-8 text-primary relative z-10" />
+                      <div className="absolute inset-0 bg-primary/15 rounded-2xl blur-xl group-hover/item:blur-2xl group-hover/item:scale-150 transition-all duration-500"></div>
                     </div>
-                    <h3 className="text-lg font-bold text-neutral-text mb-2 group-hover/item:text-electric-sapphire transition-colors">Row Level Security</h3>
+                    <h3 className="text-lg font-bold text-neutral-text mb-2 group-hover/item:text-primary transition-colors">Row Level Security</h3>
                     <p className="text-sm text-neutral-muted leading-relaxed">
                       Advanced database security ensuring your data is only accessible by you.
                     </p>
@@ -1407,13 +1407,13 @@ export default function HomePageClient() {
                   
                   <div className="text-center group/item relative">
                     {/* Floating element */}
-                    <div className="absolute -top-2 -left-2 w-8 h-8 bg-bright-indigo/10 rounded-full blur-lg opacity-0 group-hover/item:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute -top-2 -left-2 w-8 h-8 bg-primary/10 rounded-full blur-lg opacity-0 group-hover/item:opacity-100 transition-opacity duration-300"></div>
                     
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-bright-indigo/20 to-vivid-royal/20 mb-4 group-hover/item:scale-125 group-hover/item:-rotate-12 transition-all duration-500 relative">
-                      <Lock className="h-8 w-8 text-bright-indigo relative z-10" />
-                      <div className="absolute inset-0 bg-bright-indigo/20 rounded-2xl blur-xl group-hover/item:blur-2xl group-hover/item:scale-150 transition-all duration-500"></div>
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4 group-hover/item:scale-125 group-hover/item:-rotate-12 transition-all duration-500 relative">
+                      <Lock className="h-8 w-8 text-primary relative z-10" />
+                      <div className="absolute inset-0 bg-primary/15 rounded-2xl blur-xl group-hover/item:blur-2xl group-hover/item:scale-150 transition-all duration-500"></div>
                     </div>
-                    <h3 className="text-lg font-bold text-neutral-text mb-2 group-hover/item:text-bright-indigo transition-colors">Encrypted Storage</h3>
+                    <h3 className="text-lg font-bold text-neutral-text mb-2 group-hover/item:text-primary transition-colors">Encrypted Storage</h3>
                     <p className="text-sm text-neutral-muted leading-relaxed">
                       All data is encrypted at rest and in transit using industry-standard encryption.
                     </p>
@@ -1421,13 +1421,13 @@ export default function HomePageClient() {
                   
                   <div className="text-center group/item relative">
                     {/* Floating element */}
-                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-vivid-royal/10 rounded-full blur-lg opacity-0 group-hover/item:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-primary/10 rounded-full blur-lg opacity-0 group-hover/item:opacity-100 transition-opacity duration-300"></div>
                     
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-vivid-royal/20 to-neon-pink/20 mb-4 group-hover/item:scale-125 group-hover/item:rotate-12 transition-all duration-500 relative">
-                      <Award className="h-8 w-8 text-vivid-royal relative z-10" />
-                      <div className="absolute inset-0 bg-vivid-royal/20 rounded-2xl blur-xl group-hover/item:blur-2xl group-hover/item:scale-150 transition-all duration-500"></div>
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4 group-hover/item:scale-125 group-hover/item:rotate-12 transition-all duration-500 relative">
+                      <Award className="h-8 w-8 text-primary relative z-10" />
+                      <div className="absolute inset-0 bg-primary/15 rounded-2xl blur-xl group-hover/item:blur-2xl group-hover/item:scale-150 transition-all duration-500"></div>
                     </div>
-                    <h3 className="text-lg font-bold text-neutral-text mb-2 group-hover/item:text-vivid-royal transition-colors">99.9% Uptime SLA</h3>
+                    <h3 className="text-lg font-bold text-neutral-text mb-2 group-hover/item:text-primary transition-colors">99.9% Uptime SLA</h3>
                     <p className="text-sm text-neutral-muted leading-relaxed">
                       Enterprise-grade infrastructure with guaranteed uptime and reliability.
                     </p>
@@ -1456,7 +1456,7 @@ export default function HomePageClient() {
                 key={idx}
                 className="flex items-center gap-3 px-6 py-4 bg-white rounded-xl border border-neutral-border shadow-soft"
               >
-                <integration.icon className="h-6 w-6 text-electric-sapphire" />
+                <integration.icon className="h-6 w-6 text-primary" />
                 <span className="font-semibold text-neutral-text">{integration.name}</span>
               </div>
             ))}
@@ -1468,9 +1468,9 @@ export default function HomePageClient() {
       <section className="py-24 bg-white relative overflow-hidden">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 w-64 h-64 bg-electric-sapphire/5 rounded-full blur-3xl animate-float"></div>
-          <div className="absolute bottom-20 right-10 w-80 h-80 bg-bright-indigo/5 rounded-full blur-3xl animate-float-reverse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-vivid-royal/3 rounded-full blur-3xl animate-drift"></div>
+          <div className="absolute top-20 left-10 w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute bottom-20 right-10 w-80 h-80 bg-primary/5 rounded-full blur-3xl animate-float-reverse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/[0.03] rounded-full blur-3xl animate-drift"></div>
         </div>
         
         {/* Curved decorative lines */}
@@ -1508,7 +1508,7 @@ export default function HomePageClient() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="absolute w-16 h-16 border-2 border-electric-sapphire/10 rounded-full animate-float"
+              className="absolute w-16 h-16 border-2 border-primary/10 rounded-full animate-float"
               style={{
                 left: `${15 + (i * 15)}%`,
                 top: `${20 + (i % 2) * 60}%`,
@@ -1521,26 +1521,23 @@ export default function HomePageClient() {
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-electric-sapphire/10 text-electric-sapphire text-xs font-semibold mb-4">
-              <TrendingUp className="h-3 w-3" />
-              <span>PRICING</span>
-            </div>
+            <SectionLabel>Pricing</SectionLabel>
             <h2 className="text-4xl sm:text-5xl font-bold text-neutral-text mb-4">
               Simple, Transparent{" "}
-              <span className="bg-gradient-to-r from-electric-sapphire to-bright-indigo bg-clip-text text-transparent">
+              <span className="text-primary">
                 Pricing
               </span>
             </h2>
             <p className="text-xl text-neutral-muted mb-8">
               Start free, upgrade when you need more
             </p>
-            <div className="inline-flex items-center gap-2 p-1.5 bg-neutral-bg rounded-2xl border-2 border-neutral-border shadow-lg">
+            <div className="inline-flex items-center gap-1 p-1.5 bg-white/90 backdrop-blur-xl rounded-full border border-neutral-border/80 shadow-soft">
               <button
                 onClick={() => setBillingCycle("monthly")}
                 className={cn(
-                  "px-6 py-2.5 rounded-xl text-sm font-semibold transition-all",
+                  "px-6 py-2.5 rounded-full text-sm font-semibold transition-all",
                   billingCycle === "monthly"
-                    ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white shadow-button"
+                    ? "bg-primary text-white shadow-button"
                     : "text-neutral-muted hover:text-neutral-text"
                 )}
               >
@@ -1549,14 +1546,19 @@ export default function HomePageClient() {
               <button
                 onClick={() => setBillingCycle("yearly")}
                 className={cn(
-                  "px-6 py-2.5 rounded-xl text-sm font-semibold transition-all relative",
+                  "px-6 py-2.5 rounded-full text-sm font-semibold transition-all inline-flex items-center gap-2",
                   billingCycle === "yearly"
-                    ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white shadow-button"
+                    ? "bg-primary text-white shadow-button"
                     : "text-neutral-muted hover:text-neutral-text"
                 )}
               >
                 Yearly
-                <span className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-500 text-white shadow-lg animate-bounce">
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    billingCycle === "yearly" ? "text-white/80" : "text-primary"
+                  )}
+                >
                   Save 17%
                 </span>
               </button>
@@ -1636,22 +1638,19 @@ export default function HomePageClient() {
       </section>
 
       {/* FAQ Section - Two Column Layout with Playful Elements */}
-      <section className="py-24 bg-gradient-to-b from-neutral-bg to-white relative overflow-hidden">
+      <section className="py-24 bg-neutral-bg relative overflow-hidden">
         {/* Playful background elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-20 w-64 h-64 bg-electric-sapphire/5 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-20 w-80 h-80 bg-bright-indigo/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-20 left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-20 w-80 h-80 bg-primary/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
         </div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-electric-sapphire/10 text-electric-sapphire text-xs font-semibold mb-4">
-              <HelpCircle className="h-3 w-3" />
-              <span>FAQ</span>
-            </div>
+            <SectionLabel>FAQ</SectionLabel>
             <h2 className="text-4xl sm:text-5xl font-bold text-neutral-text mb-4">
               Frequently Asked{" "}
-              <span className="bg-gradient-to-r from-electric-sapphire to-bright-indigo bg-clip-text text-transparent">
+              <span className="text-primary">
                 Questions
               </span>
             </h2>
@@ -1664,32 +1663,32 @@ export default function HomePageClient() {
             {faqs.map((faq, idx) => (
               <div
                 key={idx}
-                className="bg-white rounded-2xl border-2 border-neutral-border overflow-hidden hover:border-electric-sapphire/50 hover:shadow-xl transition-all duration-300 group relative"
+                className="bg-white rounded-2xl border-2 border-neutral-border overflow-hidden hover:border-primary/50 hover:shadow-xl transition-all duration-300 group relative"
               >
                 {/* Playful corner decoration */}
-                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-electric-sapphire/5 to-bright-indigo/5 rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="absolute top-0 right-0 w-16 h-16 bg-primary/[0.04] rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
                 <button
                   onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                  className="w-full px-6 py-5 flex items-start justify-between text-left hover:bg-gradient-to-r hover:from-electric-sapphire/5 hover:to-bright-indigo/5 transition-all gap-4 relative z-10"
+                  className="w-full px-6 py-5 flex items-start justify-between text-left hover:bg-primary/5 transition-all gap-4 relative z-10"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-electric-sapphire/10 flex items-center justify-center flex-shrink-0 group-hover:bg-electric-sapphire/20 group-hover:rotate-12 group-hover:scale-110 transition-all duration-300">
-                        <HelpCircle className="h-4 w-4 text-electric-sapphire" />
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/15 group-hover:rotate-12 group-hover:scale-110 transition-all duration-300">
+                        <HelpCircle className="h-4 w-4 text-primary" />
                       </div>
-                      <span className="font-semibold text-neutral-text group-hover:text-electric-sapphire transition-colors text-left">
+                      <span className="font-semibold text-neutral-text group-hover:text-primary transition-colors text-left">
                         {faq.question}
                       </span>
                     </div>
                   </div>
                   <div className="flex-shrink-0">
                     {openFaq === idx ? (
-                      <div className="p-1 rounded-lg bg-electric-sapphire/10">
-                        <ChevronUp className="h-5 w-5 text-electric-sapphire transition-transform rotate-180" />
+                      <div className="p-1 rounded-lg bg-primary/10">
+                        <ChevronUp className="h-5 w-5 text-primary transition-transform rotate-180" />
                       </div>
                     ) : (
-                      <ChevronDown className="h-5 w-5 text-neutral-muted group-hover:text-electric-sapphire group-hover:scale-110 transition-all duration-300" />
+                      <ChevronDown className="h-5 w-5 text-neutral-muted group-hover:text-primary group-hover:scale-110 transition-all duration-300" />
                     )}
                   </div>
                 </button>
@@ -1705,7 +1704,7 @@ export default function HomePageClient() {
       </section>
 
       {/* CTA Section - Playful & Dynamic with Flashy Animations */}
-      <section className="py-24 bg-gradient-to-br from-electric-sapphire via-bright-indigo to-vivid-royal relative overflow-hidden">
+      <section className="py-24 bg-primary relative overflow-hidden">
         {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-10 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-float"></div>
@@ -1738,44 +1737,20 @@ export default function HomePageClient() {
           />
         </svg>
         
-        {/* Floating sparkles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${i * 0.2}s`,
-                animationDuration: `${1 + Math.random() * 2}s`,
-                opacity: 0.6 + Math.random() * 0.4,
-              }}
-            />
-          ))}
-        </div>
-        
-        {/* Orbiting elements */}
-        <div className="absolute top-1/4 right-20 w-32 h-32 border-2 border-white/10 rounded-full animate-orbit"></div>
-        <div className="absolute bottom-1/4 left-20 w-24 h-24 border-2 border-white/10 rounded-full animate-orbit" style={{ animationDirection: 'reverse', animationDuration: '20s' }}></div>
-        
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold mb-6">
-            <Sparkles className="h-4 w-4" />
-            <span>Join thousands of users</span>
-          </div>
+          <SectionLabel tone="onDark">Join thousands of users</SectionLabel>
           <h2 className="text-5xl sm:text-6xl font-bold text-white mb-6 leading-tight">
             Build Your Link Infrastructure
           </h2>
           <p className="text-xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed">
             Start with URL shortening, add QR codes, manage campaigns, and scale with APIs. Enterprise-grade infrastructure, simple pricing.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full px-2">
           <Link
             href="/login"
             className={cn(
-                "inline-flex items-center gap-2 px-10 py-5 rounded-2xl font-semibold text-electric-sapphire text-lg",
-                "bg-white hover:bg-neutral-bg hover:scale-105",
+                "inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 sm:px-10 py-4 sm:py-5 rounded-full font-semibold text-primary text-base sm:text-lg",
+                "bg-white hover:bg-neutral-bg shadow-button",
                 "transition-all active:scale-[0.98] shadow-2xl hover:shadow-3xl group relative overflow-hidden"
               )}
             >
@@ -1783,12 +1758,12 @@ export default function HomePageClient() {
             Get Started Free
                 <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-electric-sapphire/10 to-bright-indigo/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             </Link>
             <Link
               href="/docs"
               className={cn(
-                "inline-flex items-center gap-2 px-10 py-5 rounded-2xl font-semibold text-white text-lg",
+                "inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 sm:px-10 py-4 sm:py-5 rounded-2xl font-semibold text-white text-base sm:text-lg",
                 "border-2 border-white/30 hover:border-white/50 hover:bg-white/10",
                 "transition-all active:scale-[0.98] backdrop-blur-sm"
               )}
@@ -1797,7 +1772,7 @@ export default function HomePageClient() {
           </Link>
           </div>
           <p className="mt-8 text-sm text-white/80">
-            ✨ No credit card required • 2 free links • 2 free QR codes
+            No credit card required • 2 free links • 2 free QR codes
           </p>
         </div>
       </section>
@@ -1808,7 +1783,7 @@ export default function HomePageClient() {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <BrandLogo href={null} variant="full" size="md" />
+                <BrandLogo variant="full" size="md" />
               </div>
               <p className="text-sm text-neutral-muted">
                 The all-in-one link management platform for professionals and businesses.
@@ -1818,22 +1793,22 @@ export default function HomePageClient() {
               <h4 className="font-semibold text-neutral-text mb-4">Product</h4>
               <ul className="space-y-2 text-sm text-neutral-muted">
                 <li>
-                  <Link href="#" className="hover:text-electric-sapphire transition-colors">
+                  <Link href="/#features" className="hover:text-primary transition-colors">
                     Features
                   </Link>
                 </li>
                 <li>
-                  <Link href="/dashboard/billing" className="hover:text-electric-sapphire transition-colors">
+                  <Link href="/pricing" className="hover:text-primary transition-colors">
                     Pricing
                   </Link>
                 </li>
                 <li>
-                  <Link href="/docs" className="hover:text-electric-sapphire transition-colors">
+                  <Link href="/docs" className="hover:text-primary transition-colors">
                     Documentation
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="hover:text-electric-sapphire transition-colors">
+                  <Link href="/api-reference" className="hover:text-primary transition-colors">
                     API
                   </Link>
                 </li>
@@ -1843,22 +1818,22 @@ export default function HomePageClient() {
               <h4 className="font-semibold text-neutral-text mb-4">Company</h4>
               <ul className="space-y-2 text-sm text-neutral-muted">
                 <li>
-                  <Link href="#" className="hover:text-electric-sapphire transition-colors">
+                  <Link href="/about" className="hover:text-primary transition-colors">
                     About
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="hover:text-electric-sapphire transition-colors">
-                    Blog
+                  <Link href="/docs" className="hover:text-primary transition-colors">
+                    Docs &amp; updates
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="hover:text-electric-sapphire transition-colors">
+                  <Link href="/contact?intent=careers" className="hover:text-primary transition-colors">
                     Careers
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="hover:text-electric-sapphire transition-colors">
+                  <Link href="/contact" className="hover:text-primary transition-colors">
                     Contact
                   </Link>
                 </li>
@@ -1868,22 +1843,22 @@ export default function HomePageClient() {
               <h4 className="font-semibold text-neutral-text mb-4">Legal</h4>
               <ul className="space-y-2 text-sm text-neutral-muted">
                 <li>
-                  <Link href="#" className="hover:text-electric-sapphire transition-colors">
-                Privacy Policy
-              </Link>
+                  <Link href="/privacy" className="hover:text-primary transition-colors">
+                    Privacy Policy
+                  </Link>
                 </li>
                 <li>
-                  <Link href="#" className="hover:text-electric-sapphire transition-colors">
-                Terms of Service
-              </Link>
+                  <Link href="/terms" className="hover:text-primary transition-colors">
+                    Terms of Service
+                  </Link>
                 </li>
                 <li>
-                  <Link href="#" className="hover:text-electric-sapphire transition-colors">
+                  <Link href="/#security" className="hover:text-primary transition-colors">
                     Security
-              </Link>
+                  </Link>
                 </li>
                 <li>
-                  <Link href="#" className="hover:text-electric-sapphire transition-colors">
+                  <Link href="/privacy#compliance" className="hover:text-primary transition-colors">
                     Compliance
                   </Link>
                 </li>
@@ -1891,7 +1866,7 @@ export default function HomePageClient() {
             </div>
           </div>
           <div className="pt-8 border-t border-neutral-border text-center text-sm text-neutral-muted">
-            <p>© 2024 lunr.to. All rights reserved. Built with Next.js and Supabase.</p>
+            <p>© {new Date().getFullYear()} lunr.to. All rights reserved.</p>
           </div>
         </div>
       </footer>
@@ -1911,14 +1886,14 @@ function FeatureCard({
   color: string;
 }) {
   return (
-    <div className="group p-6 rounded-card bg-white border border-neutral-border hover:border-electric-sapphire/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative overflow-hidden">
+    <div className="group p-6 rounded-card bg-white border border-neutral-border hover:border-primary/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative overflow-hidden">
       {/* Gradient overlay on hover */}
       <div className={cn("absolute inset-0 opacity-0 group-hover:opacity-5 bg-gradient-to-br transition-opacity duration-300", color)}></div>
       
       <div className={cn("p-3 rounded-xl w-fit mb-4 bg-gradient-to-br transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3", color)}>
         <Icon className="h-6 w-6 text-white" />
       </div>
-      <h3 className="text-xl font-semibold text-neutral-text mb-2 group-hover:text-electric-sapphire transition-colors">{title}</h3>
+      <h3 className="text-xl font-semibold text-neutral-text mb-2 group-hover:text-primary transition-colors">{title}</h3>
       <p className="text-neutral-muted leading-relaxed">{description}</p>
     </div>
   );
@@ -1936,20 +1911,20 @@ function UseCaseCard({
   features: string[];
 }) {
   return (
-    <div className="group p-6 rounded-card bg-white border border-neutral-border hover:border-electric-sapphire/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative overflow-hidden">
+    <div className="group p-6 rounded-card bg-white border border-neutral-border hover:border-primary/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative overflow-hidden">
       {/* Gradient overlay on hover */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-5 bg-gradient-to-br from-electric-sapphire to-bright-indigo transition-opacity duration-300"></div>
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-5 bg-primary transition-opacity duration-300"></div>
       
       <div className="relative z-10">
-        <div className="p-3 rounded-xl w-fit mb-4 bg-gradient-to-br from-electric-sapphire to-bright-indigo group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+        <div className="p-3 rounded-xl w-fit mb-4 bg-primary group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
           <Icon className="h-6 w-6 text-white" />
       </div>
-        <h3 className="text-xl font-semibold text-neutral-text mb-2 group-hover:text-electric-sapphire transition-colors">{title}</h3>
+        <h3 className="text-xl font-semibold text-neutral-text mb-2 group-hover:text-primary transition-colors">{title}</h3>
         <p className="text-neutral-muted mb-4 leading-relaxed">{description}</p>
         <ul className="space-y-2">
           {features.map((feature, idx) => (
             <li key={idx} className="flex items-center gap-2 text-sm text-neutral-text group-hover:translate-x-1 transition-transform duration-200" style={{ transitionDelay: `${idx * 50}ms` }}>
-              <Check className="h-4 w-4 text-electric-sapphire flex-shrink-0" />
+              <Check className="h-4 w-4 text-primary flex-shrink-0" />
               <span>{feature}</span>
             </li>
           ))}
@@ -1969,15 +1944,15 @@ function SecurityCard({
   description: string;
 }) {
   return (
-    <div className="group p-6 rounded-card bg-white border border-neutral-border hover:border-electric-sapphire/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 text-center relative overflow-hidden">
+    <div className="group p-6 rounded-card bg-white border border-neutral-border hover:border-primary/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 text-center relative overflow-hidden">
       {/* Gradient overlay on hover */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-5 bg-gradient-to-br from-electric-sapphire to-bright-indigo transition-opacity duration-300"></div>
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-5 bg-primary transition-opacity duration-300"></div>
       
       <div className="relative z-10">
-        <div className="p-3 rounded-xl w-fit mx-auto mb-4 bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 group-hover:from-electric-sapphire/20 group-hover:to-bright-indigo/20 group-hover:scale-110 transition-all duration-300">
-          <Icon className="h-8 w-8 text-electric-sapphire" />
+        <div className="p-3 rounded-xl w-fit mx-auto mb-4 bg-primary/10 group-hover:from-primary/15 group-hover:to-primary/10 group-hover:scale-110 transition-all duration-300">
+          <Icon className="h-8 w-8 text-primary" />
         </div>
-        <h3 className="text-lg font-semibold text-neutral-text mb-2 group-hover:text-electric-sapphire transition-colors">{title}</h3>
+        <h3 className="text-lg font-semibold text-neutral-text mb-2 group-hover:text-primary transition-colors">{title}</h3>
         <p className="text-sm text-neutral-muted leading-relaxed">{description}</p>
       </div>
     </div>
@@ -2003,50 +1978,47 @@ function PricingCard({
 }) {
   const displayPrice = billingCycle === "monthly" ? price : price;
   const period = billingCycle === "monthly" ? "month" : "year";
+  const ctaLabel = price === 0 ? "Start free" : "Get started";
 
   return (
     <div
       className={cn(
-        "p-6 rounded-card border-2 transition-all relative group overflow-hidden",
+        "p-6 rounded-card border transition-all relative flex flex-col h-full",
         highlighted
-          ? "border-electric-sapphire bg-gradient-to-br from-electric-sapphire/5 to-bright-indigo/5 ring-2 ring-electric-sapphire/20 hover:ring-4 hover:ring-electric-sapphire/30 hover:shadow-2xl hover:-translate-y-1"
-          : "border-neutral-border bg-white hover:border-electric-sapphire/50 hover:shadow-xl hover:-translate-y-1"
+          ? "border-primary/40 bg-white shadow-hover ring-2 ring-primary/15"
+          : "border-neutral-border/80 bg-white/90 backdrop-blur-xl shadow-soft hover:border-primary/30 hover:shadow-hover"
       )}
     >
-      {/* Gradient overlay on hover */}
-      {!highlighted && (
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-5 bg-gradient-to-br from-electric-sapphire to-bright-indigo transition-opacity duration-300"></div>
-      )}
-      
-      {highlighted && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-xs font-semibold shadow-lg animate-pulse">
-          Most Popular
-        </div>
-      )}
-      <div className="mb-6 relative z-10">
+      <div className="mb-6">
         <div className="flex items-center gap-3 mb-3">
           {Icon && (
-            <div className={cn(
-              "p-2 rounded-lg bg-gradient-to-br from-electric-sapphire to-bright-indigo transition-transform duration-300",
-              highlighted ? "group-hover:scale-110 group-hover:rotate-3" : "group-hover:scale-110"
-            )}>
+            <div className="p-2 rounded-xl bg-primary">
               <Icon className="h-5 w-5 text-white" />
             </div>
           )}
-          <h3 className="text-2xl font-bold text-neutral-text group-hover:text-electric-sapphire transition-colors">{name}</h3>
+          <div className="min-w-0">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <h3 className="text-2xl font-semibold text-neutral-text">{name}</h3>
+              {highlighted && (
+                <span className="text-sm font-medium text-neutral-muted">
+                  Recommended
+                </span>
+              )}
+            </div>
+          </div>
         </div>
         <div className="flex items-baseline gap-2 mb-2">
-          <span className="text-4xl font-bold text-neutral-text">
+          <span className="text-4xl font-semibold text-neutral-text tracking-tight">
             {price === 0 ? "Free" : `$${displayPrice.toFixed(2)}`}
           </span>
           {price > 0 && <span className="text-neutral-muted">/{period}</span>}
         </div>
         <p className="text-sm text-neutral-muted">{description}</p>
       </div>
-      <ul className="space-y-3 mb-8 relative z-10">
+      <ul className="space-y-3 mb-8 flex-1">
         {features.map((feature, idx) => (
-          <li key={idx} className="flex items-center gap-2 group-hover:translate-x-1 transition-transform duration-200" style={{ transitionDelay: `${idx * 30}ms` }}>
-            <Check className="h-5 w-5 text-electric-sapphire flex-shrink-0" />
+          <li key={idx} className="flex items-center gap-2">
+            <Check className="h-5 w-5 text-primary flex-shrink-0" />
             <span className="text-sm text-neutral-text">{feature}</span>
           </li>
         ))}
@@ -2054,15 +2026,15 @@ function PricingCard({
       <Link
         href="/login"
         className={cn(
-          "w-full block text-center px-6 py-3 rounded-xl font-semibold transition-all active:scale-[0.98] relative z-10 group/button",
+          "w-full block text-center px-6 py-3 rounded-full font-semibold transition-all active:scale-[0.98] mt-auto",
           highlighted
-            ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white hover:from-bright-indigo hover:to-vivid-royal shadow-button hover:shadow-xl hover:scale-105"
-            : "bg-neutral-bg text-neutral-text hover:bg-gradient-to-r hover:from-electric-sapphire/10 hover:to-bright-indigo/10 border border-neutral-border hover:border-electric-sapphire/50"
+            ? "bg-primary text-white hover:bg-bright-indigo shadow-button"
+            : "bg-neutral-bg text-neutral-text hover:bg-primary/10 border border-neutral-border/80 hover:border-primary/40"
         )}
       >
         <span className="flex items-center justify-center gap-2">
-        {highlighted ? "Get Started" : "Start Free"}
-          {highlighted && <ArrowRight className="h-4 w-4 group-hover/button:translate-x-1 transition-transform" />}
+          {ctaLabel}
+          {highlighted && <ArrowRight className="h-4 w-4" />}
         </span>
       </Link>
     </div>

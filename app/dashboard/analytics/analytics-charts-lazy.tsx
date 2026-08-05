@@ -12,16 +12,22 @@ const AnalyticsChartsInner = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {[1, 2].map((i) => (
-          <div
-            key={i}
-            className="rounded-card border border-neutral-border bg-white p-6 shadow-soft"
-          >
-            <div className="h-5 w-40 bg-neutral-border rounded-lg animate-pulse mb-6" />
-            <div className="h-64 w-full bg-neutral-border/60 rounded-xl animate-pulse" />
-          </div>
-        ))}
+      <div className="space-y-5 mb-2">
+        <div className="rounded-card border border-neutral-border/80 bg-white p-6 shadow-soft">
+          <div className="h-5 w-40 bg-neutral-surface rounded-lg animate-pulse mb-6" />
+          <div className="h-72 w-full bg-neutral-surface/80 rounded-2xl animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {[1, 2].map((i) => (
+            <div
+              key={i}
+              className="rounded-card border border-neutral-border/80 bg-white p-6 shadow-soft"
+            >
+              <div className="h-5 w-36 bg-neutral-surface rounded-lg animate-pulse mb-6" />
+              <div className="h-64 w-full bg-neutral-surface/80 rounded-2xl animate-pulse" />
+            </div>
+          ))}
+        </div>
       </div>
     ),
   }

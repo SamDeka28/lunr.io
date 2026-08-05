@@ -223,6 +223,15 @@ export async function PATCH(
     if (body.title !== undefined) {
       updateData.title = body.title || null;
     }
+    if (body.description !== undefined) {
+      updateData.description = body.description || null;
+    }
+    if (body.og_image_url !== undefined) {
+      updateData.og_image_url = body.og_image_url || null;
+    }
+    if (body.is_active !== undefined) {
+      updateData.is_active = Boolean(body.is_active);
+    }
     if (body.short_code) {
       updateData.short_code = body.short_code;
     }

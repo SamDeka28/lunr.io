@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { DashboardContainer } from "@/components/ui/dashboard-container";
+
 import { useRouter } from "next/navigation";
 import { FileText, Loader2, ChevronDown, ChevronRight, Globe, Lock, Link2, Plus, X, Mail, Twitter, Instagram, Linkedin, Github, Youtube, Facebook, Palette } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { ColorPickerWithInput } from "@/components/color-picker-with-input";
 import { toast } from "sonner";
 import { usePlan } from "@/hooks/use-plan";
 import { SuccessModal } from "@/components/success-modal";
@@ -273,7 +276,7 @@ export default function PageForm({ userId, userLinks }: { userId: string; userLi
     <div className="flex h-[calc(100vh-73px)]">
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-3xl mx-auto">
+        <DashboardContainer size="narrow">
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-neutral-text mb-2">Create a new page</h1>
@@ -609,125 +612,53 @@ export default function PageForm({ userId, userLinks }: { userId: string; userLi
 
                 {backgroundType === "solid" ? (
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
-                    Background Color
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={backgroundColor}
-                      onChange={(e) => setBackgroundColor(e.target.value)}
-                      className="w-16 h-12 rounded-xl border-2 border-neutral-border cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={backgroundColor}
-                      onChange={(e) => setBackgroundColor(e.target.value)}
-                      className="flex-1 h-12 px-4 rounded-xl border-2 border-neutral-border text-sm font-mono font-medium focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
-                    />
-                  </div>
+                  <ColorPickerWithInput
+                    label="Background Color"
+                    value={backgroundColor}
+                    onChange={(color) => setBackgroundColor(color)}
+                  />
                 </div>
                 ) : (
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
-                        Gradient Start Color
-                      </label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="color"
-                          value={gradientColors.start}
-                          onChange={(e) => setGradientColors({ ...gradientColors, start: e.target.value })}
-                          className="w-16 h-12 rounded-xl border-2 border-neutral-border cursor-pointer"
-                        />
-                        <input
-                          type="text"
-                          value={gradientColors.start}
-                          onChange={(e) => setGradientColors({ ...gradientColors, start: e.target.value })}
-                          className="flex-1 h-12 px-4 rounded-xl border-2 border-neutral-border text-sm font-mono font-medium focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
-                        />
-                      </div>
+                      <ColorPickerWithInput
+                        label="Gradient Start Color"
+                        value={gradientColors.start}
+                        onChange={(color) => setGradientColors({ ...gradientColors, start: color })}
+                      />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
-                        Gradient End Color
-                      </label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="color"
-                          value={gradientColors.end}
-                          onChange={(e) => setGradientColors({ ...gradientColors, end: e.target.value })}
-                          className="w-16 h-12 rounded-xl border-2 border-neutral-border cursor-pointer"
-                        />
-                        <input
-                          type="text"
-                          value={gradientColors.end}
-                          onChange={(e) => setGradientColors({ ...gradientColors, end: e.target.value })}
-                          className="flex-1 h-12 px-4 rounded-xl border-2 border-neutral-border text-sm font-mono font-medium focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
-                        />
-                      </div>
+                      <ColorPickerWithInput
+                        label="Gradient End Color"
+                        value={gradientColors.end}
+                        onChange={(color) => setGradientColors({ ...gradientColors, end: color })}
+                      />
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
-                    Text Color
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={textColor}
-                      onChange={(e) => setTextColor(e.target.value)}
-                      className="w-16 h-12 rounded-xl border-2 border-neutral-border cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={textColor}
-                      onChange={(e) => setTextColor(e.target.value)}
-                      className="flex-1 h-12 px-4 rounded-xl border-2 border-neutral-border text-sm font-mono font-medium focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
-                    />
-                  </div>
+                  <ColorPickerWithInput
+                    label="Text Color"
+                    value={textColor}
+                    onChange={(color) => setTextColor(color)}
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
-                    Button Color
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={buttonColor}
-                      onChange={(e) => setButtonColor(e.target.value)}
-                      className="w-16 h-12 rounded-xl border-2 border-neutral-border cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={buttonColor}
-                      onChange={(e) => setButtonColor(e.target.value)}
-                      className="flex-1 h-12 px-4 rounded-xl border-2 border-neutral-border text-sm font-mono font-medium focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
-                    />
-                  </div>
+                  <ColorPickerWithInput
+                    label="Button Color"
+                    value={buttonColor}
+                    onChange={(color) => setButtonColor(color)}
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
-                    Button Text Color
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={buttonTextColor}
-                      onChange={(e) => setButtonTextColor(e.target.value)}
-                      className="w-16 h-12 rounded-xl border-2 border-neutral-border cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={buttonTextColor}
-                      onChange={(e) => setButtonTextColor(e.target.value)}
-                      className="flex-1 h-12 px-4 rounded-xl border-2 border-neutral-border text-sm font-mono font-medium focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
-                    />
-                  </div>
+                  <ColorPickerWithInput
+                    label="Button Text Color"
+                    value={buttonTextColor}
+                    onChange={(color) => setButtonTextColor(color)}
+                  />
                 </div>
 
                 <div>
@@ -983,7 +914,7 @@ export default function PageForm({ userId, userLinks }: { userId: string; userLi
               </button>
             </div>
           </form>
-        </div>
+        </DashboardContainer>
       </div>
 
       {/* Preview Panel */}

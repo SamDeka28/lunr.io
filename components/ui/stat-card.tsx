@@ -7,7 +7,9 @@ export interface StatCardProps extends React.HTMLAttributes<HTMLDivElement> {
   value: React.ReactNode;
   icon?: React.ReactNode;
   hint?: React.ReactNode;
-  /** Subtle accent tint — use sparingly */
+  /** Optional trend chip, e.g. "+12%" */
+  trend?: string;
+  trendPositive?: boolean;
   accent?: "default" | "primary";
 }
 
@@ -17,6 +19,8 @@ export function StatCard({
   value,
   icon,
   hint,
+  trend,
+  trendPositive = true,
   accent = "default",
   ...props
 }: StatCardProps) {
@@ -24,31 +28,54 @@ export function StatCard({
     <Card
       hoverLift
       className={cn(
-        "group",
-        accent === "primary" && "border-primary/15",
+        "relative overflow-hidden",
+        accent === "primary" && "ring-1 ring-primary/10",
         className
       )}
       {...props}
     >
-      <div className="flex items-start justify-between mb-4">
-        {icon && (
-          <div
-            className={cn(
-              "w-11 h-11 rounded-xl flex items-center justify-center",
-              accent === "primary"
-                ? "bg-primary/10 text-primary"
-                : "bg-neutral-surface text-neutral-muted"
-            )}
-          >
-            {icon}
-          </div>
-        )}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-24 opacity-70"
+        style={{
+          background:
+            accent === "primary"
+              ? "radial-gradient(120% 80% at 100% 0%, rgba(67,97,238,0.12), transparent 60%)"
+              : "radial-gradient(120% 80% at 100% 0%, rgba(67,97,238,0.06), transparent 60%)",
+        }}
+      />
+      <div className="relative flex items-start justify-between gap-3 mb-4">
+        <div className="text-[13px] font-medium text-neutral-muted">{label}</div>
+        <div className="flex items-center gap-2">
+          {trend && (
+            <span
+              className={cn(
+                "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                trendPositive
+                  ? "bg-emerald-50 text-emerald-600"
+                  : "bg-red-50 text-red-600"
+              )}
+            >
+              {trend}
+            </span>
+          )}
+          {icon && (
+            <div
+              className={cn(
+                "w-9 h-9 rounded-2xl flex items-center justify-center",
+                accent === "primary"
+                  ? "bg-primary/10 text-primary"
+                  : "bg-neutral-surface text-neutral-muted"
+              )}
+            >
+              {icon}
+            </div>
+          )}
+        </div>
       </div>
-      <div className="text-3xl font-semibold text-neutral-text tracking-tight tabular-nums">
+      <div className="relative text-3xl sm:text-[2rem] font-semibold text-neutral-text tracking-tight tabular-nums">
         {value}
       </div>
-      <div className="mt-1 text-sm font-medium text-neutral-muted">{label}</div>
-      {hint && <div className="mt-3 text-xs text-neutral-muted">{hint}</div>}
+      {hint && <div className="relative mt-3 text-sm text-neutral-muted">{hint}</div>}
     </Card>
   );
 }

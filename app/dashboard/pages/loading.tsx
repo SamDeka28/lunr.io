@@ -1,9 +1,11 @@
 import { Calendar, Filter, Grid, LayoutGrid, List } from "lucide-react";
+import { DashboardContainer } from "@/components/ui/dashboard-container";
+
 import Link from "next/link";
 
 export default function PagesLoading() {
   return (
-    <div className="max-w-7xl mx-auto w-full">
+    <DashboardContainer>
       {/* Header Section - Static, shows immediately */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-6">
@@ -123,6 +125,6 @@ export default function PagesLoading() {
           </div>
         ))}
       </div>
-    </div>
+    </DashboardContainer>
   );
 }

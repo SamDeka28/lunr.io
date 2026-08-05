@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, Zap, Building2, Crown, TrendingUp, ArrowRight } from "lucide-react";
+import { Check, Zap, Building2, Crown, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { SectionLabel } from "@/components/ui/section-label";
 
 interface Plan {
   id: string;
@@ -25,7 +26,6 @@ interface PricingPageClientProps {
 export function PricingPageClient({ plans, isAuthenticated }: PricingPageClientProps) {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
 
-  // Sort plans: Free first, then by price
   const sortedPlans = [...plans].sort((a, b) => {
     if (a.name.toLowerCase() === "free") return -1;
     if (b.name.toLowerCase() === "free") return 1;
@@ -49,29 +49,25 @@ export function PricingPageClient({ plans, isAuthenticated }: PricingPageClientP
 
   const getPlanFeatures = (plan: Plan): string[] => {
     const features: string[] = [];
-    
-    // Links
+
     if (plan.max_links === -1) {
       features.push("Unlimited Links");
     } else {
       features.push(`${plan.max_links} Links`);
     }
-    
-    // QR Codes
+
     if (plan.max_qr_codes === -1) {
       features.push("Unlimited QR Codes");
     } else {
       features.push(`${plan.max_qr_codes} QR Codes`);
     }
-    
-    // Pages
+
     if (plan.max_pages === -1) {
       features.push("Unlimited Pages");
     } else {
       features.push(`${plan.max_pages} Pages`);
     }
-    
-    // Additional features from the features object
+
     if (plan.features) {
       if (plan.features.custom_domains) features.push("Custom Domains for Pages");
       if (plan.features.api_access) features.push("API Access");
@@ -81,7 +77,7 @@ export function PricingPageClient({ plans, isAuthenticated }: PricingPageClientP
       if (plan.features.expiration) features.push("Link Expiration");
       if (plan.features.password_protection) features.push("Password Protection");
     }
-    
+
     return features;
   };
 
@@ -89,84 +85,41 @@ export function PricingPageClient({ plans, isAuthenticated }: PricingPageClientP
     return planName.toLowerCase() === "pro";
   };
 
-  return (
-    <main className="min-h-screen bg-white relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-64 h-64 bg-electric-sapphire/5 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute bottom-20 right-10 w-80 h-80 bg-bright-indigo/5 rounded-full blur-3xl animate-float-reverse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-vivid-royal/3 rounded-full blur-3xl animate-drift"></div>
-      </div>
-      
-      {/* Curved decorative lines */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-10" preserveAspectRatio="none">
-        <path
-          d="M0,250 Q500,150 1000,250 T2000,250"
-          stroke="url(#pricingGradient1)"
-          strokeWidth="3"
-          fill="none"
-          className="animate-wave"
-        />
-        <path
-          d="M0,450 Q600,350 1200,450 T2400,450"
-          stroke="url(#pricingGradient2)"
-          strokeWidth="3"
-          fill="none"
-          className="animate-wave delay-1000"
-        />
-        <defs>
-          <linearGradient id="pricingGradient1" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.4" />
-            <stop offset="50%" stopColor="#6366F1" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.4" />
-          </linearGradient>
-          <linearGradient id="pricingGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#6366F1" stopOpacity="0.4" />
-            <stop offset="50%" stopColor="#8B5CF6" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#EC4899" stopOpacity="0.4" />
-          </linearGradient>
-        </defs>
-      </svg>
-      
-      {/* Floating price tags */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-16 h-16 border-2 border-electric-sapphire/10 rounded-full animate-float"
-            style={{
-              left: `${15 + (i * 15)}%`,
-              top: `${20 + (i % 2) * 60}%`,
-              animationDelay: `${i * 0.8}s`,
-              animationDuration: `${6 + (i % 2) * 2}s`,
-            }}
-          />
-        ))}
-      </div>
+  const getCtaLabel = (plan: Plan, highlighted: boolean) => {
+    if (isAuthenticated) {
+      return plan.name.toLowerCase() === "free" ? "Current plan" : "Upgrade";
+    }
+    if (plan.price_monthly === 0 && plan.price_yearly === 0) {
+      return "Start free";
+    }
+    return highlighted ? "Get started" : "Get started";
+  };
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 relative z-10">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-electric-sapphire/10 text-electric-sapphire text-xs font-semibold mb-4">
-            <TrendingUp className="h-3 w-3" />
-            <span>PRICING</span>
-          </div>
-          <h1 className="text-4xl sm:text-5xl font-bold text-neutral-text mb-4">
-            Simple, Transparent{" "}
-            <span className="bg-gradient-to-r from-electric-sapphire to-bright-indigo bg-clip-text text-transparent">
-              Pricing
-            </span>
+  return (
+    <main
+      className="min-h-screen relative overflow-hidden"
+      style={{
+        background:
+          "radial-gradient(120% 80% at 10% 0%, rgba(67,97,238,0.08), transparent 45%), radial-gradient(90% 60% at 100% 100%, rgba(67,97,238,0.05), transparent 40%), #F3F5FA",
+      }}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-24 relative z-10">
+        <div className="text-center mb-10 sm:mb-16">
+          <SectionLabel>Pricing</SectionLabel>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-neutral-text tracking-tight mb-4">
+            Simple, transparent{" "}
+            <span className="text-primary">pricing</span>
           </h1>
-          <p className="text-xl text-neutral-muted mb-8">
+          <p className="text-base sm:text-xl text-neutral-muted mb-8">
             Start free, upgrade when you need more
           </p>
-          <div className="inline-flex items-center gap-2 p-1.5 bg-neutral-bg rounded-2xl border-2 border-neutral-border shadow-lg">
+          <div className="inline-flex items-center gap-1 p-1.5 bg-white/90 backdrop-blur-xl rounded-full border border-neutral-border/80 shadow-soft">
             <button
               onClick={() => setBillingCycle("monthly")}
               className={cn(
-                "px-6 py-2.5 rounded-xl text-sm font-semibold transition-all",
+                "px-6 py-2.5 rounded-full text-sm font-semibold transition-all",
                 billingCycle === "monthly"
-                  ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white shadow-button"
+                  ? "bg-primary text-white shadow-button"
                   : "text-neutral-muted hover:text-neutral-text"
               )}
             >
@@ -175,21 +128,25 @@ export function PricingPageClient({ plans, isAuthenticated }: PricingPageClientP
             <button
               onClick={() => setBillingCycle("yearly")}
               className={cn(
-                "px-6 py-2.5 rounded-xl text-sm font-semibold transition-all relative",
+                "px-6 py-2.5 rounded-full text-sm font-semibold transition-all inline-flex items-center gap-2",
                 billingCycle === "yearly"
-                  ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white shadow-button"
+                  ? "bg-primary text-white shadow-button"
                   : "text-neutral-muted hover:text-neutral-text"
               )}
             >
               Yearly
-              <span className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-500 text-white shadow-lg animate-bounce">
+              <span
+                className={cn(
+                  "text-xs font-medium",
+                  billingCycle === "yearly" ? "text-white/80" : "text-primary"
+                )}
+              >
                 Save 17%
               </span>
             </button>
           </div>
         </div>
 
-        {/* Pricing Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
           {sortedPlans.map((plan) => {
             const Icon = getPlanIcon(plan.name);
@@ -197,75 +154,68 @@ export function PricingPageClient({ plans, isAuthenticated }: PricingPageClientP
             const price = billingCycle === "monthly" ? plan.price_monthly : plan.price_yearly;
             const period = billingCycle === "monthly" ? "month" : "year";
             const features = getPlanFeatures(plan);
+            const ctaLabel = getCtaLabel(plan, highlighted);
 
             return (
               <div
                 key={plan.id}
                 className={cn(
-                  "p-6 rounded-card border-2 transition-all relative group overflow-hidden",
+                  "p-6 rounded-card border transition-all relative flex flex-col h-full",
                   highlighted
-                    ? "border-electric-sapphire bg-gradient-to-br from-electric-sapphire/5 to-bright-indigo/5 ring-2 ring-electric-sapphire/20 hover:ring-4 hover:ring-electric-sapphire/30 hover:shadow-2xl hover:-translate-y-1"
-                    : "border-neutral-border bg-white hover:border-electric-sapphire/50 hover:shadow-xl hover:-translate-y-1"
+                    ? "border-primary/40 bg-white shadow-hover ring-2 ring-primary/15"
+                    : "border-neutral-border/80 bg-white/90 backdrop-blur-xl shadow-soft hover:border-primary/30 hover:shadow-hover"
                 )}
               >
-                {/* Gradient overlay on hover */}
-                {!highlighted && (
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-5 bg-gradient-to-br from-electric-sapphire to-bright-indigo transition-opacity duration-300"></div>
-                )}
-                
-                {highlighted && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-xs font-semibold shadow-lg animate-pulse">
-                    Most Popular
-                  </div>
-                )}
-                
-                <div className="mb-6 relative z-10">
+                <div className="mb-6">
                   <div className="flex items-center gap-3 mb-3">
                     {Icon && (
-                      <div className={cn(
-                        "p-2 rounded-lg bg-gradient-to-br from-electric-sapphire to-bright-indigo transition-transform duration-300",
-                        highlighted ? "group-hover:scale-110 group-hover:rotate-3" : "group-hover:scale-110"
-                      )}>
+                      <div className="p-2 rounded-xl bg-primary">
                         <Icon className="h-5 w-5 text-white" />
                       </div>
                     )}
-                    <h3 className="text-2xl font-bold text-neutral-text group-hover:text-electric-sapphire transition-colors">
-                      {plan.display_name || plan.name}
-                    </h3>
+                    <div className="min-w-0">
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <h3 className="text-2xl font-semibold text-neutral-text">
+                          {plan.display_name || plan.name}
+                        </h3>
+                        {highlighted && (
+                          <span className="text-sm font-medium text-neutral-muted">
+                            Recommended
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <div className="flex items-baseline gap-2 mb-2">
-                    <span className="text-4xl font-bold text-neutral-text">
+                    <span className="text-4xl font-semibold text-neutral-text tracking-tight">
                       {price === 0 ? "Free" : `$${price.toFixed(2)}`}
                     </span>
                     {price > 0 && <span className="text-neutral-muted">/{period}</span>}
                   </div>
                 </div>
-                
-                <ul className="space-y-3 mb-8 relative z-10">
+
+                <ul className="space-y-3 mb-8 flex-1">
                   {features.map((feature, idx) => (
-                    <li key={idx} className="flex items-center gap-2 group-hover:translate-x-1 transition-transform duration-200" style={{ transitionDelay: `${idx * 30}ms` }}>
-                      <Check className="h-5 w-5 text-electric-sapphire flex-shrink-0" />
+                    <li key={idx} className="flex items-center gap-2">
+                      <Check className="h-5 w-5 text-primary flex-shrink-0" />
                       <span className="text-sm text-neutral-text">{feature}</span>
                     </li>
                   ))}
                 </ul>
-                
+
                 <Link
                   href={isAuthenticated ? "/dashboard/billing" : "/login"}
                   className={cn(
-                    "w-full block text-center px-6 py-3 rounded-xl font-semibold transition-all active:scale-[0.98] relative z-10 group/button",
+                    "w-full block text-center px-6 py-3 rounded-full font-semibold transition-all active:scale-[0.98] mt-auto",
                     highlighted
-                      ? "bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white hover:from-bright-indigo hover:to-vivid-royal shadow-button hover:shadow-xl hover:scale-105"
-                      : "bg-neutral-bg text-neutral-text hover:bg-gradient-to-r hover:from-electric-sapphire/10 hover:to-bright-indigo/10 border border-neutral-border hover:border-electric-sapphire/50"
+                      ? "bg-primary text-white hover:bg-bright-indigo shadow-button"
+                      : "bg-neutral-bg text-neutral-text hover:bg-primary/10 border border-neutral-border/80 hover:border-primary/40"
                   )}
                 >
                   <span className="flex items-center justify-center gap-2">
-                    {isAuthenticated 
-                      ? (plan.name.toLowerCase() === "free" ? "Current Plan" : "Upgrade")
-                      : (highlighted ? "Get Started" : "Start Free")
-                    }
+                    {ctaLabel}
                     {highlighted && !isAuthenticated && (
-                      <ArrowRight className="h-4 w-4 group-hover/button:translate-x-1 transition-transform" />
+                      <ArrowRight className="h-4 w-4" />
                     )}
                   </span>
                 </Link>
@@ -277,4 +227,3 @@ export function PricingPageClient({ plans, isAuthenticated }: PricingPageClientP
     </main>
   );
 }
-

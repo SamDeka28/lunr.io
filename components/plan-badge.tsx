@@ -1,6 +1,6 @@
 "use client";
 
-import { Crown, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
 
@@ -24,21 +24,22 @@ export function PlanBadge({
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      {isPremium && !isFree && (
-        <Crown className="h-4 w-4 text-neon-pink" />
-      )}
-      <span className={cn(
-        "text-sm font-semibold",
-        isPremium && !isFree ? "text-neon-pink" : "text-neutral-text"
-      )}>
+      <span
+        className={cn(
+          "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold tracking-tight border shadow-soft",
+          isPremium && !isFree
+            ? "bg-primary/10 text-primary border-primary/15"
+            : "bg-white text-neutral-muted border-neutral-border/80"
+        )}
+      >
         {displayName}
       </span>
       {showUpgrade && isFree && (
         <Link
-          href="/pricing"
-          className="text-xs text-electric-sapphire hover:text-bright-indigo font-semibold"
+          href="/dashboard/billing"
+          className="text-xs text-primary hover:text-bright-indigo font-medium"
         >
-          Upgrade →
+          Upgrade
         </Link>
       )}
     </div>
@@ -50,7 +51,7 @@ interface FeatureListProps {
   planName: string;
 }
 
-export function FeatureList({ features, planName }: FeatureListProps) {
+export function FeatureList({ features }: FeatureListProps) {
   const featureLabels: Record<string, string> = {
     custom_back_half: "Custom back-half",
     expiration: "Link expiration",
@@ -70,14 +71,14 @@ export function FeatureList({ features, planName }: FeatureListProps) {
 
   return (
     <div className="space-y-2">
-      <h4 className="text-xs font-semibold text-neutral-text uppercase tracking-wide mb-3">
-        Available Features
+      <h4 className="text-xs font-medium text-neutral-muted uppercase tracking-wide mb-3">
+        Available features
       </h4>
       {enabledFeatures.length > 0 ? (
         <div className="space-y-1.5">
           {enabledFeatures.map((feature) => (
             <div key={feature} className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-electric-sapphire flex-shrink-0" />
+              <CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
               <span className="text-sm text-neutral-text">{feature}</span>
             </div>
           ))}
@@ -88,4 +89,3 @@ export function FeatureList({ features, planName }: FeatureListProps) {
     </div>
   );
 }
-

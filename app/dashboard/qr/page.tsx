@@ -1,4 +1,9 @@
 import { redirect } from "next/navigation";
+import { DashboardContainer } from "@/components/ui/dashboard-container";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+
 import { createClient } from "@/lib/supabase/server";
 import { getCachedUser } from "@/lib/supabase/auth";
 import { QRPageWrapper } from "./qr-page-wrapper";
@@ -85,37 +90,32 @@ export default async function QRCodePage({
   const canCreateQR = limits.can_create_qr;
 
   return (
-    <div className="max-w-7xl mx-auto w-full">
-      {/* Header Section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-neutral-text mb-2">Your QR Codes</h1>
-            <p className="text-sm text-neutral-muted">
-              {qrCount} / {limits.max_qr_codes === -1 ? "∞" : limits.max_qr_codes} QR codes used
-            </p>
-          </div>
-          {canCreateQR && (
-            <Link
-              href="/dashboard/qr/new"
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold hover:from-bright-indigo hover:to-vivid-royal transition-all active:scale-[0.98] flex items-center gap-2 shadow-button"
-            >
-              <span className="text-lg">+</span>
-              Generate QR Code
+    <DashboardContainer>
+      <PageHeader
+        title="Your QR Codes"
+        description={`${qrCount} / ${limits.max_qr_codes === -1 ? "∞" : limits.max_qr_codes} QR codes used`}
+        actions={
+          canCreateQR ? (
+            <Link href="/dashboard/qr/new">
+              <Button>
+                <Plus className="h-4 w-4" />
+                <span className="sm:hidden">Create QR</span>
+                <span className="hidden sm:inline">Generate QR Code</span>
+              </Button>
             </Link>
-          )}
-        </div>
+          ) : undefined
+        }
+      />
 
-        <QRPageWrapper
-          qrCodes={qrCodes || []}
-          canCreate={canCreateQR}
-          initialSearch={searchParams.search}
-          initialView={(searchParams.view as any) || "list"}
-          initialStatus={(searchParams.status as any) || "active"}
-          initialDateFilter={searchParams.dateFilter}
-        />
-      </div>
-    </div>
+      <QRPageWrapper
+        qrCodes={qrCodes || []}
+        canCreate={canCreateQR}
+        initialSearch={searchParams.search}
+        initialView={(searchParams.view as any) || "list"}
+        initialStatus={(searchParams.status as any) || "active"}
+        initialDateFilter={searchParams.dateFilter}
+      />
+    </DashboardContainer>
   );
 }
 

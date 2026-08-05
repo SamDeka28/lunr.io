@@ -83,6 +83,86 @@ export async function GET(
       }
     }
 
+    const analyticsService = new AnalyticsService(supabase);
+    const ipAddress = getClientIp(request);
+    const userAgent = request.headers.get("user-agent");
+    const referrer = request.headers.get("referer") || request.headers.get("referrer");
+    const country = getCountryFromRequest(request);
+    const parsedUa = parseUserAgent(userAgent);
+    const requestUtmSource = requestUrl.searchParams.get("utm_source");
+    const requestUtmMedium = requestUrl.searchParams.get("utm_medium");
+    const requestUtmCampaign = requestUrl.searchParams.get("utm_campaign");
+    const requestUtmTerm = requestUrl.searchParams.get("utm_term");
+    const requestUtmContent = requestUrl.searchParams.get("utm_content");
+
+    // Preview bots get OG HTML before password gate so shares still unfurl
+    if (parsedUa.isBot) {
+      const { buildLinkPreviewHtml } = await import("@/lib/utils/link-preview");
+      const previewTitle =
+        link.title?.trim() ||
+        (() => {
+          try {
+            return new URL(link.original_url).hostname;
+          } catch {
+            return link.short_code;
+          }
+        })();
+      const previewDescription =
+        link.description?.trim() || `Visit ${previewTitle}`;
+      const shortPageUrl = `${requestUrl.origin}/${shortCode}`;
+      const html = buildLinkPreviewHtml({
+        title: previewTitle,
+        description: previewDescription,
+        url: shortPageUrl,
+        imageUrl: link.og_image_url,
+        siteName: "lunr.to",
+      });
+
+      analyticsService
+        .trackClick({
+          link_id: link.id,
+          ip_address: ipAddress,
+          user_agent: userAgent,
+          referrer: referrer || null,
+          country,
+          device_type: parsedUa.deviceType,
+          browser: parsedUa.browser,
+          os: parsedUa.os,
+          is_bot: true,
+          utm_source:
+            requestUtmSource ||
+            (link.utm_parameters as Record<string, string>)?.utm_source ||
+            null,
+          utm_medium:
+            requestUtmMedium ||
+            (link.utm_parameters as Record<string, string>)?.utm_medium ||
+            null,
+          utm_campaign:
+            requestUtmCampaign ||
+            (link.utm_parameters as Record<string, string>)?.utm_campaign ||
+            null,
+          utm_term:
+            requestUtmTerm ||
+            (link.utm_parameters as Record<string, string>)?.utm_term ||
+            null,
+          utm_content:
+            requestUtmContent ||
+            (link.utm_parameters as Record<string, string>)?.utm_content ||
+            null,
+        })
+        .catch((err) => {
+          console.error("Failed to track bot preview analytics:", err);
+        });
+
+      return new NextResponse(html, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "public, max-age=300",
+        },
+      });
+    }
+
     // Check if link requires password (cookie-based access, never query string)
     if (link.password_hash) {
       const {
@@ -96,19 +176,6 @@ export async function GET(
         return NextResponse.redirect(passwordUrl.toString(), { status: 302 });
       }
     }
-
-    // Use the same server-side Supabase client for analytics
-    const analyticsService = new AnalyticsService(supabase);
-    const ipAddress = getClientIp(request);
-    const userAgent = request.headers.get("user-agent");
-    const referrer = request.headers.get("referer") || request.headers.get("referrer");
-    const country = getCountryFromRequest(request);
-    const parsedUa = parseUserAgent(userAgent);
-    const requestUtmSource = requestUrl.searchParams.get("utm_source");
-    const requestUtmMedium = requestUrl.searchParams.get("utm_medium");
-    const requestUtmCampaign = requestUrl.searchParams.get("utm_campaign");
-    const requestUtmTerm = requestUrl.searchParams.get("utm_term");
-    const requestUtmContent = requestUrl.searchParams.get("utm_content");
 
     // Get link's default UTM parameters
     const linkUtmParams = (link.utm_parameters as Record<string, string>) || {};

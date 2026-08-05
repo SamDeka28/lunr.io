@@ -36,6 +36,8 @@ export async function POST(request: NextRequest) {
       folder,
       max_clicks,
       targeting,
+      description,
+      og_image_url,
     } = body;
 
     if (!original_url) {
@@ -71,6 +73,8 @@ export async function POST(request: NextRequest) {
       original_url,
       short_code,
       title: title || null,
+      description: description || null,
+      og_image_url: og_image_url || null,
       expires_at,
       password,
       user_id: user.id,
@@ -117,9 +121,16 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const shortCode = searchParams.get("short_code");
     const all = searchParams.get("all") === "true";
+    const q = searchParams.get("q")?.trim() || "";
+    const limitParam = Number(searchParams.get("limit") || "0");
+    const limit = Number.isFinite(limitParam) && limitParam > 0
+      ? Math.min(limitParam, 50)
+      : all || q
+        ? 100
+        : 0;
 
-    // If "all=true" is requested, return all user links
-    if (all) {
+    // List / search authenticated user's links
+    if (all || q) {
       const supabase = await createClient();
       const {
         data: { user },
@@ -132,12 +143,25 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const { data: links, error } = await supabase
+      let query = supabase
         .from("links")
-        .select("id, short_code, original_url, title, click_count, campaign_id, created_at")
+        .select("id, short_code, original_url, title, click_count, campaign_id, created_at, is_active")
         .eq("user_id", user.id)
         .eq("is_active", true)
         .order("created_at", { ascending: false });
+
+      if (q) {
+        const escaped = q.replace(/%/g, "\\%").replace(/_/g, "\\_");
+        query = query.or(
+          `short_code.ilike.%${escaped}%,original_url.ilike.%${escaped}%,title.ilike.%${escaped}%`
+        );
+      }
+
+      if (limit > 0) {
+        query = query.limit(limit);
+      }
+
+      const { data: links, error } = await query;
 
       if (error) {
         throw new Error(error.message);

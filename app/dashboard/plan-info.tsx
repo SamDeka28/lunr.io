@@ -1,8 +1,8 @@
 "use client";
 
-import { Crown, CheckCircle2, XCircle, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils/cn";
+import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 interface PlanInfoProps {
   planName: string;
@@ -38,9 +38,8 @@ export function PlanInfo({
     priority_support: { label: "Priority support", description: "Get help faster" },
   };
 
-  // Link generation is always available (basic feature)
   const basicFeatures = [
-    { key: "link_generation", label: "Link generation", description: "Shorten URLs and track clicks" }
+    { key: "link_generation", label: "Link generation", description: "Shorten URLs and track clicks" },
   ];
 
   const enabledFeatures = [
@@ -48,86 +47,82 @@ export function PlanInfo({
     ...Object.entries(features)
       .filter(([_, enabled]) => enabled)
       .map(([key, _]) => ({ key, ...featureLabels[key] }))
-      .filter((f) => f.label)
+      .filter((f) => f.label),
   ];
 
   return (
-    <div className="bg-white rounded-card p-6 shadow-soft border border-neutral-border">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          {isPremium && (
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-neon-pink/10 to-raspberry-plum/10 flex items-center justify-center">
-              <Crown className="h-6 w-6 text-neon-pink" />
-            </div>
-          )}
+    <div className="relative overflow-hidden rounded-card border border-neutral-border/80 bg-white shadow-soft sticky top-24">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(80% 60% at 100% 0%, rgba(67,97,238,0.08), transparent 55%)",
+        }}
+      />
+      <div className="relative p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-3 mb-5">
           <div>
-            <h3 className="text-lg font-bold text-neutral-text">{planDisplayName} Plan</h3>
-            <p className="text-xs text-neutral-muted">
-              {isPremium ? "Premium features enabled" : "Basic features"}
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-muted mb-1">
+              Current plan
+            </div>
+            <h3 className="text-lg font-semibold text-neutral-text tracking-tight">
+              {planDisplayName}
+            </h3>
+            <p className="text-sm text-neutral-muted mt-0.5">
+              {isPremium ? "Premium features included" : "Free tier"}
             </p>
           </div>
-        </div>
-        {!isPremium && (
-          <Link
-            href="/dashboard/billing"
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold hover:from-bright-indigo hover:to-vivid-royal transition-all active:scale-[0.98] flex items-center gap-2 shadow-button"
-          >
-            <Crown className="h-4 w-4" />
-            Upgrade
-          </Link>
-        )}
-      </div>
-
-      {/* Usage Stats */}
-      <div className="grid grid-cols-2 gap-4 mb-6 p-4 rounded-xl bg-neutral-bg border border-neutral-border">
-        <div>
-          <div className="text-xs text-neutral-muted mb-1">Links</div>
-          <div className="text-2xl font-bold text-neutral-text">
-            {isUnlimited ? "∞" : `${usedLinks} / ${maxLinks}`}
-          </div>
-        </div>
-        <div>
-          <div className="text-xs text-neutral-muted mb-1">QR Codes</div>
-          <div className="text-2xl font-bold text-neutral-text">
-            {maxQRCodes === -1 ? "∞" : `${usedQRCodes} / ${maxQRCodes}`}
-          </div>
-        </div>
-      </div>
-
-      {/* Features List */}
-      <div>
-        <h4 className="text-sm font-semibold text-neutral-text mb-4 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-electric-sapphire" />
-          Available Features
-        </h4>
-        {enabledFeatures.length > 0 ? (
-          <div className="space-y-2">
-            {enabledFeatures.map((feature) => (
-              <div
-                key={feature.key}
-                className="flex items-start gap-3 p-3 rounded-xl bg-gradient-to-r from-electric-sapphire/5 to-bright-indigo/5 border border-electric-sapphire/10"
-              >
-                <CheckCircle2 className="h-5 w-5 text-electric-sapphire flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <div className="text-sm font-semibold text-neutral-text">{feature.label}</div>
-                  <div className="text-xs text-neutral-muted">{feature.description}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="p-4 rounded-xl bg-neutral-bg border border-neutral-border text-center">
-            <p className="text-sm text-neutral-muted">No premium features enabled</p>
-            <Link
-              href="/dashboard/billing"
-              className="mt-2 inline-block text-sm text-electric-sapphire hover:text-bright-indigo font-semibold"
-            >
-              View plans →
+          {!isPremium && (
+            <Link href="/dashboard/billing">
+              <Button size="sm">Upgrade</Button>
             </Link>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mb-6 p-3.5 rounded-2xl bg-neutral-bg/80 border border-neutral-border/70">
+          <div>
+            <div className="text-xs text-neutral-muted mb-0.5">Links</div>
+            <div className="text-xl font-semibold text-neutral-text tabular-nums tracking-tight">
+              {isUnlimited ? "∞" : `${usedLinks} / ${maxLinks}`}
+            </div>
           </div>
-        )}
+          <div>
+            <div className="text-xs text-neutral-muted mb-0.5">QR codes</div>
+            <div className="text-xl font-semibold text-neutral-text tabular-nums tracking-tight">
+              {maxQRCodes === -1 ? "∞" : `${usedQRCodes} / ${maxQRCodes}`}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-neutral-muted mb-3">
+            Included
+          </h4>
+          {enabledFeatures.length > 0 ? (
+            <ul className="space-y-2.5">
+              {enabledFeatures.map((feature) => (
+                <li key={feature.key} className="flex items-start gap-2.5">
+                  <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-neutral-text">{feature.label}</div>
+                    <div className="text-xs text-neutral-muted leading-relaxed">
+                      {feature.description}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-neutral-muted leading-relaxed">
+              No premium features enabled.{" "}
+              <Link href="/dashboard/billing" className="text-primary font-medium hover:underline">
+                View plans
+              </Link>
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
 }
-

@@ -1,57 +1,56 @@
+import { DashboardContainer } from "@/components/ui/dashboard-container";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
+
 export default function AnalyticsLoading() {
   return (
-    <div className="max-w-7xl mx-auto w-full">
-      {/* Header - Static, shows immediately */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-neutral-text mb-3">Analytics Overview</h1>
-        <p className="text-lg text-neutral-muted">Track performance across all your links</p>
+    <DashboardContainer size="wide">
+      <PageHeader
+        title="Analytics"
+        description="Loading…"
+        actions={<Skeleton className="h-7 w-28 rounded-full" />}
+      />
+
+      <div className="rounded-card border border-neutral-border/80 bg-white p-5 shadow-soft space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-9 w-20 rounded-full" />
+          ))}
+        </div>
+        <Skeleton className="h-4 w-48" />
       </div>
 
-      {/* Stats Cards Skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="rounded-2xl border border-neutral-border bg-white p-6 shadow-soft"
+            className="rounded-card border border-neutral-border/80 bg-white p-5 shadow-soft"
           >
-            <div className="w-12 h-12 rounded-xl bg-neutral-border animate-pulse mb-4" />
-            <div className="h-4 w-24 bg-neutral-border rounded-lg animate-pulse mb-2" />
-            <div className="h-8 w-20 bg-neutral-border rounded-lg animate-pulse" />
+            <div className="flex justify-between mb-4">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-9 w-9 rounded-2xl" />
+            </div>
+            <Skeleton className="h-8 w-16" />
           </div>
         ))}
       </div>
 
-      {/* Charts Skeleton */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="rounded-card border border-neutral-border/80 bg-white p-6 shadow-soft">
+        <Skeleton className="h-5 w-40 mb-6" />
+        <Skeleton className="h-72 w-full rounded-2xl" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {[1, 2].map((i) => (
           <div
             key={i}
-            className="rounded-card border border-neutral-border bg-white p-6 shadow-soft"
+            className="rounded-card border border-neutral-border/80 bg-white p-6 shadow-soft"
           >
-            <div className="h-5 w-40 bg-neutral-border rounded-lg animate-pulse mb-6" />
-            <div className="h-64 w-full bg-neutral-border/60 rounded-xl animate-pulse" />
+            <Skeleton className="h-5 w-36 mb-6" />
+            <Skeleton className="h-64 w-full rounded-2xl" />
           </div>
         ))}
       </div>
-
-      {/* Top Performing Links Skeleton */}
-      <div className="rounded-card border border-neutral-border bg-white p-6 shadow-soft">
-        <div className="h-5 w-48 bg-neutral-border rounded-lg animate-pulse mb-6" />
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between p-4 rounded-xl bg-neutral-bg border border-neutral-border"
-            >
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-32 bg-neutral-border rounded-lg animate-pulse" />
-                <div className="h-3 w-56 bg-neutral-border rounded-lg animate-pulse" />
-              </div>
-              <div className="h-8 w-12 bg-neutral-border rounded-lg animate-pulse" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+    </DashboardContainer>
   );
 }
