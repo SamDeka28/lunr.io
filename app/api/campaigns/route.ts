@@ -2,8 +2,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { CampaignService } from "@/lib/services/campaign.service";
+import { campaignsDisabledResponse } from "@/lib/features";
 
 export async function POST(request: NextRequest) {
+  const disabled = campaignsDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     const supabase = await createClient();
     const {
@@ -40,6 +44,8 @@ export async function POST(request: NextRequest) {
       target_clicks,
       budget,
       utm_defaults,
+      default_destination_url,
+      currency,
     } = body;
 
     if (!name || name.trim().length === 0) {
@@ -59,7 +65,9 @@ export async function POST(request: NextRequest) {
       tags: tags || null,
       target_clicks: target_clicks || 0,
       budget: budget || 0,
+      currency: currency || "USD",
       utm_defaults: utm_defaults || null,
+      default_destination_url: default_destination_url || null,
       user_id: user.id,
     });
 
@@ -82,6 +90,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const disabled = campaignsDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     const supabase = await createClient();
     const {

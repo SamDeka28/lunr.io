@@ -16,6 +16,7 @@ interface LinksPageWrapperProps {
   initialDateFilter?: string | null;
   initialTag?: string;
   initialFolder?: string;
+  initialCampaignId?: string;
 }
 
 export function LinksPageWrapper({
@@ -28,6 +29,7 @@ export function LinksPageWrapper({
   initialDateFilter,
   initialTag,
   initialFolder,
+  initialCampaignId,
 }: LinksPageWrapperProps) {
   const [selectedCount, setSelectedCount] = useState(0);
   const [viewType, setViewType] = useState<"list" | "grid" | "card">(initialView || "list");
@@ -41,6 +43,7 @@ export function LinksPageWrapper({
         initialDateFilter={initialDateFilter}
         initialTag={initialTag}
         initialFolder={initialFolder}
+        initialCampaignId={initialCampaignId}
         selectedCount={selectedCount}
         onViewChange={setViewType}
       />

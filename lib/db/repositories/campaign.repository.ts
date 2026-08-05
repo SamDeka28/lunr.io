@@ -25,7 +25,9 @@ export class CampaignRepository {
         tags: data.tags || null,
         target_clicks: data.target_clicks || 0,
         budget: data.budget || 0,
+        currency: data.currency || "USD",
         utm_defaults: data.utm_defaults || {},
+        default_destination_url: data.default_destination_url || null,
         user_id: data.user_id,
         is_active: true,
       })
@@ -153,8 +155,14 @@ export class CampaignRepository {
     if (data.budget !== undefined) {
       updateData.budget = data.budget || 0;
     }
+    if (data.currency !== undefined) {
+      updateData.currency = data.currency || "USD";
+    }
     if (data.utm_defaults !== undefined) {
       updateData.utm_defaults = data.utm_defaults || {};
+    }
+    if (data.default_destination_url !== undefined) {
+      updateData.default_destination_url = data.default_destination_url || null;
     }
 
     const { data: campaign, error } = await this.supabase
@@ -173,9 +181,25 @@ export class CampaignRepository {
   }
 
   /**
-   * Delete campaign (soft delete by setting is_active to false)
+   * Archive campaign (soft delete) and unassign all member links
+   * so redirects are not blocked by an inactive campaign.
    */
   async delete(campaignId: string, userId: string): Promise<void> {
+    const existing = await this.getById(campaignId, userId);
+    if (!existing) {
+      throw new Error("Campaign not found");
+    }
+
+    const { error: unassignError } = await this.supabase
+      .from("links")
+      .update({ campaign_id: null })
+      .eq("campaign_id", campaignId)
+      .eq("user_id", userId);
+
+    if (unassignError) {
+      throw new Error(`Failed to unassign campaign links: ${unassignError.message}`);
+    }
+
     const { error } = await this.supabase
       .from("campaigns")
       .update({ is_active: false, updated_at: new Date().toISOString() })
@@ -183,8 +207,69 @@ export class CampaignRepository {
       .eq("user_id", userId);
 
     if (error) {
-      throw new Error(`Failed to delete campaign: ${error.message}`);
+      throw new Error(`Failed to archive campaign: ${error.message}`);
     }
+  }
+
+  /**
+   * Unassign all links from a campaign (without archiving).
+   */
+  async unassignAllLinks(campaignId: string, userId: string): Promise<number> {
+    const { data, error } = await this.supabase
+      .from("links")
+      .update({ campaign_id: null })
+      .eq("campaign_id", campaignId)
+      .eq("user_id", userId)
+      .select("id");
+
+    if (error) {
+      throw new Error(`Failed to unassign links: ${error.message}`);
+    }
+
+    return data?.length || 0;
+  }
+
+  /**
+   * Bulk assign / unassign links to a campaign.
+   */
+  async bulkSetLinkCampaign(
+    campaignId: string | null,
+    userId: string,
+    linkIds: string[]
+  ): Promise<string[]> {
+    if (linkIds.length === 0) return [];
+
+    const { data, error } = await this.supabase
+      .from("links")
+      .update({
+        campaign_id: campaignId,
+      })
+      .in("id", linkIds)
+      .eq("user_id", userId)
+      .select("id");
+
+    if (error) {
+      throw new Error(`Failed to update link campaign assignment: ${error.message}`);
+    }
+
+    return (data || []).map((l) => l.id);
+  }
+
+  /**
+   * Get all links for a campaign including inactive (for UTM propagation).
+   */
+  async getAllCampaignLinkIds(campaignId: string, userId: string): Promise<string[]> {
+    const { data, error } = await this.supabase
+      .from("links")
+      .select("id")
+      .eq("campaign_id", campaignId)
+      .eq("user_id", userId);
+
+    if (error) {
+      throw new Error(`Failed to get campaign link ids: ${error.message}`);
+    }
+
+    return (data || []).map((l) => l.id);
   }
 
   /**

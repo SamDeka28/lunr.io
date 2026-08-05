@@ -108,8 +108,18 @@ export function CampaignCompare({
     };
   }, [campaignIds[0], campaignIds[1]]);
 
-  const cpcA = a ? computeCpc(Number(a.budget) || 0, a.total_clicks) : null;
-  const cpcB = b ? computeCpc(Number(b.budget) || 0, b.total_clicks) : null;
+  const cpcA =
+    a && (a.total_spend || 0) > 0
+      ? computeCpc(Number(a.total_spend) || 0, a.total_clicks)
+      : a
+        ? computeCpc(Number(a.budget) || 0, a.total_clicks)
+        : null;
+  const cpcB =
+    b && (b.total_spend || 0) > 0
+      ? computeCpc(Number(b.total_spend) || 0, b.total_clicks)
+      : b
+        ? computeCpc(Number(b.budget) || 0, b.total_clicks)
+        : null;
   const uniqueRateA =
     a && a.total_clicks > 0 ? (a.unique_clicks / a.total_clicks) * 100 : null;
   const uniqueRateB =
@@ -174,8 +184,18 @@ export function CampaignCompare({
           </div>
 
           <MetricRow label="Links" a={a.total_links} b={b.total_links} />
+          <MetricRow
+            label="Creators"
+            a={a.total_creators ?? 0}
+            b={b.total_creators ?? 0}
+          />
           <MetricRow label="Clicks" a={a.total_clicks} b={b.total_clicks} />
           <MetricRow label="Unique" a={a.unique_clicks} b={b.unique_clicks} />
+          <MetricRow
+            label="Conversions"
+            a={a.total_conversions ?? 0}
+            b={b.total_conversions ?? 0}
+          />
           <MetricRow
             label="Unique %"
             a={uniqueRateA}
@@ -187,6 +207,13 @@ export function CampaignCompare({
             a={clicksPerLinkA}
             b={clicksPerLinkB}
             format={(n) => n.toFixed(1)}
+          />
+          <MetricRow
+            label="Spend"
+            a={a.total_spend ?? 0}
+            b={b.total_spend ?? 0}
+            format={(n) => `$${n.toFixed(2)}`}
+            higherIsBetter={false}
           />
           <MetricRow
             label="CPC"

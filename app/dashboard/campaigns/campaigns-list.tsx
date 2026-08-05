@@ -8,7 +8,6 @@ import {
   Calendar,
   TrendingUp,
   Link2,
-  MoreVertical,
   Edit,
   Trash2,
   BarChart3,
@@ -25,13 +24,47 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { CampaignCompare } from "./campaign-compare";
 
+function CampaignStatusChip({ campaign }: { campaign: Campaign }) {
+  const status = (() => {
+    if (campaign.is_active === false) return "archived" as const;
+    const now = Date.now();
+    if (campaign.start_date) {
+      const start = new Date(campaign.start_date).getTime();
+      if (!Number.isNaN(start) && now < start) return "scheduled" as const;
+    }
+    if (campaign.end_date) {
+      const end = new Date(campaign.end_date).getTime();
+      if (!Number.isNaN(end) && now > end) return "ended" as const;
+    }
+    return "active" as const;
+  })();
+
+  const styles = {
+    active: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    scheduled: "bg-sky-50 text-sky-700 border-sky-100",
+    ended: "bg-amber-50 text-amber-700 border-amber-100",
+    archived: "bg-neutral-bg text-neutral-muted border-neutral-border",
+  };
+
+  return (
+    <span
+      className={cn(
+        "text-[11px] font-semibold px-2 py-0.5 rounded-full border capitalize",
+        styles[status]
+      )}
+    >
+      {status}
+    </span>
+  );
+}
+
 export function CampaignsList({ campaigns }: { campaigns: (Campaign | CampaignWithStats)[] }) {
   const router = useRouter();
   const [selectedCampaigns, setSelectedCampaigns] = useState<Set<string>>(new Set());
   const [comparing, setComparing] = useState(false);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this campaign? Links will not be deleted, but they will be unassigned from this campaign.")) {
+    if (!confirm("Archive this campaign? Links will stay active but will be unassigned from the campaign.")) {
       return;
     }
 
@@ -41,13 +74,13 @@ export function CampaignsList({ campaigns }: { campaigns: (Campaign | CampaignWi
       });
 
       if (response.ok) {
-        toast.success("Campaign deleted");
+        toast.success("Campaign archived");
         router.refresh();
       } else {
-        toast.error("Failed to delete campaign");
+        toast.error("Failed to archive campaign");
       }
     } catch {
-      toast.error("Failed to delete campaign");
+      toast.error("Failed to archive campaign");
     }
   };
 
@@ -85,8 +118,8 @@ export function CampaignsList({ campaigns }: { campaigns: (Campaign | CampaignWi
       <div className="space-y-8">
         <EmptyState
           icon={<Monitor className="h-8 w-8" />}
-          title="Organize your links with campaigns"
-          description="Campaigns help you group related links, apply default UTM parameters, and compare performance across marketing initiatives."
+          title="Run your first campaign"
+          description="Start with an influencer campaign—add creators, generate unique tracking links, log fees—or use the same workspace for email, paid, and launch campaigns."
           action={
             <Link href="/dashboard/campaigns/new">
               <Button>
@@ -270,11 +303,22 @@ export function CampaignsList({ campaigns }: { campaigns: (Campaign | CampaignWi
 
                 <div className="flex-1 min-w-0">
                   <div className="mb-3">
-                    <h3 className="text-lg font-semibold text-neutral-text mb-1">
+                    <Link
+                      href={`/dashboard/campaigns/${campaign.id}`}
+                      className="text-lg font-semibold text-neutral-text mb-1 hover:text-primary transition-colors inline-block"
+                    >
                       {campaign.name}
-                    </h3>
+                    </Link>
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                      <CampaignStatusChip campaign={campaign} />
+                      {campaign.campaign_type && (
+                        <span className="text-[11px] font-medium text-neutral-muted px-2 py-0.5 rounded-full bg-neutral-bg border border-neutral-border/80 capitalize">
+                          {campaign.campaign_type.replace(/_/g, " ")}
+                        </span>
+                      )}
+                    </div>
                     {campaign.description && (
-                      <p className="text-sm text-neutral-muted line-clamp-2">
+                      <p className="text-sm text-neutral-muted line-clamp-2 mt-2">
                         {campaign.description}
                       </p>
                     )}
@@ -304,9 +348,15 @@ export function CampaignsList({ campaigns }: { campaigns: (Campaign | CampaignWi
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <Link
-                    href={`/dashboard/campaigns/${campaign.id}/analytics`}
+                    href={`/dashboard/campaigns/${campaign.id}`}
+                    className="px-3.5 py-2 rounded-full bg-primary text-white text-xs font-semibold shadow-button hover:bg-bright-indigo transition-colors"
+                  >
+                    Open workspace
+                  </Link>
+                  <Link
+                    href={`/dashboard/campaigns/${campaign.id}?tab=analytics`}
                     className="p-2 rounded-xl text-neutral-muted hover:text-neutral-text hover:bg-neutral-surface transition-colors"
                     title="Analytics"
                   >
@@ -315,19 +365,16 @@ export function CampaignsList({ campaigns }: { campaigns: (Campaign | CampaignWi
                   <Link
                     href={`/dashboard/campaigns/${campaign.id}/edit`}
                     className="p-2 rounded-xl text-neutral-muted hover:text-neutral-text hover:bg-neutral-surface transition-colors"
-                    title="Edit"
+                    title="Edit settings"
                   >
                     <Edit className="h-4 w-4" />
                   </Link>
                   <button
                     onClick={() => handleDelete(campaign.id)}
                     className="p-2 rounded-xl text-neutral-muted hover:text-red-600 hover:bg-red-50 transition-colors"
-                    title="Delete"
+                    title="Archive"
                   >
                     <Trash2 className="h-4 w-4" />
-                  </button>
-                  <button className="p-2 rounded-xl text-neutral-muted hover:text-neutral-text hover:bg-neutral-surface transition-colors">
-                    <MoreVertical className="h-4 w-4" />
                   </button>
                 </div>
               </div>

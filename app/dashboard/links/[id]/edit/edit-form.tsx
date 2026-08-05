@@ -15,6 +15,7 @@ import {
   FormModeTabs,
   PreviewPanel,
 } from "@/components/ui/form-with-preview";
+import { isCampaignsEnabled } from "@/lib/features";
 
 export default function LinkEditForm({
   link,
@@ -43,6 +44,7 @@ export default function LinkEditForm({
   // Fetch campaigns
   useEffect(() => {
     const fetchCampaigns = async () => {
+      if (!isCampaignsEnabled()) return;
       try {
         const response = await fetch("/api/campaigns");
         if (response.ok) {
@@ -645,7 +647,7 @@ export default function LinkEditForm({
                 </div>
 
                 {/* Campaign Selection */}
-                {campaigns.length > 0 && (
+                {isCampaignsEnabled() && campaigns.length > 0 && (
                   <div>
                     <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
                       <Monitor className="h-3.5 w-3.5 inline mr-1.5" />

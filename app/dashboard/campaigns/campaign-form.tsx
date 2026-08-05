@@ -10,7 +10,6 @@ import {
   Target,
   DollarSign,
   Tag,
-  Info,
   Link2,
   X,
   Sparkles,
@@ -23,6 +22,8 @@ import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import Link from "next/link";
 import type { Campaign } from "@/types/database.types";
+import { LabelWithTip, InfoTooltip } from "@/components/ui/info-tooltip";
+import { CAMPAIGN_CURRENCIES, normalizeCurrency } from "@/lib/utils/currency";
 
 interface CampaignFormProps {
   userId: string;
@@ -30,6 +31,7 @@ interface CampaignFormProps {
 }
 
 const CAMPAIGN_TYPES = [
+  { value: "influencer", label: "Influencer / Creator" },
   { value: "product_launch", label: "Product Launch" },
   { value: "seasonal_promotion", label: "Seasonal Promotion" },
   { value: "email_marketing", label: "Email Marketing" },
@@ -47,13 +49,14 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [campaignType, setCampaignType] = useState("");
+  const [campaignType, setCampaignType] = useState(campaign ? "" : "influencer");
   const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
   const [targetClicks, setTargetClicks] = useState("");
   const [budget, setBudget] = useState("");
+  const [currency, setCurrency] = useState("USD");
   const [tags, setTags] = useState("");
   const [utmSource, setUtmSource] = useState("");
   const [utmMedium, setUtmMedium] = useState("");
@@ -61,6 +64,7 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
   const [utmTerm, setUtmTerm] = useState("");
   const [utmContent, setUtmContent] = useState("");
   const [utmCampaignTouched, setUtmCampaignTouched] = useState(false);
+  const [defaultDestinationUrl, setDefaultDestinationUrl] = useState("");
   const [loading, setLoading] = useState(false);
   
   // Links state
@@ -95,11 +99,15 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
         setBudget("");
       }
 
+      setCurrency(normalizeCurrency(campaign.currency));
+
       if (campaign.tags && Array.isArray(campaign.tags) && campaign.tags.length > 0) {
         setTags(campaign.tags.join(", "));
       } else {
         setTags("");
       }
+
+      setDefaultDestinationUrl(campaign.default_destination_url || "");
 
       if (campaign.start_date) {
         try {
@@ -258,6 +266,8 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
           end_date: finalEndDate,
           target_clicks: targetClicks.trim() ? parseInt(targetClicks, 10) : 0,
           budget: budget.trim() ? parseFloat(budget) : 0,
+          currency: normalizeCurrency(currency),
+          default_destination_url: defaultDestinationUrl.trim() || null,
           utm_defaults: {
             utm_source: utmSource.trim() || undefined,
             utm_medium: utmMedium.trim() || undefined,
@@ -276,47 +286,45 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
       const campaignData = await response.json();
       const campaignId = campaignData.id || campaign?.id;
 
-      // Update link assignments
+      // Bulk assign / unassign links
       if (campaignId) {
         const currentCampaignLinksResponse = await fetch(`/api/campaigns/${campaignId}/links`);
         const currentCampaignLinksData = currentCampaignLinksResponse.ok
           ? await currentCampaignLinksResponse.json()
           : [];
-        const currentLinkIds = new Set(currentCampaignLinksData.map((l: any) => l.id) || []);
+        const currentLinkIds = new Set(
+          (Array.isArray(currentCampaignLinksData) ? currentCampaignLinksData : []).map(
+            (l: any) => l.id
+          )
+        );
 
-        // Unassign links that are no longer selected
-        for (const linkId of links.map(l => l.id)) {
-          if (currentLinkIds.has(linkId) && !selectedLinkIds.has(linkId)) {
-            try {
-              await fetch(`/api/links/${linkId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ campaign_id: null }),
-              });
-            } catch (error) {
-              console.error(`Failed to unassign link ${linkId}:`, error);
-            }
-          }
+        const toUnassign = [...currentLinkIds].filter((id) => !selectedLinkIds.has(id as string));
+        const toAssign = [...selectedLinkIds].filter((id) => !currentLinkIds.has(id));
+
+        if (toUnassign.length > 0) {
+          await fetch(`/api/campaigns/${campaignId}/links`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ link_ids: toUnassign, action: "unassign" }),
+          });
         }
-
-        // Assign newly selected links
-        for (const linkId of Array.from(selectedLinkIds)) {
-          if (!currentLinkIds.has(linkId)) {
-            try {
-              await fetch(`/api/links/${linkId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ campaign_id: campaignId }),
-              });
-            } catch (error) {
-              console.error(`Failed to assign link ${linkId}:`, error);
-            }
-          }
+        if (toAssign.length > 0) {
+          await fetch(`/api/campaigns/${campaignId}/links`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ link_ids: toAssign, action: "assign" }),
+          });
         }
       }
 
-      toast.success(isEditing ? "Campaign updated" : "Campaign created");
-      router.push("/dashboard/campaigns");
+      if (isEditing && campaignData.utm_links_updated > 0) {
+        toast.success(
+          `Campaign updated · UTM defaults applied to ${campaignData.utm_links_updated} link(s)`
+        );
+      } else {
+        toast.success(isEditing ? "Campaign updated" : "Campaign created");
+      }
+      router.push(campaignId ? `/dashboard/campaigns/${campaignId}` : "/dashboard/campaigns");
       router.refresh();
     } catch (error: any) {
       toast.error(error.message || "Failed to save campaign");
@@ -521,10 +529,15 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-text mb-2">
-                      <Target className="h-4 w-4 inline mr-1.5" />
-                      Target Clicks
-                    </label>
+                    <LabelWithTip
+                      tip="Goal for how many clicks this campaign should drive. Progress shows on overview and compare."
+                      className="mb-2"
+                    >
+                      <span className="inline-flex items-center gap-1.5">
+                        <Target className="h-4 w-4" />
+                        Target clicks
+                      </span>
+                    </LabelWithTip>
                     <input
                       type="number"
                       value={targetClicks}
@@ -535,23 +548,64 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-text mb-2">
-                      <DollarSign className="h-4 w-4 inline mr-1.5" />
-                      Budget (for CPC)
-                    </label>
-                    <input
-                      type="number"
-                      value={budget}
-                      onChange={(e) => setBudget(e.target.value)}
-                      placeholder="e.g., 5000"
-                      min="0"
-                      step="0.01"
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
-                    />
-                    <p className="mt-1.5 text-xs text-neutral-muted">
-                      Used to compute cost-per-click (budget ÷ clicks) on analytics.
-                    </p>
+                    <LabelWithTip
+                      tip="Currency for planned budget, creator fees, and spend. Used when displaying money across this campaign."
+                      className="mb-2"
+                    >
+                      Currency
+                    </LabelWithTip>
+                    <select
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text bg-white transition-all"
+                    >
+                      {CAMPAIGN_CURRENCIES.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
+                  <div className="col-span-2">
+                    <LabelWithTip
+                      tip="Planning estimate or spending ceiling — not actual cost. Cost per click (CPC) uses logged spend when you add it under Spend."
+                      className="mb-2"
+                    >
+                      <span className="inline-flex items-center gap-1.5">
+                        <DollarSign className="h-4 w-4" />
+                        Planned budget
+                      </span>
+                    </LabelWithTip>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-neutral-muted">
+                        {currency}
+                      </span>
+                      <input
+                        type="number"
+                        value={budget}
+                        onChange={(e) => setBudget(e.target.value)}
+                        placeholder="e.g., 5000"
+                        min="0"
+                        step="0.01"
+                        className="w-full pl-14 pr-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <LabelWithTip
+                    tip="The long URL each short link opens — e.g. your product or landing page. Used as the default when generating creator tracking links."
+                    className="mb-2"
+                  >
+                    Default destination URL
+                  </LabelWithTip>
+                  <input
+                    type="url"
+                    value={defaultDestinationUrl}
+                    onChange={(e) => setDefaultDestinationUrl(e.target.value)}
+                    placeholder="https://example.com/landing"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                  />
                 </div>
               </div>
 
@@ -561,16 +615,22 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center">
                     <Tag className="h-5 w-5 text-electric-sapphire" />
                   </div>
-                  <h3 className="text-lg font-bold text-neutral-text">Default UTM Parameters</h3>
+                  <h3 className="text-lg font-bold text-neutral-text inline-flex items-center gap-2">
+                    Default UTM Parameters
+                    <InfoTooltip text="UTM tags are query params added to URLs so analytics tools can tell where traffic came from (which channel, campaign, or creator)." />
+                  </h3>
                 </div>
                 <p className="text-sm text-neutral-muted mb-5">
                   Applied to links assigned to this campaign. Link-specific UTM values always win.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-text mb-2">
+                    <LabelWithTip
+                      tip="Where the traffic originates — e.g. newsletter, instagram, google. For influencers this is often set per creator (their platform)."
+                      className="mb-2"
+                    >
                       utm_source
-                    </label>
+                    </LabelWithTip>
                     <input
                       type="text"
                       value={utmSource}
@@ -580,9 +640,12 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-text mb-2">
+                    <LabelWithTip
+                      tip="The marketing channel type — e.g. email, social, cpc, influencer."
+                      className="mb-2"
+                    >
                       utm_medium
-                    </label>
+                    </LabelWithTip>
                     <input
                       type="text"
                       value={utmMedium}
@@ -592,9 +655,12 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-text mb-2">
+                    <LabelWithTip
+                      tip="Name of this marketing effort. Defaults to a slug of the campaign name if left blank."
+                      className="mb-2"
+                    >
                       utm_campaign
-                    </label>
+                    </LabelWithTip>
                     <input
                       type="text"
                       value={utmCampaign}
@@ -607,9 +673,12 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-text mb-2">
+                    <LabelWithTip
+                      tip="Optional. Often used for paid search keywords."
+                      className="mb-2"
+                    >
                       utm_term
-                    </label>
+                    </LabelWithTip>
                     <input
                       type="text"
                       value={utmTerm}
@@ -619,9 +688,12 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-semibold text-neutral-text mb-2">
+                    <LabelWithTip
+                      tip="Optional. Differentiates creatives or placements — for influencers we often put their handle here."
+                      className="mb-2"
+                    >
                       utm_content
-                    </label>
+                    </LabelWithTip>
                     <input
                       type="text"
                       value={utmContent}
@@ -849,7 +921,7 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
                   {isEditing ? "Updating..." : "Creating..."}
                 </>
               ) : (
-                isEditing ? "Update Campaign" : "Create Campaign"
+                isEditing ? "Update Campaign" : "Create & open workspace"
               )}
             </button>
           </div>

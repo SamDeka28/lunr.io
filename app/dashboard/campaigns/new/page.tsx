@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { BookOpen } from "lucide-react";
 import { DashboardContainer } from "@/components/ui/dashboard-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { createClient } from "@/lib/supabase/server";
@@ -17,10 +19,20 @@ export default async function NewCampaignPage() {
     <DashboardContainer>
       <PageHeader
         title="Create Campaign"
-        description="Organize your links into marketing campaigns"
+        description="Set basics here, then open the workspace (Creators, Links, Analytics, Spend) after you create."
+        actions={
+          <Link
+            href="/docs/campaigns/influencer-setup"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-neutral-border bg-white text-sm font-semibold text-neutral-text hover:border-primary/40 hover:text-primary"
+          >
+            <BookOpen className="h-4 w-4" />
+            Setup guide
+          </Link>
+        }
       />
       <CampaignForm userId={user.id} />
     </DashboardContainer>
   );
 }
-

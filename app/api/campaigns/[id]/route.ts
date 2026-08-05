@@ -2,11 +2,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { CampaignService } from "@/lib/services/campaign.service";
+import { campaignsDisabledResponse } from "@/lib/features";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const disabled = campaignsDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     const supabase = await createClient();
     const {
@@ -44,6 +48,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const disabled = campaignsDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     const supabase = await createClient();
     const {
@@ -72,7 +79,7 @@ export async function PUT(
     } = body;
 
     const campaignService = new CampaignService(supabase);
-    const campaign = await campaignService.updateCampaign(id, user.id, {
+    const { campaign, utmLinksUpdated } = await campaignService.updateCampaign(id, user.id, {
       name,
       description,
       start_date,
@@ -81,10 +88,12 @@ export async function PUT(
       tags,
       target_clicks,
       budget,
+      currency: body.currency,
       utm_defaults,
+      default_destination_url: body.default_destination_url,
     });
 
-    return NextResponse.json(campaign);
+    return NextResponse.json({ ...campaign, utm_links_updated: utmLinksUpdated });
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Failed to update campaign" },
@@ -97,6 +106,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const disabled = campaignsDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     const supabase = await createClient();
     const {

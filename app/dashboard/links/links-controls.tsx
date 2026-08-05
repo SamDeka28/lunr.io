@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Calendar, Filter, Grid, LayoutGrid, List, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
+import { isCampaignsEnabled } from "@/lib/features";
 
 type ViewType = "list" | "grid" | "card";
 type StatusFilter = "active" | "all" | "archived";
@@ -17,6 +18,7 @@ interface LinksControlsProps {
   initialDateFilter?: string | null;
   initialTag?: string;
   initialFolder?: string;
+  initialCampaignId?: string;
   selectedCount: number;
   onViewChange?: (view: ViewType) => void;
 }
@@ -28,6 +30,7 @@ export function LinksControls({
   initialDateFilter,
   initialTag = "",
   initialFolder = "",
+  initialCampaignId = "",
   selectedCount,
   onViewChange,
 }: LinksControlsProps) {
@@ -39,11 +42,35 @@ export function LinksControls({
   const [dateFilter, setDateFilter] = useState<DateFilter>((initialDateFilter || searchParams.get("dateFilter")) as DateFilter || null);
   const [tagFilter, setTagFilter] = useState(initialTag || searchParams.get("tag") || "");
   const [folderFilter, setFolderFilter] = useState(initialFolder || searchParams.get("folder") || "");
+  const [campaignIdFilter, setCampaignIdFilter] = useState(
+    initialCampaignId || searchParams.get("campaign_id") || ""
+  );
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
   const [showDateMenu, setShowDateMenu] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [isFiltering, setIsFiltering] = useState(false);
   const dateMenuRef = useRef<HTMLDivElement>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isCampaignsEnabled()) return;
+    void (async () => {
+      try {
+        const res = await fetch("/api/campaigns");
+        if (res.ok) {
+          const data = await res.json();
+          setCampaigns(
+            (Array.isArray(data) ? data : []).map((c: any) => ({
+              id: c.id,
+              name: c.name,
+            }))
+          );
+        }
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
 
   // Update URL when search changes (debounced)
   useEffect(() => {
@@ -288,6 +315,23 @@ export function LinksControls({
                     className="w-full px-3 py-2 rounded-xl border border-neutral-border/80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/25"
                   />
                 </div>
+                {isCampaignsEnabled() && (
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-muted mb-1">Campaign</label>
+                    <select
+                      value={campaignIdFilter}
+                      onChange={(e) => setCampaignIdFilter(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-border/80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 bg-white"
+                    >
+                      <option value="">All campaigns</option>
+                      {campaigns.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
               <div className="border-t border-neutral-border my-1" />
               <div className="px-4 py-2 flex gap-2">
@@ -296,9 +340,11 @@ export function LinksControls({
                   onClick={() => {
                     setTagFilter("");
                     setFolderFilter("");
+                    setCampaignIdFilter("");
                     const params = new URLSearchParams(searchParams.toString());
                     params.delete("tag");
                     params.delete("folder");
+                    params.delete("campaign_id");
                     router.push(`/dashboard/links?${params.toString()}`);
                     setShowFilterMenu(false);
                   }}
@@ -314,6 +360,8 @@ export function LinksControls({
                     else params.delete("tag");
                     if (folderFilter.trim()) params.set("folder", folderFilter.trim());
                     else params.delete("folder");
+                    if (campaignIdFilter.trim()) params.set("campaign_id", campaignIdFilter.trim());
+                    else params.delete("campaign_id");
                     router.push(`/dashboard/links?${params.toString()}`);
                     setShowFilterMenu(false);
                   }}
@@ -329,7 +377,7 @@ export function LinksControls({
       </div>
 
       {/* Active Filters Display */}
-      {(dateFilter || tagFilter || folderFilter || isFiltering) && (
+      {(dateFilter || tagFilter || folderFilter || campaignIdFilter || isFiltering) && (
         <div className="mb-3 flex items-center gap-2 flex-wrap">
           {dateFilter && (
             <div className="px-3 py-1.5 rounded-lg bg-electric-sapphire/10 border border-electric-sapphire/20 flex items-center gap-2">
@@ -372,6 +420,25 @@ export function LinksControls({
                   setFolderFilter("");
                   const params = new URLSearchParams(searchParams.toString());
                   params.delete("folder");
+                  router.push(`/dashboard/links?${params.toString()}`);
+                }}
+                className="hover:bg-electric-sapphire/20 rounded p-0.5"
+              >
+                <X className="h-3 w-3 text-electric-sapphire" />
+              </button>
+            </div>
+          )}
+          {campaignIdFilter && (
+            <div className="px-3 py-1.5 rounded-lg bg-electric-sapphire/10 border border-electric-sapphire/20 flex items-center gap-2">
+              <span className="text-xs font-semibold text-electric-sapphire">
+                Campaign:{" "}
+                {campaigns.find((c) => c.id === campaignIdFilter)?.name || "Selected"}
+              </span>
+              <button
+                onClick={() => {
+                  setCampaignIdFilter("");
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.delete("campaign_id");
                   router.push(`/dashboard/links?${params.toString()}`);
                 }}
                 className="hover:bg-electric-sapphire/20 rounded p-0.5"

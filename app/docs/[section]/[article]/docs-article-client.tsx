@@ -23,6 +23,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { MobileBottomNav, MobileBottomNavItem } from "@/components/mobile-bottom-nav";
 import { docsContent } from "../../docs-content";
+import { isCampaignsEnabled } from "@/lib/features";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Zap,
@@ -48,6 +49,9 @@ export function DocsArticleClient({
   article,
   isAuthenticated,
 }: DocsArticleClientProps) {
+  const visibleDocs = docsContent.filter(
+    (s) => s.id !== "campaigns" || isCampaignsEnabled()
+  );
   const Icon = iconMap[section.icon] || BookOpen;
   const currentIndex = section.articles.findIndex((a) => a.id === article.id);
   const prevArticle =
@@ -369,7 +373,7 @@ export function DocsArticleClient({
                   </h4>
                 </div>
                 <nav className="p-2 space-y-0.5">
-                  {docsContent.map((s) => {
+                  {visibleDocs.map((s) => {
                     const SectionIcon = iconMap[s.icon] || BookOpen;
                     return (
                       <Link
@@ -461,7 +465,7 @@ export function DocsArticleClient({
       </div>
 
       <MobileBottomNav>
-        {docsContent.map((s) => {
+        {visibleDocs.map((s) => {
           const SectionIcon = iconMap[s.icon] || BookOpen;
           return (
             <MobileBottomNavItem

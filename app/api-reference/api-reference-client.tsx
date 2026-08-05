@@ -8,6 +8,7 @@ import Link from "next/link";
 import { CodeEditor } from "@/components/code-editor";
 import { BrandLogo } from "@/components/brand-logo";
 import { MobileBottomNav, MobileBottomNavItem } from "@/components/mobile-bottom-nav";
+import { isCampaignsEnabled } from "@/lib/features";
 
 type Language = "curl" | "javascript" | "python" | "php";
 
@@ -601,7 +602,7 @@ const apiCategories: EndpointCategory[] = [
             name: "campaign_type",
             type: "string",
             required: false,
-            description: "Type of campaign (e.g., 'product_launch', 'seasonal_promo', 'email_marketing')",
+            description: "Type of campaign (e.g. 'influencer', 'product_launch', 'email_marketing', 'paid_advertising')",
           },
           {
             name: "tags",
@@ -741,6 +742,90 @@ const apiCategories: EndpointCategory[] = [
         ],
         examples: generateExamples("DELETE", "/api/v1/campaigns/{id}"),
       },
+      {
+        method: "POST",
+        path: "/api/v1/conversions",
+        title: "Record a conversion",
+        description:
+          "Attribute a conversion to a link (preferred), short code, or campaign. Resolves the campaign creator when the link is tied to one. Emits webhook event conversion.recorded.",
+        parameters: [
+          {
+            name: "event_name",
+            type: "string",
+            required: true,
+            description: "Conversion event name (e.g. purchase, signup, lead)",
+          },
+          {
+            name: "link_id",
+            type: "string (UUID)",
+            required: false,
+            description: "Link that drove the conversion (preferred attribution)",
+          },
+          {
+            name: "short_code",
+            type: "string",
+            required: false,
+            description: "Short code alternative to link_id",
+          },
+          {
+            name: "campaign_id",
+            type: "string (UUID)",
+            required: false,
+            description: "Campaign fallback when link is unknown",
+          },
+          {
+            name: "value",
+            type: "number",
+            required: false,
+            description: "Optional monetary value",
+          },
+          {
+            name: "currency",
+            type: "string",
+            required: false,
+            description: "ISO currency code (default USD)",
+          },
+          {
+            name: "idempotency_key",
+            type: "string",
+            required: false,
+            description: "Deduplicate retries with the same key",
+          },
+        ],
+        requestBody: {
+          event_name: "purchase",
+          short_code: "abc123",
+          value: 49.99,
+          currency: "USD",
+          idempotency_key: "order_12345",
+        },
+        responses: [
+          {
+            status: 201,
+            description: "Conversion recorded",
+            body: JSON.stringify(
+              {
+                id: "990e8400-e29b-41d4-a716-446655440000",
+                event_name: "purchase",
+                link_id: "550e8400-e29b-41d4-a716-446655440000",
+                campaign_id: "770e8400-e29b-41d4-a716-446655440000",
+                campaign_creator_id: "aa0e8400-e29b-41d4-a716-446655440000",
+                value: 49.99,
+                currency: "USD",
+                occurred_at: "2024-06-15T12:00:00Z",
+              },
+              null,
+              2
+            ),
+          },
+        ],
+        examples: generateExamples("POST", "/api/v1/conversions", {
+          event_name: "purchase",
+          short_code: "abc123",
+          value: 49.99,
+          currency: "USD",
+        }),
+      },
     ],
   },
   {
@@ -799,7 +884,7 @@ const apiCategories: EndpointCategory[] = [
             name: "events",
             type: "array of strings",
             required: true,
-            description: "Array of event types to subscribe to: 'link.created', 'link.updated', 'link.deleted', 'link.clicked'",
+            description: "Array of event types to subscribe to: 'link.created', 'link.updated', 'link.deleted', 'link.clicked', 'conversion.recorded', 'campaign.created', …",
           },
         ],
         requestBody: {
@@ -987,6 +1072,10 @@ export function ApiReferenceClient() {
   const [expandedEndpoints, setExpandedEndpoints] = useState<Set<string>>(new Set());
   const [webhookTab, setWebhookTab] = useState<"getting-started" | "endpoints">("getting-started");
 
+  const visibleCategories = apiCategories.filter(
+    (category) => category.id !== "campaigns" || isCampaignsEnabled()
+  );
+
   const handleCopy = (text: string, index: string) => {
     navigator.clipboard.writeText(text);
     setCopiedIndex(index);
@@ -1014,7 +1103,7 @@ export function ApiReferenceClient() {
     });
   };
 
-  const currentCategory = apiCategories.find((cat) => cat.id === selectedCategory) || apiCategories[0];
+  const currentCategory = visibleCategories.find((cat) => cat.id === selectedCategory) || visibleCategories[0];
 
   const selectApiSection = (categoryId: string, tab?: "getting-started" | "endpoints") => {
     setSelectedCategory(categoryId);
@@ -1031,7 +1120,7 @@ export function ApiReferenceClient() {
     active: boolean;
     onClick: () => void;
   }> = [
-    ...apiCategories
+    ...visibleCategories
       .filter((category) => category.id !== "webhooks")
       .map((category) => ({
         id: category.id,
@@ -1137,7 +1226,7 @@ export function ApiReferenceClient() {
                 <div className="text-xs font-semibold text-neutral-muted uppercase tracking-wider px-3 mb-2">
                   API Sections
                 </div>
-                {apiCategories
+                {visibleCategories
                   .filter((category) => category.id !== "webhooks")
                   .map((category) => {
                     const Icon = category.icon;

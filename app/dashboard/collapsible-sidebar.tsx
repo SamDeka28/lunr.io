@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { BrandLogo } from "@/components/brand-logo";
+import { isCampaignsEnabled } from "@/lib/features";
 
 interface CollapsibleSidebarProps {
   isOpen: boolean;
@@ -19,13 +20,14 @@ const NAV_ITEMS: Array<{
   title: string;
   icon: React.ElementType;
   badge?: string;
+  feature?: "campaigns";
 }> = [
   { href: "/dashboard", title: "Home", icon: Home },
   { href: "/dashboard/links", title: "Links", icon: Link2 },
   { href: "/dashboard/qr", title: "QR Codes", icon: QrCode },
   { href: "/dashboard/pages", title: "Pages", icon: FileText },
   { href: "/dashboard/analytics", title: "Analytics", icon: BarChart3 },
-  { href: "/dashboard/campaigns", title: "Campaigns", icon: Monitor },
+  { href: "/dashboard/campaigns", title: "Campaigns", icon: Monitor, feature: "campaigns" },
   { href: "/dashboard/domains", title: "Custom domains", icon: Globe, badge: "NEW" },
   { href: "/dashboard/billing", title: "Billing", icon: CreditCard },
   { href: "/dashboard/settings", title: "Settings", icon: Settings },
@@ -34,6 +36,9 @@ const NAV_ITEMS: Array<{
 export function CollapsibleSidebar({ isOpen, onToggle, pathname, planName, planDisplayName }: CollapsibleSidebarProps) {
   const currentPathname = usePathname();
   const activePath = currentPathname || pathname;
+  const navItems = NAV_ITEMS.filter(
+    (item) => item.feature !== "campaigns" || isCampaignsEnabled()
+  );
 
   const closeOnMobileNavigate = () => {
     if (typeof window !== "undefined" && window.innerWidth < 1024 && isOpen) {
@@ -113,7 +118,7 @@ export function CollapsibleSidebar({ isOpen, onToggle, pathname, planName, planD
 
         <nav className="flex-1 overflow-y-auto px-3 pb-4">
           <div className="space-y-1">
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <NavItem
                 key={item.href}
                 href={item.href}

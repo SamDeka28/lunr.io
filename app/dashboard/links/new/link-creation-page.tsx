@@ -17,11 +17,14 @@ import {
   FormModeTabs,
   PreviewPanel,
 } from "@/components/ui/form-with-preview";
+import { isCampaignsEnabled } from "@/lib/features";
 
 export function LinkCreationPage({
   userId,
+  initialCampaignId = "",
 }: {
   userId: string;
+  initialCampaignId?: string;
 }) {
   // Get plan data from Zustand store
   const {
@@ -71,11 +74,12 @@ export function LinkCreationPage({
   const [utmContent, setUtmContent] = useState("");
 
   // Campaign selection
-  const [selectedCampaignId, setSelectedCampaignId] = useState("");
+  const [selectedCampaignId, setSelectedCampaignId] = useState(initialCampaignId);
   const [campaigns, setCampaigns] = useState<any[]>([]);
 
-  // Fetch campaigns on mount
+  // Fetch campaigns on mount (when feature enabled)
   useEffect(() => {
+    if (!isCampaignsEnabled()) return;
     const fetchCampaigns = async () => {
       try {
         const response = await fetch("/api/campaigns");
@@ -89,6 +93,12 @@ export function LinkCreationPage({
     };
     fetchCampaigns();
   }, []);
+
+  useEffect(() => {
+    if (isCampaignsEnabled() && initialCampaignId) {
+      setSelectedCampaignId(initialCampaignId);
+    }
+  }, [initialCampaignId]);
 
   // Collapsible sections
   const [codeDetailsOpen, setCodeDetailsOpen] = useState(true);
@@ -735,7 +745,7 @@ export function LinkCreationPage({
                         </div>
 
                         {/* Campaign Selection */}
-                        {campaigns.length > 0 && (
+                        {isCampaignsEnabled() && campaigns.length > 0 && (
                           <div>
                             <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
                               <Monitor className="h-3.5 w-3.5 inline mr-1.5" />

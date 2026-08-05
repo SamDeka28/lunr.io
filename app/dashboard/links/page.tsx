@@ -12,7 +12,16 @@ import { EmptyState } from "@/components/ui/empty-state";
 export default async function LinksPage({
   searchParams,
 }: {
-  searchParams: { search?: string; filter?: string; view?: string; status?: string; dateFilter?: string; tag?: string; folder?: string };
+  searchParams: {
+    search?: string;
+    filter?: string;
+    view?: string;
+    status?: string;
+    dateFilter?: string;
+    tag?: string;
+    folder?: string;
+    campaign_id?: string;
+  };
 }) {
   const supabase = await createClient();
   const user = await getCachedUser();
@@ -25,6 +34,7 @@ export default async function LinksPage({
   const dateFilter = searchParams.dateFilter;
   const tagFilter = searchParams.tag?.trim();
   const folderFilter = searchParams.folder?.trim();
+  const campaignIdFilter = searchParams.campaign_id?.trim();
 
   let query = supabase
     .from("links")
@@ -87,6 +97,10 @@ export default async function LinksPage({
     query = query.ilike("folder", folderFilter);
   }
 
+  if (campaignIdFilter) {
+    query = query.eq("campaign_id", campaignIdFilter);
+  }
+
   const { data: links } = await query;
 
   const { PlanService } = await import("@/lib/services/plan.service");
@@ -117,6 +131,7 @@ export default async function LinksPage({
       !searchParams.search &&
       !tagFilter &&
       !folderFilter &&
+      !campaignIdFilter &&
       statusFilter === "active" &&
       !dateFilter ? (
         <EmptyState
@@ -145,6 +160,7 @@ export default async function LinksPage({
           initialDateFilter={searchParams.dateFilter}
           initialTag={tagFilter}
           initialFolder={folderFilter}
+          initialCampaignId={campaignIdFilter}
         />
       )}
     </DashboardContainer>

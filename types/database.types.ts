@@ -19,7 +19,9 @@ export interface Campaign {
   tags: string[] | null;
   target_clicks: number;
   budget: number;
+  currency?: string;
   utm_defaults: CampaignUtmDefaults | null;
+  default_destination_url?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -33,6 +35,9 @@ export interface CampaignWithStats extends Campaign {
   cpc?: number | null;
   /** Progress toward target_clicks as 0–100 */
   target_progress?: number | null;
+  total_creators?: number;
+  total_spend?: number;
+  total_conversions?: number;
 }
 
 export interface CreateCampaignInput {
@@ -44,8 +49,94 @@ export interface CreateCampaignInput {
   tags?: string[] | null;
   target_clicks?: number;
   budget?: number;
+  currency?: string | null;
   utm_defaults?: CampaignUtmDefaults | null;
+  default_destination_url?: string | null;
   user_id: string;
+}
+
+export type CreatorPlatform =
+  | "instagram"
+  | "tiktok"
+  | "youtube"
+  | "twitter"
+  | "linkedin"
+  | "other";
+
+export type CreatorStatus =
+  | "invited"
+  | "accepted"
+  | "content_submitted"
+  | "posted"
+  | "paid"
+  | "dropped";
+
+export interface CampaignCreator {
+  id: string;
+  campaign_id: string;
+  user_id: string;
+  display_name: string;
+  handle: string | null;
+  platform: CreatorPlatform;
+  profile_url: string | null;
+  status: CreatorStatus;
+  fee_amount: number | null;
+  fee_currency: string;
+  deliverable_notes: string | null;
+  due_at: string | null;
+  posted_at: string | null;
+  link_id: string | null;
+  utm_source: string | null;
+  utm_content: string | null;
+  created_at: string;
+  updated_at: string;
+  link?: Link | null;
+}
+
+export interface CreateCampaignCreatorInput {
+  campaign_id: string;
+  user_id: string;
+  display_name: string;
+  handle?: string | null;
+  platform?: CreatorPlatform;
+  profile_url?: string | null;
+  status?: CreatorStatus;
+  fee_amount?: number | null;
+  fee_currency?: string;
+  deliverable_notes?: string | null;
+  due_at?: string | null;
+  utm_source?: string | null;
+  utm_content?: string | null;
+  destination_url?: string | null;
+  generate_link?: boolean;
+}
+
+export interface CampaignSpendEntry {
+  id: string;
+  campaign_id: string;
+  user_id: string;
+  campaign_creator_id: string | null;
+  amount: number;
+  currency: string;
+  spent_on: string;
+  note: string | null;
+  created_at: string;
+}
+
+export interface ConversionEvent {
+  id: string;
+  user_id: string;
+  campaign_id: string | null;
+  link_id: string | null;
+  campaign_creator_id: string | null;
+  short_code: string | null;
+  event_name: string;
+  value: number | null;
+  currency: string | null;
+  metadata: Record<string, unknown> | null;
+  occurred_at: string;
+  idempotency_key: string | null;
+  created_at: string;
 }
 
 export interface LinkTargeting {

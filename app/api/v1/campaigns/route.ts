@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { withApiAuth, type AuthenticatedApiRequest } from "@/lib/middleware/api-auth";
 import { CampaignService } from "@/lib/services/campaign.service";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { campaignsDisabledResponse } from "@/lib/features";
 
 // GET /api/v1/campaigns - List all campaigns for the authenticated API user
 async function handleGet(request: AuthenticatedApiRequest) {
+  const disabled = campaignsDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     const supabase = createServiceClient();
     const userId = request.apiKey!.user_id;
@@ -36,6 +40,9 @@ async function handleGet(request: AuthenticatedApiRequest) {
 
 // POST /api/v1/campaigns - Create a new campaign
 async function handlePost(request: AuthenticatedApiRequest) {
+  const disabled = campaignsDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     const supabase = createServiceClient();
     const userId = request.apiKey!.user_id;

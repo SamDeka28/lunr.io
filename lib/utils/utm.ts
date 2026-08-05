@@ -49,17 +49,65 @@ export function mergeCampaignUtmDefaults(
 }
 
 /**
+ * Fill only empty keys on a link from campaign defaults.
+ * Never overwrites a link's explicit non-empty UTM values.
+ */
+export function fillEmptyUtmFromDefaults(
+  campaignDefaults: Record<string, string> | null | undefined,
+  linkUtm: Record<string, string> | null | undefined
+): Record<string, string> | null {
+  const current = { ...(linkUtm || {}) };
+  const defaults = campaignDefaults || {};
+  for (const [key, value] of Object.entries(defaults)) {
+    if (!value || !String(value).trim()) continue;
+    const existing = current[key];
+    if (existing == null || String(existing).trim() === "") {
+      current[key] = String(value).trim();
+    }
+  }
+  return cleanUtmParameters(current);
+}
+
+/**
+ * Build influencer-oriented UTM params for a creator tracking link.
+ * Creator/link explicit values win over campaign defaults.
+ */
+export function buildCreatorLinkUtm(options: {
+  campaignDefaults?: Record<string, string> | null;
+  platform?: string | null;
+  handle?: string | null;
+  utmSourceOverride?: string | null;
+  utmContentOverride?: string | null;
+}): Record<string, string> | null {
+  const platform = options.platform?.trim().toLowerCase() || undefined;
+  const handle = options.handle?.trim().replace(/^@/, "") || undefined;
+  return mergeCampaignUtmDefaults(options.campaignDefaults, {
+    utm_medium: "influencer",
+    ...(options.utmSourceOverride?.trim() || platform
+      ? { utm_source: options.utmSourceOverride?.trim() || platform }
+      : {}),
+    ...(options.utmContentOverride?.trim() || handle
+      ? { utm_content: options.utmContentOverride?.trim() || handle }
+      : {}),
+  });
+}
+
+/**
  * Build campaign utm_defaults from form/API input.
  * Defaults utm_campaign to the campaign name slug when not provided.
+ * For influencer campaigns, default utm_medium to influencer when unset.
  */
 export function buildCampaignUtmDefaults(
   name: string,
-  input?: Partial<UtmParameters> | null
+  input?: Partial<UtmParameters> | null,
+  campaignType?: string | null
 ): Record<string, string> | null {
   const slug = slugifyCampaignName(name);
+  const isInfluencer = campaignType === "influencer";
   return cleanUtmParameters({
     utm_source: input?.utm_source,
-    utm_medium: input?.utm_medium,
+    utm_medium:
+      input?.utm_medium || (isInfluencer ? "influencer" : undefined),
     utm_campaign: input?.utm_campaign || slug || undefined,
     utm_term: input?.utm_term,
     utm_content: input?.utm_content,

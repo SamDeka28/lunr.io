@@ -45,3 +45,6 @@ export { Dialog } from "./dialog";
 export type { DialogProps } from "./dialog";
 
 export { Toaster } from "./toaster";
+
+export { InfoTooltip, LabelWithTip } from "./info-tooltip";
+export type { InfoTooltipProps, LabelWithTipProps } from "./info-tooltip";

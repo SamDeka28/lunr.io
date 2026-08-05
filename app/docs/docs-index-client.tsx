@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { docsContent } from "./docs-content";
+import { isCampaignsEnabled } from "@/lib/features";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Zap,
@@ -41,7 +42,9 @@ interface DocsIndexClientProps {
 export function DocsIndexClient({ isAuthenticated }: DocsIndexClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const sections = docsContent;
+  const sections = docsContent.filter(
+    (section) => section.id !== "campaigns" || isCampaignsEnabled()
+  );
 
   const filteredSections = sections.map((section) => ({
     ...section,

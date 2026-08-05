@@ -433,71 +433,116 @@ The main analytics page shows:
       {
         id: "creating-campaigns",
         title: "Creating Campaigns",
-        content: `Organize your links into campaigns for better management.
+        content: `Organize your links into campaigns for better management. Influencer / creator campaigns are the primary workflow; the same engine works for email, paid, and launches without creators.
 
 ## Campaign Creation
 
 1. **Navigate to Campaigns**: Click "Campaigns" in the sidebar
-2. **Click "Create Campaign"**: Start a new campaign
+2. **Click "Create Campaign"**: Start a new campaign (defaults to Influencer / Creator)
 3. **Add Campaign Details**:
-   - Campaign name
-   - Description
+   - Campaign name and description
    - Start and end dates
-   - Campaign type (product launch, seasonal promo, etc.)
-   - Tags for organization
-4. **Add Links**: Assign links to the campaign
-5. **Set Targets**: Optional click targets
+   - Campaign type (influencer, email, paid, launch, etc.)
+   - Planned budget (estimate / ceiling) and click targets
+   - Default destination URL (used when generating creator links)
+   - Default UTM parameters
+4. **Open the workspace**: Overview, Creators, Links, Analytics, Spend, Settings
+5. **Add creators** (influencer) or assign links (generic)
 6. **Save**: Your campaign is ready
 
 ## Campaign Types
 
-- **Product Launch**: For new product releases
-- **Seasonal Promo**: Holiday and seasonal campaigns
-- **Email Marketing**: Email campaign tracking
-- **Social Media**: Social media campaigns
-- **Custom**: Create your own campaign types
+- **Influencer / Creator**: Unique tracking links per creator, fees, status pipeline
+- **Product Launch**, **Seasonal Promo**, **Email Marketing**, **Social Media**, **Paid Advertising**, **Event**, **Other**
 
 ## Campaign Features
 
-- **Link Organization**: Group related links together
-- **Performance Tracking**: Track campaign-level metrics
-- **Campaign Analytics**: View aggregate analytics for all links in a campaign
-- **Campaign Management**: Create, edit, and delete campaigns
+- **Creators**: Platform, handle, fee, deliverable status, one-click tracking link generation
+- **Bulk assign**: Assign/unassign many links; CSV import for creators
+- **UTM defaults**: Propagate empty keys to member links without overwriting overrides
+- **Spend**: Log fees and ad spend; CPC/CPA use real spend when present
+- **Conversions**: Record via API (\`POST /api/v1/conversions\`) with \`conversion.recorded\` webhooks
+- **Archive safely**: Archiving unassigns links so redirects keep working`,
+      },
+      {
+        id: "influencer-setup",
+        title: "Influencer campaign setup",
+        content: `Run an influencer / creator campaign from create → report in a few steps.
 
-*Note: Target setting, budget tracking, and tags are coming soon.*`,
+## 1. Create the campaign
+
+1. Go to **Campaigns** → **Create Campaign**
+2. Choose type **Influencer / Creator** (default)
+3. Set:
+   - **Default destination URL** — the landing page short links open
+   - **Currency** — for budget, fees, and spend
+   - **Planned budget** — planning estimate only
+   - Optional UTM defaults (\`utm_medium\` defaults to \`influencer\`)
+4. Create — you’ll land in the campaign workspace
+
+## 2. Add creators
+
+Open the **Creators** tab.
+
+**One at a time:** name, handle, platform, fee, destination URL → **Create + generate link**.  
+Each creator gets a unique short link with UTM \`source=<platform>\`, \`content=<handle>\`.
+
+**Bulk CSV:** download the template, fill rows, paste or import.
+
+CSV columns:
+\`\`\`
+display_name,handle,platform,fee_amount,destination_url
+\`\`\`
+
+- \`platform\`: instagram, tiktok, youtube, twitter, linkedin, or other
+- \`destination_url\`: optional if the campaign default destination is set
+- Leave fee blank if you don’t know it yet
+
+## 3. Share & track status
+
+Copy each creator’s short link (or QR from the link). Move status: invited → accepted → content submitted → posted → paid. Marking **paid** can log their fee under Spend.
+
+## 4. Links (optional)
+
+Use the **Links** tab for non-creator links (email, ads, landing variants). Assign existing links or create new ones in campaign context.
+
+## 5. Spend & conversions
+
+- **Spend:** log fees and other costs; CPC/CPA use real spend when present
+- **Conversions:** record via \`POST /api/v1/conversions\` (API key) so creator leaderboards include conversions
+
+## 6. Analytics
+
+Use the **Analytics** tab for creator leaderboard, platform mix, UTM breakdowns, and CSV export. Compare two campaigns from the campaigns list.
+
+## Generic campaigns
+
+Skip Creators. Use Links + Analytics + Spend for email, paid, or launch campaigns.`,
       },
       {
         id: "campaign-analytics",
         title: "Campaign Analytics",
-        content: `Track the performance of your entire campaigns.
+        content: `Track the performance of your entire campaigns from the Analytics tab.
 
 ## Campaign Dashboard
 
 View comprehensive campaign statistics:
-- Total campaign clicks
-- Unique clicks
-- Average clicks per link
-- Click-through rates
-- Campaign performance over time
+- Total clicks and unique visitors (date range)
+- Creator leaderboard (clicks, conversions, spend, CPA)
+- Platform mix and UTM source/medium/content breakdowns
+- Per-link leaderboard
+- CSV export of creators and links
 
 ## Campaign Comparison
 
-Compare multiple campaigns:
-- Side-by-side performance metrics
-- Identify top-performing campaigns
-- Learn from successful strategies
+Compare two campaigns from the list:
+- Links, creators, clicks, conversions
+- Spend and CPC (from logged spend when available)
+- Target progress
 
-## Campaign Analytics
+## Conversions
 
-View comprehensive campaign statistics:
-- Total campaign clicks
-- Unique clicks
-- Average clicks per link
-- Click-through rates
-- Campaign performance over time
-- Referrer data (geographic data coming soon)
-
-*Note: Report generation and sharing are coming soon.*`,
+Attribute purchases or goals to a link or short code via the public API. Conversions roll into creator leaderboards when the link belongs to a creator.`,
       },
     ],
   },

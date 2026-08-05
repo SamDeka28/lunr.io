@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DocsSectionClient } from "./docs-section-client";
 import { docsContent } from "../docs-content";
+import { isCampaignsEnabled } from "@/lib/features";
 
 export default async function DocsSectionPage({
   params,
@@ -13,6 +14,10 @@ export default async function DocsSectionPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (section === "campaigns" && !isCampaignsEnabled()) {
+    redirect("/docs");
+  }
 
   const sectionData = docsContent.find((s) => s.id === section);
   

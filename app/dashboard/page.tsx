@@ -73,7 +73,7 @@ export default async function DashboardPage() {
     <DashboardContainer>
       <PageHeader
         title="Home"
-        description="Create links, track clicks, and manage your campaigns."
+        description="Create links, track clicks, and grow your brand."
       />
 
       <div className="mb-8">

@@ -4,7 +4,11 @@ import { getCachedUser } from "@/lib/supabase/auth";
 import { LinkCreationPage } from "./link-creation-page";
 import { PlanService } from "@/lib/services/plan.service";
 
-export default async function NewLinkPage() {
+export default async function NewLinkPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ campaign_id?: string }> | { campaign_id?: string };
+}) {
   const supabase = await createClient();
   const user = await getCachedUser();
 
@@ -12,7 +16,6 @@ export default async function NewLinkPage() {
     redirect("/login");
   }
 
-  // Check user limits using PlanService (server-side validation)
   const planService = new PlanService(supabase);
   const limits = await planService.getUsageLimits(user.id);
 
@@ -20,6 +23,12 @@ export default async function NewLinkPage() {
     redirect("/dashboard/links");
   }
 
-  // Plan features are now handled via Zustand store in the client component
-  return <LinkCreationPage userId={user.id} />;
+  const params = await Promise.resolve(searchParams);
+
+  return (
+    <LinkCreationPage
+      userId={user.id}
+      initialCampaignId={params.campaign_id || ""}
+    />
+  );
 }

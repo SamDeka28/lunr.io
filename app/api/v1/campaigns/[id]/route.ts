@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { withApiAuth, type AuthenticatedApiRequest } from "@/lib/middleware/api-auth";
 import { CampaignService } from "@/lib/services/campaign.service";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { campaignsDisabledResponse } from "@/lib/features";
 
 // GET /api/v1/campaigns/[id] - Get a specific campaign
 async function handleGet(
   request: AuthenticatedApiRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const disabled = campaignsDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     const { id } = await params;
     const supabase = createServiceClient();
@@ -34,6 +38,9 @@ async function handlePatch(
   request: AuthenticatedApiRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const disabled = campaignsDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     const { id } = await params;
     const supabase = createServiceClient();
@@ -62,6 +69,7 @@ async function handlePatch(
     if (body.tags !== undefined) updates.tags = body.tags;
     if (body.target_clicks !== undefined) updates.target_clicks = body.target_clicks;
     if (body.budget !== undefined) updates.budget = body.budget;
+    if (body.currency !== undefined) updates.currency = body.currency;
     if (body.utm_defaults !== undefined) updates.utm_defaults = body.utm_defaults;
     if (body.is_active !== undefined) updates.is_active = body.is_active;
 
@@ -88,38 +96,30 @@ async function handlePatch(
   }
 }
 
-// DELETE /api/v1/campaigns/[id] - Delete a campaign
+// DELETE /api/v1/campaigns/[id] - Archive a campaign (unassigns links)
 async function handleDelete(
   request: AuthenticatedApiRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const disabled = campaignsDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     const { id } = await params;
     const supabase = createServiceClient();
     const userId = request.apiKey!.user_id;
 
-    // Verify ownership
-    const { data: existingCampaign } = await supabase
-      .from("campaigns")
-      .select("id")
-      .eq("id", id)
-      .eq("user_id", userId)
-      .single();
-
-    if (!existingCampaign) {
+    const campaignService = new CampaignService(supabase);
+    const existing = await campaignService.getCampaign(id, userId);
+    if (!existing) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
     }
 
-    const { error } = await supabase.from("campaigns").delete().eq("id", id);
+    await campaignService.deleteCampaign(id, userId);
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message || "Failed to delete campaign" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ message: "Campaign deleted successfully" });
+    return NextResponse.json({
+      message: "Campaign archived successfully. Links were unassigned and remain active.",
+    });
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Failed to delete campaign" },

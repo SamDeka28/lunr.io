@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCachedUser } from "@/lib/supabase/auth";
 import { CampaignsList } from "./campaigns-list";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { BookOpen, Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { DashboardContainer } from "@/components/ui/dashboard-container";
 import { Button } from "@/components/ui/button";
@@ -60,12 +60,23 @@ export default async function CampaignsPage() {
         title="Campaigns"
         description="Organize, track, and compare your marketing campaigns"
         actions={
-          <Link href="/dashboard/campaigns/new">
-            <Button>
-              <Plus className="h-4 w-4" />
-              Create campaign
-            </Button>
-          </Link>
+          <>
+            <Link
+              href="/docs/campaigns/influencer-setup"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-neutral-border bg-white text-sm font-semibold text-neutral-text hover:border-primary/40 hover:text-primary"
+            >
+              <BookOpen className="h-4 w-4" />
+              Setup guide
+            </Link>
+            <Link href="/dashboard/campaigns/new">
+              <Button>
+                <Plus className="h-4 w-4" />
+                Create campaign
+              </Button>
+            </Link>
+          </>
         }
       />
 

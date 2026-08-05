@@ -18,6 +18,7 @@ const VALID_EVENTS = [
   "campaign.updated",
   "campaign.deleted",
   "analytics.spike",
+  "conversion.recorded",
 ];
 
 const MAX_ATTEMPTS = 3;
