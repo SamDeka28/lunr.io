@@ -91,6 +91,8 @@ CREATE TABLE IF NOT EXISTS links (
   is_active BOOLEAN DEFAULT true NOT NULL,
   click_count INTEGER DEFAULT 0 NOT NULL,
   password_hash TEXT,
+  lead_capture_enabled BOOLEAN DEFAULT false NOT NULL,
+  lead_capture_config JSONB DEFAULT '{}'::jsonb NOT NULL,
   title TEXT,
   description TEXT,
   og_image_url TEXT,
@@ -103,6 +105,8 @@ CREATE TABLE IF NOT EXISTS qr_codes (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   link_id UUID REFERENCES links(id) ON DELETE SET NULL,
+  title VARCHAR(255),
+  description TEXT,
   qr_data TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   is_active BOOLEAN DEFAULT true NOT NULL
@@ -179,6 +183,16 @@ CREATE TABLE IF NOT EXISTS page_email_captures (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
+-- Email captures from link lead-capture gate
+CREATE TABLE IF NOT EXISTS link_email_captures (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  link_id UUID NOT NULL REFERENCES links(id) ON DELETE CASCADE,
+  email VARCHAR(255) NOT NULL,
+  name TEXT,
+  responses JSONB DEFAULT '{}'::jsonb NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+);
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_campaigns_user_id ON campaigns(user_id);
 CREATE INDEX IF NOT EXISTS idx_campaigns_created_at ON campaigns(created_at);
@@ -206,6 +220,9 @@ CREATE INDEX IF NOT EXISTS idx_page_analytics_created_at ON page_analytics(creat
 CREATE INDEX IF NOT EXISTS idx_page_analytics_event_type ON page_analytics(event_type);
 CREATE INDEX IF NOT EXISTS idx_page_email_captures_page_id ON page_email_captures(page_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_page_email_captures_unique ON page_email_captures(page_id, lower(email));
+CREATE INDEX IF NOT EXISTS idx_link_email_captures_link_id ON link_email_captures(link_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_link_email_captures_unique ON link_email_captures(link_id, lower(email));
+CREATE INDEX IF NOT EXISTS idx_link_email_captures_created_at ON link_email_captures(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_profiles_plan_id ON profiles(plan_id);
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(email);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
@@ -528,6 +545,7 @@ ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE qr_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE link_email_captures ENABLE ROW LEVEL SECURITY;
 ALTER TABLE analytics ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for plans (public read)
@@ -608,6 +626,27 @@ CREATE POLICY "Allow users to delete their own links"
   ON links FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own link email captures"
+  ON link_email_captures FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM links
+      WHERE links.id = link_email_captures.link_id
+        AND links.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Anyone can insert captures for active lead-gated links"
+  ON link_email_captures FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM links
+      WHERE links.id = link_email_captures.link_id
+        AND links.is_active = true
+        AND links.lead_capture_enabled = true
+    )
+  );
 
 -- RLS Policies for qr_codes
 CREATE POLICY "Allow users to read their own QR codes"

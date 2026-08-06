@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Calendar, Filter, Grid, LayoutGrid, List, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
+import { resetPageParam } from "@/lib/utils/pagination";
 
 type ViewType = "list" | "grid" | "card";
 type StatusFilter = "active" | "all" | "archived";
@@ -42,17 +43,21 @@ export function PagesControls({
   // Update URL when search changes (debounced)
   useEffect(() => {
     const timer = setTimeout(() => {
+      const current = searchParams.get("search") || "";
+      if (search === current) return;
       const params = new URLSearchParams(searchParams.toString());
       if (search) {
         params.set("search", search);
       } else {
         params.delete("search");
       }
+      resetPageParam(params);
       router.push(`/dashboard/pages?${params.toString()}`);
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [search, router, searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   const handleViewChange = (view: ViewType) => {
     setViewType(view);
@@ -68,6 +73,7 @@ export function PagesControls({
     setStatusFilter(status);
     const params = new URLSearchParams(searchParams.toString());
     params.set("status", status);
+    resetPageParam(params);
     router.push(`/dashboard/pages?${params.toString()}`);
   };
 
@@ -81,8 +87,8 @@ export function PagesControls({
     } else {
       params.delete("dateFilter");
     }
+    resetPageParam(params);
     router.push(`/dashboard/pages?${params.toString()}`);
-    // Reset loading state after navigation
     setTimeout(() => setIsFiltering(false), 500);
   };
 

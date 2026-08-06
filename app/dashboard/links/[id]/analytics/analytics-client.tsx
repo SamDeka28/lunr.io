@@ -23,6 +23,7 @@ import {
   Target,
   Download,
   Monitor,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
@@ -42,6 +43,20 @@ import {
 } from "chart.js";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 
+function formatReferrerHost(referrer?: string | null): string {
+  if (!referrer || referrer === "Direct" || referrer.toLowerCase() === "direct") {
+    return "Direct";
+  }
+  try {
+    const withProtocol = /^https?:\/\//i.test(referrer)
+      ? referrer
+      : `https://${referrer}`;
+    return new URL(withProtocol).hostname.replace(/^www\./, "") || referrer;
+  } catch {
+    return referrer;
+  }
+}
+
 // Register Chart.js components
 ChartJS.register(
   CategoryScale,
@@ -56,10 +71,27 @@ ChartJS.register(
   Filler
 );
 
-export function LinkAnalyticsClient({ link, stats }: { link: any; stats: any }) {
+export function LinkAnalyticsClient({
+  link,
+  stats,
+  leads = [],
+  leadConfig = null,
+}: {
+  link: any;
+  stats: any;
+  leads?: Array<{
+    id: string;
+    email: string;
+    name: string | null;
+    responses?: Record<string, string | boolean> | null;
+    created_at: string;
+  }>;
+  leadConfig?: import("@/lib/utils/lead-capture-config").LeadCaptureConfig | null;
+}) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingLeads, setExportingLeads] = useState(false);
   const [liveClicks, setLiveClicks] = useState(link.click_count || 0);
 
   const shortUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/${link.short_code}`;
@@ -138,6 +170,31 @@ export function LinkAnalyticsClient({ link, stats }: { link: any; stats: any }) 
       toast.error(err.message || "Failed to export CSV");
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleExportLeads = async () => {
+    try {
+      setExportingLeads(true);
+      const res = await fetch(`/api/links/${link.id}/leads?format=csv`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Export failed");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `leads-${link.short_code}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Leads exported");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to export leads");
+    } finally {
+      setExportingLeads(false);
     }
   };
 
@@ -257,11 +314,7 @@ export function LinkAnalyticsClient({ link, stats }: { link: any; stats: any }) 
     labels:
       stats?.top_referrers
         ?.slice(0, 6)
-        .map((ref: any) =>
-          ref.referrer === "Direct" || !ref.referrer
-            ? "Direct"
-            : new URL(ref.referrer).hostname.replace("www.", "")
-        ) || [],
+        .map((ref: any) => formatReferrerHost(ref.referrer)) || [],
     datasets: [
       {
         label: "Clicks",
@@ -496,6 +549,99 @@ export function LinkAnalyticsClient({ link, stats }: { link: any; stats: any }) 
           )}
         </div>
 
+        {link.lead_capture_enabled && (
+          <div className="bg-white rounded-xl border border-neutral-border p-6 shadow-soft mb-6">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center shrink-0">
+                  <Mail className="h-5 w-5 text-electric-sapphire" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-lg font-semibold text-neutral-text">
+                    Captured leads
+                  </h2>
+                  <p className="text-sm text-neutral-muted">
+                    {leads.length} email{leads.length === 1 ? "" : "s"} collected
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleExportLeads}
+                disabled={exportingLeads || leads.length === 0}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-border bg-white text-sm font-semibold text-neutral-text hover:border-electric-sapphire hover:text-electric-sapphire transition-all active:scale-[0.98] disabled:opacity-60 shrink-0"
+              >
+                <Download className="h-4 w-4" />
+                {exportingLeads ? "Exporting…" : "Export leads"}
+              </button>
+            </div>
+
+            {leads.length === 0 ? (
+              <p className="text-sm text-neutral-muted py-6 text-center">
+                No emails collected yet. Share your link to start capturing leads.
+              </p>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-neutral-border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-neutral-bg/80 text-left text-xs font-semibold uppercase tracking-wide text-neutral-muted">
+                      <th className="px-4 py-3">Email</th>
+                      {(leadConfig?.fields || [])
+                        .filter((f) => f.type !== "email")
+                        .map((f) => (
+                          <th key={f.id} className="px-4 py-3">
+                            {f.label}
+                          </th>
+                        ))}
+                      <th className="px-4 py-3">Captured</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leads.map((lead) => {
+                      const responses = lead.responses || {};
+                      return (
+                        <tr
+                          key={lead.id}
+                          className="border-t border-neutral-border/70"
+                        >
+                          <td className="px-4 py-3 font-medium text-neutral-text">
+                            {lead.email}
+                          </td>
+                          {(leadConfig?.fields || [])
+                            .filter((f) => f.type !== "email")
+                            .map((f) => {
+                              const v = responses[f.id];
+                              let display: string;
+                              if (typeof v === "boolean") {
+                                display = v ? "Yes" : "No";
+                              } else if (v == null || v === "") {
+                                display = "—";
+                              } else {
+                                display = String(v);
+                              }
+                              return (
+                                <td
+                                  key={f.id}
+                                  className="px-4 py-3 text-neutral-muted max-w-[12rem] truncate"
+                                  title={display}
+                                >
+                                  {display}
+                                </td>
+                              );
+                            })}
+                          <td className="px-4 py-3 text-neutral-muted whitespace-nowrap">
+                            {new Date(lead.created_at).toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Key Metrics - Professional Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {/* Total Clicks */}
@@ -559,9 +705,7 @@ export function LinkAnalyticsClient({ link, stats }: { link: any; stats: any }) 
             </div>
             <p className="text-sm font-semibold text-neutral-muted mb-1">Top Source</p>
             <p className="text-lg font-bold text-neutral-text truncate">
-              {stats?.top_referrers?.[0]?.referrer
-                ? new URL(stats.top_referrers[0].referrer).hostname.replace("www.", "")
-                : "Direct"}
+              {formatReferrerHost(stats?.top_referrers?.[0]?.referrer)}
             </p>
             {stats?.top_referrers?.[0] && (
               <p className="text-xs text-neutral-muted mt-2">

@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { Link2, Loader2, Upload, ChevronDown, ChevronRight, Crown, Calendar, Clock, X, Image as ImageIcon, Download, QrCode, Monitor, Lock } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import QRCode from "qrcode";
 import { usePlan } from "@/hooks/use-plan";
 import { ColorPickerWithInput } from "@/components/color-picker-with-input";
+import { ProtectedQrPreview } from "@/components/qr-preview-protected";
 import { Button } from "@/components/ui/button";
 import {
   FormWithPreviewShell,
@@ -16,13 +18,24 @@ import {
   PreviewPanel,
 } from "@/components/ui/form-with-preview";
 import { isCampaignsEnabled } from "@/lib/features";
+import { FolderPicker } from "@/components/ui/folder-picker";
+import { LeadGateStudio } from "@/components/lead-capture/lead-gate-studio";
+import {
+  defaultLeadCaptureConfig,
+  normalizeLeadCaptureConfig,
+  type LeadCaptureConfig,
+} from "@/lib/utils/lead-capture-config";
 
 export default function LinkEditForm({
   link,
   existingQRCode,
+  availableFolders = [],
+  availableTags = [],
 }: {
   link: any;
   existingQRCode?: any;
+  availableFolders?: string[];
+  availableTags?: string[];
 }) {
   // Get plan data from Zustand store
   const {
@@ -57,7 +70,7 @@ export default function LinkEditForm({
     };
     fetchCampaigns();
   }, []);
-  const [mode, setMode] = useState<"configure" | "design">("configure");
+  const [mode, setMode] = useState<"configure" | "design" | "leads">("configure");
   const [url, setUrl] = useState(link.original_url);
   const [title, setTitle] = useState(link.title || "");
   const [shortCode, setShortCode] = useState(link.short_code || "");
@@ -69,6 +82,16 @@ export default function LinkEditForm({
     link.expires_at ? new Date(link.expires_at).toISOString().split("T")[0] : ""
   );
   const [password, setPassword] = useState("");
+  const [passwordEnabled, setPasswordEnabled] = useState(!!link.password_hash);
+  const [leadCaptureEnabled, setLeadCaptureEnabled] = useState(
+    !!link.lead_capture_enabled
+  );
+  const [leadCaptureConfig, setLeadCaptureConfig] = useState<LeadCaptureConfig>(
+    () =>
+      link.lead_capture_config
+        ? normalizeLeadCaptureConfig(link.lead_capture_config)
+        : defaultLeadCaptureConfig()
+  );
   const [qrFormat, setQrFormat] = useState<"png" | "svg">("png");
   const [generateQR, setGenerateQR] = useState(!!existingQRCode);
   const [linkActive, setLinkActive] = useState(link.is_active !== false);
@@ -116,6 +139,58 @@ export default function LinkEditForm({
   // File input refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Track last-saved values so we know when the form / QR are dirty
+  const [savedQr, setSavedQr] = useState(existingQRCode ?? null);
+  const [baseline, setBaseline] = useState({
+    url: link.original_url || "",
+    shortCode: link.short_code || "",
+    title: link.title || "",
+    qrColor: "#000000",
+    qrBgColor: "#FFFFFF",
+    qrSize: "medium",
+    qrFormat: "png" as "png" | "svg",
+  });
+
+  const hasQrStyleChanges =
+    addLogo ||
+    !!logoImageUrl ||
+    qrColor !== baseline.qrColor ||
+    qrBgColor !== baseline.qrBgColor ||
+    qrSize !== baseline.qrSize ||
+    qrFormat !== baseline.qrFormat;
+
+  const shortCodeChanged = shortCode !== baseline.shortCode;
+
+  const isFormDirty =
+    url !== baseline.url ||
+    shortCodeChanged ||
+    title !== baseline.title ||
+    hasQrStyleChanges;
+
+  // Saved QR is downloadable only while nothing on the form has been touched
+  const canDownloadSavedQr =
+    !!savedQr?.qr_data && !isFormDirty && generateQR;
+
+  const handleDownloadQR = () => {
+    const src = canDownloadSavedQr ? savedQr.qr_data : null;
+    if (!src) {
+      toast.error("Save your changes to download a clean QR");
+      return;
+    }
+    try {
+      const downloadLink = document.createElement("a");
+      downloadLink.href = src;
+      downloadLink.download = `qr-code-${shortCode || link.short_code}-${Date.now()}.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      toast.success("QR code downloaded");
+    } catch (err) {
+      console.error("Failed to download QR code:", err);
+      toast.error("Failed to download QR code");
+    }
+  };
 
   const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -201,25 +276,6 @@ export default function LinkEditForm({
     }
     const data = await res.json();
     return data.publicUrl as string;
-  };
-
-  // Handle QR code download
-  const handleDownloadQR = () => {
-    if (!previewQR) return;
-
-    try {
-      // Create a temporary anchor element
-      const downloadLink = document.createElement("a");
-      downloadLink.href = previewQR;
-      downloadLink.download = `qr-code-${link.short_code}-${Date.now()}.png`;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-      toast.success("QR code downloaded");
-    } catch (err) {
-      console.error("Failed to download QR code:", err);
-      toast.error("Failed to download QR code");
-    }
   };
 
   // Function to generate QR code with optional logo
@@ -345,7 +401,8 @@ export default function LinkEditForm({
 
   // Pre-populate QR code if it exists
   useEffect(() => {
-    if (existingQRCode && existingQRCode.qr_data) {
+    if (existingQRCode?.qr_data) {
+      setSavedQr(existingQRCode);
       setPreviewQR(existingQRCode.qr_data);
     }
   }, [existingQRCode]);
@@ -353,26 +410,28 @@ export default function LinkEditForm({
   // Update preview when settings change (only if generateQR is enabled)
   useEffect(() => {
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-    const shortUrl = `${baseUrl}/${shortCode || link.short_code}?utm_medium=qr&utm_source=qr`;
-    setPreviewUrl(`${baseUrl}/${shortCode || link.short_code}`);
-    
+    const code = shortCode || link.short_code;
+    const shortUrl = `${baseUrl}/${code}?utm_medium=qr&utm_source=qr`;
+    setPreviewUrl(`${baseUrl}/${code}`);
+
     if (!generateQR) {
       setPreviewQR("");
       return;
     }
-    
-    // If we have an existing QR code, use it initially
-    if (existingQRCode && existingQRCode.qr_data && !logoImageUrl && !addLogo && qrColor === "#000000" && qrBgColor === "#FFFFFF") {
-      setPreviewQR(existingQRCode.qr_data);
+
+    // Untouched saved QR — show the clean stored image
+    if (
+      savedQr?.qr_data &&
+      !hasQrStyleChanges &&
+      !shortCodeChanged
+    ) {
+      setPreviewQR(savedQr.qr_data);
       return;
     }
-    
-    // Generate QR code with current settings
+
+    // Short code or style changed — regenerate so the preview matches
     const generateQRCode = async () => {
       try {
-        // Clear any previous QR code first to avoid caching issues
-        setPreviewQR("");
-        
         const qrData = await generateQRWithLogo(
           shortUrl,
           {
@@ -380,7 +439,7 @@ export default function LinkEditForm({
             color: { dark: qrColor, light: qrBgColor },
           },
           logoImageUrl || null,
-          addLogo, // Only add logo if toggle is ON
+          addLogo,
           qrFormat
         );
         setPreviewQR(qrData);
@@ -388,10 +447,22 @@ export default function LinkEditForm({
         console.error("Failed to generate QR preview:", err);
       }
     };
-    
+
     generateQRCode();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shortCode, link.short_code, qrColor, qrBgColor, addLogo, logoImageUrl, generateQR, existingQRCode]);
+  }, [
+    shortCode,
+    link.short_code,
+    qrColor,
+    qrBgColor,
+    addLogo,
+    logoImageUrl,
+    generateQR,
+    savedQr,
+    hasQrStyleChanges,
+    shortCodeChanged,
+    qrFormat,
+  ]);
 
   const handleUrlChange = (newUrl: string) => {
     setUrl(newUrl);
@@ -423,7 +494,15 @@ export default function LinkEditForm({
           original_url: url,
           short_code: shortCode !== link.short_code ? shortCode : undefined,
           expires_at: expiresAt || null,
-          password: password || undefined,
+          password: !passwordEnabled
+            ? ""
+            : password
+              ? password
+              : undefined,
+          lead_capture_enabled: leadCaptureEnabled,
+          lead_capture_config: leadCaptureEnabled
+            ? normalizeLeadCaptureConfig(leadCaptureConfig)
+            : {},
           title: title || undefined,
           is_active: linkActive,
           ...(isPremium
@@ -452,25 +531,71 @@ export default function LinkEditForm({
         throw new Error(errorData.error || "Failed to update link");
       }
 
-      // Generate and save QR code only if toggle is enabled
-      if (generateQR) {
-        // Create new QR code (API appends utm_medium=qr)
-        try {
-          const qrResponse = await fetch("/api/qr", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              link_id: link.id,
-              format: qrFormat,
-            }),
-          });
+      const updatedLink = await response.json();
+      let nextSavedQr = savedQr;
 
-          if (!qrResponse.ok) {
-            const qrError = await qrResponse.json();
-            console.error("Failed to save QR code:", qrError);
-            toast.error("Link updated, but QR code could not be saved");
+      // Generate and save QR when creating, restyling, or short code changes
+      if (generateQR) {
+        try {
+          const mustPersistQr =
+            !savedQr?.id || hasQrStyleChanges || shortCodeChanged;
+
+          if (mustPersistQr) {
+            const baseUrl =
+              typeof window !== "undefined" ? window.location.origin : "";
+            const shortUrl = `${baseUrl}/${shortCode || link.short_code}?utm_medium=qr&utm_source=qr`;
+            const sizeMap: Record<string, number> = {
+              small: 200,
+              medium: 300,
+              large: 500,
+            };
+            const finalWidth = sizeMap[qrSize] || 300;
+            const persistFormat = addLogo && logoImageUrl ? "png" : qrFormat;
+
+            const precomposed = await generateQRWithLogo(
+              shortUrl,
+              {
+                width: finalWidth,
+                color: { dark: qrColor, light: qrBgColor },
+              },
+              logoImageUrl || null,
+              addLogo,
+              persistFormat
+            );
+
+            let qrResponse: Response;
+            if (savedQr?.id) {
+              qrResponse = await fetch(`/api/qr/${savedQr.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ qr_data: precomposed }),
+              });
+            } else {
+              qrResponse = await fetch("/api/qr", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  link_id: link.id,
+                  fg_color: qrColor,
+                  bg_color: qrBgColor,
+                  size: qrSize,
+                  format: persistFormat,
+                  logo_data_url: addLogo ? logoImageUrl : undefined,
+                  qr_data: precomposed,
+                }),
+              });
+            }
+
+            if (!qrResponse.ok) {
+              const qrError = await qrResponse.json();
+              console.error("Failed to save QR code:", qrError);
+              toast.error("Link updated, but QR code could not be saved");
+            } else {
+              const saved = await qrResponse.json();
+              nextSavedQr = saved;
+              setSavedQr(saved);
+              setPreviewQR(saved.qr_data || precomposed);
+            }
           }
         } catch (qrSaveErr) {
           console.error("Failed to save QR code:", qrSaveErr);
@@ -478,8 +603,27 @@ export default function LinkEditForm({
         }
       }
 
+      // Commit baselines so the form is clean again and QR is downloadable
+      setBaseline({
+        url: updatedLink.original_url ?? url,
+        shortCode: updatedLink.short_code ?? shortCode,
+        title: updatedLink.title ?? title,
+        qrColor,
+        qrBgColor,
+        qrSize,
+        qrFormat: addLogo && logoImageUrl ? "png" : qrFormat,
+      });
+      if (updatedLink.short_code) setShortCode(updatedLink.short_code);
+      if (updatedLink.original_url) setUrl(updatedLink.original_url);
+      // Logo is baked into saved QR — clear pending upload state
+      setAddLogo(false);
+      setLogoImage(null);
+      setLogoImageUrl(null);
+      if (logoFileInputRef.current) logoFileInputRef.current.value = "";
+      if (nextSavedQr?.qr_data) setPreviewQR(nextSavedQr.qr_data);
+
       toast.success("Link updated successfully!");
-      router.push("/dashboard/links");
+      router.refresh();
     } catch (err: any) {
       setError(err.message || "Failed to update link");
       toast.error(err.message || "Failed to update link");
@@ -491,6 +635,81 @@ export default function LinkEditForm({
   const shortUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/${shortCode || link.short_code}`;
 
   return (
+    <>
+    <AnimatePresence mode="wait" initial={false}>
+    {mode === "leads" ? (
+      <motion.div
+        key="leads-studio"
+        initial={{ opacity: 0, y: 18, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -12, scale: 0.99 }}
+        transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+        className="h-[calc(100dvh-3.75rem)] -m-4 sm:-m-6 lg:-m-8"
+      >
+      <form onSubmit={handleSubmit} className="block h-full">
+        <LeadGateStudio
+          enabled={leadCaptureEnabled}
+          onEnabledChange={setLeadCaptureEnabled}
+          config={leadCaptureConfig}
+          onConfigChange={setLeadCaptureConfig}
+          isPremium={isPremium || !!link.lead_capture_enabled}
+          linkTitle={title}
+          modeSwitcher={
+            <FormModeTabs
+              value={mode}
+              onChange={setMode}
+              options={[
+                { id: "configure" as const, label: "Configure" },
+                { id: "design" as const, label: "Design" },
+                { id: "leads" as const, label: "Leads" },
+              ]}
+            />
+          }
+          footer={
+            <div className="space-y-3 pb-1">
+              {error && (
+                <p className="text-xs font-medium text-red-600">{error}</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => router.back()}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  disabled={loading || !url}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Updating…
+                    </>
+                  ) : (
+                    <>
+                      Update link
+                      <ChevronRight className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          }
+        />
+      </form>
+      </motion.div>
+    ) : (
+    <motion.div
+      key="link-form"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+    >
     <FormWithPreviewShell
       form={
         <>
@@ -510,6 +729,7 @@ export default function LinkEditForm({
               options={[
                 { id: "configure" as const, label: "Configure" },
                 { id: "design" as const, label: "Design" },
+                { id: "leads" as const, label: "Leads" },
               ]}
             />
           </div>
@@ -615,6 +835,7 @@ export default function LinkEditForm({
                     </label>
                     <input
                       type="text"
+                      list="edit-link-tag-suggestions"
                       value={tags}
                       onChange={(e) => setTags(e.target.value)}
                       placeholder="marketing, launch"
@@ -625,23 +846,24 @@ export default function LinkEditForm({
                         "transition-all"
                       )}
                     />
+                    <datalist id="edit-link-tag-suggestions">
+                      {availableTags.map((t) => (
+                        <option key={t} value={t} />
+                      ))}
+                    </datalist>
                     <p className="text-xs text-neutral-muted mt-1.5">Comma-separated</p>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
                       Folder (optional)
                     </label>
-                    <input
-                      type="text"
+                    <FolderPicker
                       value={folder}
-                      onChange={(e) => setFolder(e.target.value)}
-                      placeholder="e.g. social"
-                      className={cn(
-                        "w-full h-12 px-4 rounded-xl bg-white border-2 border-neutral-border",
-                        "text-neutral-text text-sm font-medium",
-                        "focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire",
-                        "transition-all"
-                      )}
+                      options={availableFolders}
+                      onChange={setFolder}
+                      allowCreate
+                      emptyLabel="No folder"
+                      placeholder="Pick or create a folder"
                     />
                   </div>
                 </div>
@@ -797,31 +1019,52 @@ export default function LinkEditForm({
                 </div>
 
                 {/* Password Protection */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-electric-sapphire/5 to-bright-indigo/5 border border-electric-sapphire/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center">
-                      <Lock className="h-5 w-5 text-electric-sapphire" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-neutral-text flex items-center gap-2">
-                        Password protection
-                        <Crown className="h-3.5 w-3.5 text-neon-pink" />
+                <div className="p-4 rounded-xl bg-gradient-to-r from-electric-sapphire/5 to-bright-indigo/5 border border-electric-sapphire/10 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center shrink-0">
+                        <Lock className="h-5 w-5 text-electric-sapphire" />
                       </div>
-                      <div className="text-xs text-neutral-muted">
-                        {link.password_hash ? "Password is set. Enter new password to change." : "Require a password to access this link"}
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-neutral-text flex items-center gap-2">
+                          Password protection
+                          <Crown className="h-3.5 w-3.5 text-neon-pink" />
+                        </div>
+                        <div className="text-xs text-neutral-muted">
+                          {passwordEnabled
+                            ? link.password_hash
+                              ? "Password is set. Enter a new one to change, or leave blank to keep."
+                              : "Require a password to access this link"
+                            : "Require a password to access this link"}
+                        </div>
                       </div>
                     </div>
+                    <ToggleSwitch
+                      enabled={passwordEnabled}
+                      onChange={(on) => {
+                        setPasswordEnabled(on);
+                        if (!on) setPassword("");
+                      }}
+                    />
                   </div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={link.password_hash ? "New password (leave blank to keep)" : "Enter password"}
-                    className={cn(
-                      "h-10 px-3 rounded-xl border-2 text-xs font-medium transition-all w-48",
-                      "bg-white border-neutral-border text-neutral-text focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
-                    )}
-                  />
+                  {passwordEnabled && (
+                    <input
+                      type="password"
+                      name="link_password"
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder={
+                        link.password_hash
+                          ? "New password (leave blank to keep)"
+                          : "Enter password"
+                      }
+                      className={cn(
+                        "w-full h-10 px-3 rounded-xl border-2 text-xs font-medium transition-all",
+                        "bg-white border-neutral-border text-neutral-text focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
+                      )}
+                    />
+                  )}
                 </div>
 
                 {/* UTM Parameters Section */}
@@ -1323,18 +1566,36 @@ export default function LinkEditForm({
           />
           <div className="space-y-4">
             {generateQR && previewQR ? (
-              <PreviewPanel className="!p-6">
-                <img
-                  src={previewQR}
-                  alt="QR Code Preview"
-                  className="w-44 h-44 mx-auto mb-4 rounded-2xl shadow-soft"
-                />
-                <p className="text-xs font-semibold text-neutral-muted mb-4">QR Code</p>
-                <Button type="button" onClick={handleDownloadQR} className="w-full">
-                  <Download className="h-4 w-4" />
-                  Download QR Code
-                </Button>
-              </PreviewPanel>
+              canDownloadSavedQr ? (
+                <PreviewPanel className="!p-6">
+                  <img
+                    src={savedQr.qr_data}
+                    alt="QR Code"
+                    className="w-44 h-44 mx-auto mb-4 rounded-2xl shadow-soft"
+                  />
+                  <p className="text-xs font-semibold text-neutral-muted mb-4">
+                    Saved QR Code
+                  </p>
+                  <Button type="button" onClick={handleDownloadQR} className="w-full">
+                    <Download className="h-4 w-4" />
+                    Download QR Code
+                  </Button>
+                </PreviewPanel>
+              ) : (
+                <PreviewPanel className="!p-6 !pb-10">
+                  <ProtectedQrPreview
+                    src={previewQR}
+                    size={176}
+                    className="mb-6"
+                    label="Preview only"
+                  />
+                  <p className="text-xs font-semibold text-neutral-muted mt-2">
+                    {savedQr?.id
+                      ? "Watermarked preview — save to unlock clean download"
+                      : "Watermarked preview — clean QR after you save"}
+                  </p>
+                </PreviewPanel>
+              )
             ) : generateQR ? (
               <PreviewPanel className="h-56">
                 <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
@@ -1368,6 +1629,10 @@ export default function LinkEditForm({
         </>
       }
     />
+    </motion.div>
+    )}
+    </AnimatePresence>
+    </>
   );
 }
 

@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
       targeting,
       description,
       og_image_url,
+      lead_capture_enabled,
+      lead_capture_config,
     } = body;
 
     if (!original_url) {
@@ -59,6 +61,7 @@ export async function POST(request: NextRequest) {
       short_code,
       expires_at,
       password,
+      lead_capture_enabled: !!lead_capture_enabled,
     });
 
     if (!validation.valid) {
@@ -69,6 +72,9 @@ export async function POST(request: NextRequest) {
     }
 
     const linkService = new LinkService(supabase);
+    const { normalizeLeadCaptureConfig } = await import(
+      "@/lib/utils/lead-capture-config"
+    );
     const link = await linkService.createLink({
       original_url,
       short_code,
@@ -84,6 +90,10 @@ export async function POST(request: NextRequest) {
       folder: folder?.trim() || null,
       max_clicks: max_clicks != null && max_clicks !== "" ? Number(max_clicks) : null,
       targeting: targeting || null,
+      lead_capture_enabled: !!lead_capture_enabled,
+      lead_capture_config: lead_capture_enabled
+        ? normalizeLeadCaptureConfig(lead_capture_config)
+        : {},
     });
 
     // Trigger webhook for link.created

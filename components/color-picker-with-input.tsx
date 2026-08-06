@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { SketchPicker, type ColorResult } from "react-color";
 import { cn } from "@/lib/utils/cn";
 
@@ -22,6 +23,12 @@ function colorToCss(color: ColorResult, disableAlpha: boolean): string {
   return color.hex;
 }
 
+type PickerCoords = {
+  top?: number;
+  bottom?: number;
+  left: number;
+};
+
 export function ColorPickerWithInput({
   label,
   value,
@@ -31,27 +38,107 @@ export function ColorPickerWithInput({
   className,
 }: ColorPickerWithInputProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const pickerRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [coords, setCoords] = useState<PickerCoords | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const pickerPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
-        setIsPickerOpen(false);
-      }
-    };
+    setMounted(true);
+  }, []);
 
-    if (isPickerOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
+  const updatePosition = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const gap = 8;
+    const padding = 8;
+    const pickerHeight = 320;
+    const pickerWidth = 220;
+    const spaceBelow = window.innerHeight - rect.bottom - gap - padding;
+    const spaceAbove = rect.top - gap - padding;
+    const preferBottom = spaceBelow >= pickerHeight || spaceBelow >= spaceAbove;
+
+    let left = rect.left;
+    if (left + pickerWidth > window.innerWidth - padding) {
+      left = Math.max(padding, window.innerWidth - pickerWidth - padding);
     }
 
+    if (preferBottom) {
+      setCoords({ top: rect.bottom + gap, left });
+    } else {
+      setCoords({ bottom: window.innerHeight - rect.top + gap, left });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isPickerOpen) return;
+    updatePosition();
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (pickerPanelRef.current?.contains(target)) return;
+      setIsPickerOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsPickerOpen(false);
+    };
+    const onScrollOrResize = () => updatePosition();
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onScrollOrResize, true);
+    window.addEventListener("resize", onScrollOrResize);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", onScrollOrResize, true);
+      window.removeEventListener("resize", onScrollOrResize);
     };
-  }, [isPickerOpen]);
+  }, [isPickerOpen, updatePosition]);
 
   useEffect(() => {
     if (disabled) setIsPickerOpen(false);
   }, [disabled]);
+
+  const picker =
+    mounted &&
+    isPickerOpen &&
+    !disabled &&
+    coords &&
+    createPortal(
+      <div
+        ref={pickerPanelRef}
+        style={{
+          position: "fixed",
+          top: coords.top,
+          bottom: coords.bottom,
+          left: coords.left,
+          zIndex: 9999,
+        }}
+        className="shadow-lg rounded-lg"
+      >
+        <SketchPicker
+          color={value}
+          disableAlpha={disableAlpha}
+          onChange={(color) => onChange(colorToCss(color, disableAlpha))}
+          presetColors={[
+            "#000000",
+            "#FFFFFF",
+            "#1A1A2E",
+            "#4F46E5",
+            "#2563EB",
+            "#0EA5E9",
+            "#10B981",
+            "#F59E0B",
+            "#EF4444",
+            "#EC4899",
+            "#8B5CF6",
+            "#64748B",
+          ]}
+        />
+      </div>,
+      document.body
+    );
 
   return (
     <div className={className}>
@@ -60,9 +147,10 @@ export function ColorPickerWithInput({
           {label}
         </label>
       )}
-      <div className="flex items-center gap-2" ref={pickerRef}>
+      <div className="flex items-center gap-2">
         <div className="relative">
           <button
+            ref={triggerRef}
             type="button"
             disabled={disabled}
             onClick={() => {
@@ -75,29 +163,7 @@ export function ColorPickerWithInput({
             style={{ backgroundColor: value }}
             aria-label={label ? `Pick ${label}` : "Pick color"}
           />
-          {isPickerOpen && !disabled && (
-            <div className="absolute z-50 top-12 left-0 shadow-lg rounded-lg">
-              <SketchPicker
-                color={value}
-                disableAlpha={disableAlpha}
-                onChange={(color) => onChange(colorToCss(color, disableAlpha))}
-                presetColors={[
-                  "#000000",
-                  "#FFFFFF",
-                  "#1A1A2E",
-                  "#4F46E5",
-                  "#2563EB",
-                  "#0EA5E9",
-                  "#10B981",
-                  "#F59E0B",
-                  "#EF4444",
-                  "#EC4899",
-                  "#8B5CF6",
-                  "#64748B",
-                ]}
-              />
-            </div>
-          )}
+          {picker}
         </div>
         <input
           type="text"

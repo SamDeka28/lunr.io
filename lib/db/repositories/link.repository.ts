@@ -24,6 +24,8 @@ export class LinkRepository {
         og_image_url: data.og_image_url || null,
         expires_at: data.expires_at || null,
         password_hash: data.password ? hashPasswordUtil(data.password) : null,
+        lead_capture_enabled: !!data.lead_capture_enabled,
+        lead_capture_config: data.lead_capture_config || {},
         user_id: data.user_id || null,
         campaign_id: data.campaign_id || null,
         utm_parameters: data.utm_parameters || null,

@@ -3,10 +3,13 @@
 import { useState } from "react";
 import { QRControls } from "./qr-controls";
 import QRCodeList from "./qr-list";
+import { Pagination } from "@/components/ui/pagination";
+import type { ListPagination } from "@/lib/utils/pagination";
 
 interface QRPageWrapperProps {
   qrCodes: any[];
   canCreate: boolean;
+  pagination: ListPagination;
   initialSearch?: string;
   initialView?: "list" | "grid" | "card";
   initialStatus?: "active" | "all" | "archived";
@@ -16,6 +19,7 @@ interface QRPageWrapperProps {
 export function QRPageWrapper({
   qrCodes,
   canCreate,
+  pagination,
   initialSearch,
   initialView,
   initialStatus,
@@ -25,7 +29,7 @@ export function QRPageWrapper({
   const [viewType, setViewType] = useState<"list" | "grid" | "card">(initialView || "list");
 
   return (
-    <>
+    <div className="space-y-4">
       <QRControls
         initialSearch={initialSearch}
         initialView={viewType}
@@ -40,7 +44,7 @@ export function QRPageWrapper({
         viewType={viewType}
         onSelectionChange={setSelectedCount}
       />
-    </>
+      <Pagination pagination={pagination} itemLabel="QR codes" />
+    </div>
   );
 }
-

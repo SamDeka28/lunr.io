@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { QrCode, Loader2, Link2, ChevronDown, ChevronRight, Crown, Download, ExternalLink, Upload } from "lucide-react";
+import { QrCode, Loader2, Link2, ChevronDown, ChevronRight, Crown, ExternalLink, Upload } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import QRCodeLib from "qrcode";
 import { usePlan } from "@/hooks/use-plan";
 import { SuccessModal } from "@/components/success-modal";
 import { ColorPickerWithInput } from "@/components/color-picker-with-input";
+import { ProtectedQrPreview } from "@/components/qr-preview-protected";
 import { Button } from "@/components/ui/button";
 import {
   FormWithPreviewShell,
@@ -44,6 +45,8 @@ export default function QRCodeForm({
   const router = useRouter();
   const [linkId, setLinkId] = useState("");
   const [url, setUrl] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -224,21 +227,6 @@ export default function QRCodeForm({
     }
   };
 
-  const handleDownloadQR = () => {
-    if (!previewQR) {
-      toast.error("No QR code to download.");
-      return;
-    }
-    const link = document.createElement('a');
-    link.href = previewQR;
-    const filename = `qr-code-${Date.now()}.png`;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("QR code downloaded!");
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -279,6 +267,8 @@ export default function QRCodeForm({
         body: JSON.stringify({
           link_id: linkId || undefined,
           url: url || undefined,
+          title: title.trim() || undefined,
+          description: description.trim() || undefined,
           fg_color: qrColor,
           bg_color: qrBgColor,
           size: qrSize,
@@ -399,6 +389,44 @@ export default function QRCodeForm({
                   </p>
                 </div>
 
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                    Title (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. Event check-in poster"
+                    maxLength={255}
+                    className={cn(
+                      "w-full h-12 px-4 rounded-xl bg-white border-2 border-neutral-border",
+                      "text-neutral-text text-sm font-medium",
+                      "focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire",
+                      "transition-all"
+                    )}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
+                    Description (optional)
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Where this QR will be used, notes for your team…"
+                    rows={2}
+                    maxLength={2000}
+                    className={cn(
+                      "w-full px-4 py-3 rounded-xl bg-white border-2 border-neutral-border",
+                      "text-neutral-text text-sm font-medium resize-y min-h-[4.5rem]",
+                      "focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire",
+                      "transition-all"
+                    )}
+                  />
+                </div>
+
                 {links.length > 0 && (
                   <div>
                     <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
@@ -407,8 +435,13 @@ export default function QRCodeForm({
                     <select
                       value={linkId}
                       onChange={(e) => {
-                        setLinkId(e.target.value);
+                        const nextId = e.target.value;
+                        setLinkId(nextId);
                         setUrl("");
+                        if (nextId && !title.trim()) {
+                          const selected = links.find((l) => l.id === nextId);
+                          if (selected?.title) setTitle(selected.title);
+                        }
                       }}
                       className={cn(
                         "w-full h-12 px-4 rounded-xl bg-white border-2 border-neutral-border",
@@ -706,17 +739,11 @@ export default function QRCodeForm({
             description="See how your QR code will look"
           />
           {previewQR ? (
-            <PreviewPanel className="!p-6 shadow-premium">
-              <img
-                src={previewQR}
-                alt="QR Code Preview"
-                className="w-48 h-48 mx-auto mb-4 rounded-2xl shadow-soft"
-              />
-              <p className="text-xs font-semibold text-neutral-muted mb-4">QR Code</p>
-              <Button type="button" onClick={handleDownloadQR} className="w-full">
-                <Download className="h-4 w-4" />
-                Download QR
-              </Button>
+            <PreviewPanel className="!p-6 !pb-10 shadow-premium">
+              <ProtectedQrPreview src={previewQR} size={192} className="mb-6" />
+              <p className="text-xs font-semibold text-neutral-muted mt-2">
+                Watermarked preview — download unlocks after create
+              </p>
             </PreviewPanel>
           ) : (
             <PreviewPanel className="h-64">

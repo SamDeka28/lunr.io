@@ -143,8 +143,10 @@ export function ImageUpload({
             handleFiles(e.dataTransfer.files);
           }}
           className={cn(
-            "w-full rounded-xl border border-dashed p-8 transition-colors text-center",
+            "w-full rounded-xl border border-dashed transition-colors text-center",
             aspectClassName,
+            !aspectClassName?.includes("aspect-") && "p-6 sm:p-8",
+            aspectClassName?.includes("aspect-") && "p-4",
             "flex flex-col items-center justify-center gap-3",
             dragOver
               ? "border-neutral-text bg-neutral-bg"
@@ -156,18 +158,20 @@ export function ImageUpload({
             <Loader2 className="h-8 w-8 animate-spin text-neutral-muted" />
           ) : (
             <>
-              <div className="w-12 h-12 rounded-xl bg-neutral-bg border border-neutral-border flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-neutral-bg border border-neutral-border flex items-center justify-center shrink-0">
                 {dragOver ? (
                   <Upload className="h-5 w-5 text-neutral-text" />
                 ) : (
                   <ImageIcon className="h-5 w-5 text-neutral-muted" />
                 )}
               </div>
-              <div>
-                <p className="text-sm font-semibold text-neutral-text">
+              <div className="w-full min-w-0 px-1">
+                <p className="text-sm font-semibold text-neutral-text text-balance">
                   Drag & drop or click to upload
                 </p>
-                <p className="text-xs text-neutral-muted mt-1">{helperText}</p>
+                <p className="text-xs text-neutral-muted mt-1 text-balance">
+                  {helperText}
+                </p>
               </div>
             </>
           )}

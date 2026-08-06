@@ -33,6 +33,34 @@ export default async function EditLinkPage({
   const qrCodes = (link.qr_codes || []).filter((qr: any) => qr.is_active);
   const existingQRCode = qrCodes.length > 0 ? qrCodes[0] : null;
 
-  // Plan checks are now handled in the client component via Zustand store
-  return <LinkEditForm link={link} existingQRCode={existingQRCode} />;
+  const { data: metaRows } = await supabase
+    .from("links")
+    .select("folder, tags")
+    .eq("user_id", user.id);
+
+  const folderSet = new Set<string>();
+  const tagSet = new Set<string>();
+  for (const row of metaRows || []) {
+    if (row.folder && String(row.folder).trim()) {
+      folderSet.add(String(row.folder).trim());
+    }
+    if (Array.isArray(row.tags)) {
+      for (const t of row.tags) {
+        if (t && String(t).trim()) tagSet.add(String(t).trim());
+      }
+    }
+  }
+
+  return (
+    <LinkEditForm
+      link={link}
+      existingQRCode={existingQRCode}
+      availableFolders={Array.from(folderSet).sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: "base" })
+      )}
+      availableTags={Array.from(tagSet).sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: "base" })
+      )}
+    />
+  );
 }

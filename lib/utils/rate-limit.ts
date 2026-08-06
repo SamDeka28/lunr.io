@@ -113,6 +113,7 @@ export const RateLimitPresets = {
   api: { limit: 1000, windowMs: 60 * 60_000 }, // 1000/hr per API key
   auth: { limit: 20, windowMs: 15 * 60_000 }, // 20 / 15min per IP
   password: { limit: 10, windowMs: 15 * 60_000 }, // 10 / 15min per IP+code
+  leadCapture: { limit: 20, windowMs: 15 * 60_000 }, // 20 / 15min per IP+code
 } as const;
 
 export function rateLimitHeaders(result: RateLimitResult): Record<string, string> {

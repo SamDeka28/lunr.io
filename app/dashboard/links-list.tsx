@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   Link2,
@@ -12,18 +12,22 @@ import {
   Share2,
   MoreVertical,
   Lock,
+  Mail,
   BarChart3,
   QrCode,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface LinksListProps {
   links: any[];
   canCreate: boolean;
   viewType?: "list" | "grid" | "card";
   onSelectionChange?: (count: number) => void;
+  isLoading?: boolean;
 }
 
 function hostnameOf(url: string) {
@@ -66,7 +70,13 @@ function Favicon({ url, title }: { url: string; title: string }) {
   );
 }
 
-export function LinksList({ links, canCreate, viewType = "list", onSelectionChange }: LinksListProps) {
+export function LinksList({
+  links,
+  canCreate,
+  viewType = "list",
+  onSelectionChange,
+  isLoading = false,
+}: LinksListProps) {
   const router = useRouter();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedLinks, setSelectedLinks] = useState<Set<string>>(new Set());
@@ -177,8 +187,51 @@ export function LinksList({ links, canCreate, viewType = "list", onSelectionChan
     setSelectedLinks(next);
   };
 
-  if (links.length === 0) {
+  const withLoading = (content: ReactNode) => (
+    <div className="relative" aria-busy={isLoading}>
+      <div
+        className={cn(
+          "transition-opacity duration-150",
+          isLoading && "pointer-events-none opacity-40"
+        )}
+      >
+        {content}
+      </div>
+      {isLoading && (
+        <div className="absolute inset-0 z-10 flex min-h-[12rem] items-start justify-center pt-16">
+          <div className="flex items-center gap-2 rounded-full border border-neutral-border/80 bg-white px-4 py-2.5 shadow-float">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <span className="text-sm font-medium text-neutral-text">Loading links…</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  if (isLoading && links.length === 0) {
     return (
+      <div className="space-y-3" aria-busy="true">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-card border border-neutral-border/80 bg-white p-4 shadow-soft"
+          >
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-9 w-9 rounded-2xl" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-2/5 max-w-[40%]" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+              <Skeleton className="h-8 w-16 rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (links.length === 0) {
+    return withLoading(
       <div className="rounded-card border border-neutral-border/80 bg-white px-6 py-16 text-center shadow-soft">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <Link2 className="h-6 w-6" />
@@ -207,12 +260,13 @@ export function LinksList({ links, canCreate, viewType = "list", onSelectionChan
         ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
         : "grid-cols-1 md:grid-cols-2";
 
-    return (
+    return withLoading(
       <div className={cn("grid gap-3", cols)}>
         {processedLinks.map((link) => {
           const isSelected = selectedLinks.has(link.id);
           const isCopied = copiedId === link.id;
           const isPasswordProtected = !!link.password_hash;
+          const hasLeadCapture = !!link.lead_capture_enabled;
           const hasQRCode =
             Array.isArray(link.qr_codes) &&
             link.qr_codes.some((qr: any) => qr.is_active);
@@ -260,6 +314,7 @@ export function LinksList({ links, canCreate, viewType = "list", onSelectionChan
                 <span>{link.click_count || 0} clicks</span>
                 <div className="flex items-center gap-2">
                   {isPasswordProtected && <Lock className="h-3.5 w-3.5" />}
+                  {hasLeadCapture && <Mail className="h-3.5 w-3.5" />}
                   {hasQRCode && <QrCode className="h-3.5 w-3.5" />}
                   <Link
                     href={`/dashboard/links/${link.id}/analytics`}
@@ -283,12 +338,13 @@ export function LinksList({ links, canCreate, viewType = "list", onSelectionChan
   }
 
   // List view — dense continuous panel
-  return (
+  return withLoading(
     <div className="overflow-hidden rounded-card border border-neutral-border/80 bg-white shadow-soft">
       {processedLinks.map((link, index) => {
         const isCopied = copiedId === link.id;
         const isSelected = selectedLinks.has(link.id);
         const isPasswordProtected = !!link.password_hash;
+        const hasLeadCapture = !!link.lead_capture_enabled;
         const hasQRCode =
           Array.isArray(link.qr_codes) &&
           link.qr_codes.some((qr: any) => qr.is_active);
@@ -319,27 +375,20 @@ export function LinksList({ links, canCreate, viewType = "list", onSelectionChan
               {/* Main */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(link.shortUrl, link.id)}
-                    className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md text-left transition-colors hover:opacity-80"
-                    title="Copy short link"
-                  >
-                    <span className="truncate font-mono text-sm font-semibold text-electric-sapphire">
-                      {displayHost ? `${displayHost}${link.shortPath}` : link.shortPath}
-                    </span>
-                    {isCopied ? (
-                      <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5 shrink-0 text-neutral-muted opacity-0 transition-opacity group-hover:opacity-100" />
-                    )}
-                  </button>
+                  <p className="truncate text-sm font-semibold text-neutral-text">
+                    {link.title}
+                  </p>
 
-                  {(isPasswordProtected || hasQRCode || link.expirationDate) && (
-                    <span className="hidden items-center gap-1.5 sm:inline-flex">
+                  {(isPasswordProtected || hasLeadCapture || hasQRCode || link.expirationDate) && (
+                    <span className="hidden items-center gap-1.5 sm:inline-flex shrink-0">
                       {isPasswordProtected && (
                         <span title="Password protected">
                           <Lock className="h-3 w-3 text-neutral-muted" />
+                        </span>
+                      )}
+                      {hasLeadCapture && (
+                        <span title="Lead capture enabled">
+                          <Mail className="h-3 w-3 text-neutral-muted" />
                         </span>
                       )}
                       {hasQRCode && (
@@ -363,7 +412,21 @@ export function LinksList({ links, canCreate, viewType = "list", onSelectionChan
                 </div>
 
                 <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-neutral-muted">
-                  <span className="truncate font-medium text-neutral-text/70">{link.title}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(link.shortUrl, link.id)}
+                    className="inline-flex min-w-0 max-w-[55%] items-center gap-1.5 rounded-md text-left transition-colors hover:opacity-80"
+                    title="Copy short link"
+                  >
+                    <span className="truncate font-mono font-medium text-electric-sapphire">
+                      {displayHost ? `${displayHost}${link.shortPath}` : link.shortPath}
+                    </span>
+                    {isCopied ? (
+                      <Check className="h-3 w-3 shrink-0 text-emerald-500" />
+                    ) : (
+                      <Copy className="h-3 w-3 shrink-0 text-neutral-muted opacity-0 transition-opacity group-hover:opacity-100" />
+                    )}
+                  </button>
                   <span className="shrink-0 text-neutral-border">→</span>
                   <a
                     href={link.original_url}

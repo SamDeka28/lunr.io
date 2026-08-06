@@ -13,7 +13,7 @@ async function handleGet(request: AuthenticatedApiRequest) {
 
     const { data: qrCodes, error } = await serviceSupabase
       .from("qr_codes")
-      .select("id, link_id, qr_data, created_at, is_active")
+      .select("id, link_id, title, description, qr_data, created_at, is_active")
       .eq("user_id", userId)
       .eq("is_active", true)
       .order("created_at", { ascending: false });
@@ -46,7 +46,7 @@ async function handlePost(request: AuthenticatedApiRequest) {
 
     const userId = request.apiKey!.user_id;
     const body = await request.json();
-    const { link_id, url } = body;
+    const { link_id, url, title, description } = body;
 
     if (!link_id && !url) {
       return NextResponse.json(
@@ -92,11 +92,20 @@ async function handlePost(request: AuthenticatedApiRequest) {
     });
 
     // Save QR code
+    const trimmedTitle =
+      typeof title === "string" && title.trim() ? title.trim().slice(0, 255) : null;
+    const trimmedDescription =
+      typeof description === "string" && description.trim()
+        ? description.trim().slice(0, 2000)
+        : null;
+
     const { data: qrCode, error: insertError } = await serviceSupabase
       .from("qr_codes")
       .insert({
         user_id: userId,
         link_id: link_id || null,
+        title: trimmedTitle,
+        description: trimmedDescription,
         qr_data: qrDataUrl,
         is_active: true,
       })
@@ -114,6 +123,8 @@ async function handlePost(request: AuthenticatedApiRequest) {
       {
         id: qrCode.id,
         link_id: qrCode.link_id,
+        title: qrCode.title,
+        description: qrCode.description,
         qr_data: qrCode.qr_data,
         created_at: qrCode.created_at,
         is_active: qrCode.is_active,

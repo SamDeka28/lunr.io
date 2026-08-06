@@ -3,10 +3,13 @@
 import { useState } from "react";
 import { PagesControls } from "./pages-controls";
 import PagesList from "./pages-list";
+import { Pagination } from "@/components/ui/pagination";
+import type { ListPagination } from "@/lib/utils/pagination";
 
 interface PagesPageClientProps {
   pages: any[];
   canCreate: boolean;
+  pagination: ListPagination;
   initialSearch?: string;
   initialView?: "list" | "grid" | "card";
   initialStatus?: "active" | "all" | "archived";
@@ -16,6 +19,7 @@ interface PagesPageClientProps {
 export function PagesPageClient({
   pages,
   canCreate,
+  pagination,
   initialSearch,
   initialView,
   initialStatus,
@@ -25,7 +29,7 @@ export function PagesPageClient({
   const [viewType, setViewType] = useState<"list" | "grid" | "card">(initialView || "list");
 
   return (
-    <>
+    <div className="space-y-4">
       <PagesControls
         initialSearch={initialSearch}
         initialView={viewType}
@@ -40,7 +44,7 @@ export function PagesPageClient({
         viewType={viewType}
         onSelectionChange={setSelectedCount}
       />
-    </>
+      <Pagination pagination={pagination} itemLabel="pages" />
+    </div>
   );
 }
-

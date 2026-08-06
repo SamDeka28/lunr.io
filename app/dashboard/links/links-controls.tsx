@@ -6,6 +6,8 @@ import { Calendar, Filter, Grid, LayoutGrid, List, X, Loader2 } from "lucide-rea
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import { isCampaignsEnabled } from "@/lib/features";
+import { FolderPicker } from "@/components/ui/folder-picker";
+import { resetPageParam } from "@/lib/utils/pagination";
 
 type ViewType = "list" | "grid" | "card";
 type StatusFilter = "active" | "all" | "archived";
@@ -19,8 +21,12 @@ interface LinksControlsProps {
   initialTag?: string;
   initialFolder?: string;
   initialCampaignId?: string;
+  availableFolders?: string[];
+  availableTags?: string[];
   selectedCount: number;
   onViewChange?: (view: ViewType) => void;
+  navigate?: (href: string) => void;
+  isPending?: boolean;
 }
 
 export function LinksControls({
@@ -31,8 +37,12 @@ export function LinksControls({
   initialTag = "",
   initialFolder = "",
   initialCampaignId = "",
+  availableFolders = [],
+  availableTags = [],
   selectedCount,
   onViewChange,
+  navigate,
+  isPending = false,
 }: LinksControlsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -48,9 +58,13 @@ export function LinksControls({
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
   const [showDateMenu, setShowDateMenu] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const [isFiltering, setIsFiltering] = useState(false);
   const dateMenuRef = useRef<HTMLDivElement>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
+
+  const push = (href: string) => {
+    if (navigate) navigate(href);
+    else router.push(href);
+  };
 
   useEffect(() => {
     if (!isCampaignsEnabled()) return;
@@ -75,23 +89,27 @@ export function LinksControls({
   // Update URL when search changes (debounced)
   useEffect(() => {
     const timer = setTimeout(() => {
+      const current = searchParams.get("search") || "";
+      if (search === current) return;
       const params = new URLSearchParams(searchParams.toString());
       if (search) {
         params.set("search", search);
       } else {
         params.delete("search");
       }
-      router.push(`/dashboard/links?${params.toString()}`);
+      resetPageParam(params);
+      push(`/dashboard/links?${params.toString()}`);
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [search, router, searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run on search text
+  }, [search]);
 
   const handleViewChange = (view: ViewType) => {
     setViewType(view);
     const params = new URLSearchParams(searchParams.toString());
     params.set("view", view);
-    router.push(`/dashboard/links?${params.toString()}`);
+    push(`/dashboard/links?${params.toString()}`);
     if (onViewChange) {
       onViewChange(view);
     }
@@ -101,22 +119,21 @@ export function LinksControls({
     setStatusFilter(status);
     const params = new URLSearchParams(searchParams.toString());
     params.set("status", status);
-    router.push(`/dashboard/links?${params.toString()}`);
+    resetPageParam(params);
+    push(`/dashboard/links?${params.toString()}`);
   };
 
   const handleDateFilter = (filter: DateFilter) => {
     setDateFilter(filter);
     setShowDateMenu(false);
-    setIsFiltering(true);
     const params = new URLSearchParams(searchParams.toString());
     if (filter) {
       params.set("dateFilter", filter);
     } else {
       params.delete("dateFilter");
     }
-    router.push(`/dashboard/links?${params.toString()}`);
-    // Reset loading state after navigation
-    setTimeout(() => setIsFiltering(false), 500);
+    resetPageParam(params);
+    push(`/dashboard/links?${params.toString()}`);
   };
 
   const getDateFilterLabel = () => {
@@ -130,6 +147,17 @@ export function LinksControls({
       default: return "Filter by date";
     }
   };
+
+  const applyFolderFilter = (folder: string) => {
+    setFolderFilter(folder);
+    const params = new URLSearchParams(searchParams.toString());
+    if (folder) params.set("folder", folder);
+    else params.delete("folder");
+    resetPageParam(params);
+    push(`/dashboard/links?${params.toString()}`);
+  };
+
+  const hasMetaFilters = Boolean(tagFilter || folderFilter || campaignIdFilter);
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -164,29 +192,40 @@ export function LinksControls({
             className="w-full pl-11 pr-4 h-11 rounded-full bg-white border border-neutral-border/80 shadow-soft focus:border-primary focus:ring-2 focus:ring-primary/25 text-sm font-medium transition-all"
           />
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+        {availableFolders.length > 0 && (
+          <FolderPicker
+            compact
+            value={folderFilter}
+            options={availableFolders}
+            onChange={applyFolderFilter}
+            emptyLabel="All folders"
+            placeholder="Folder"
+            className="w-full sm:w-44"
+          />
+        )}
         <div className="relative flex-1 sm:flex-none" ref={dateMenuRef}>
           <button
             onClick={() => {
               setShowDateMenu(!showDateMenu);
               setShowFilterMenu(false);
             }}
-            disabled={isFiltering}
+            disabled={isPending}
             className={cn(
               "w-full sm:w-auto px-3 sm:px-4 py-2.5 rounded-full border text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-soft",
               dateFilter
                 ? "border-primary/30 text-primary bg-primary/10"
                 : "border-neutral-border/80 bg-white hover:border-primary/30 hover:text-primary text-neutral-text",
-              isFiltering && "opacity-70 cursor-wait"
+              isPending && "opacity-70 cursor-wait"
             )}
           >
-            {isFiltering ? (
+            {isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Calendar className="h-4 w-4" />
             )}
             <span className="truncate max-w-[7rem] sm:max-w-none">{getDateFilterLabel()}</span>
-            {dateFilter && !isFiltering && (
+            {dateFilter && !isPending && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -286,10 +325,20 @@ export function LinksControls({
               setShowFilterMenu(!showFilterMenu);
               setShowDateMenu(false);
             }}
-            className="w-full sm:w-auto px-3 sm:px-4 py-2.5 rounded-full border border-neutral-border/80 bg-white shadow-soft hover:border-primary/30 hover:text-primary text-sm font-semibold text-neutral-text transition-all flex items-center justify-center gap-2"
+            className={cn(
+              "w-full sm:w-auto px-3 sm:px-4 py-2.5 rounded-full border text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-soft",
+              hasMetaFilters
+                ? "border-primary/30 text-primary bg-primary/10"
+                : "border-neutral-border/80 bg-white hover:border-primary/30 hover:text-primary text-neutral-text"
+            )}
           >
             <Filter className="h-4 w-4" />
             <span className="sm:inline">Filters</span>
+            {hasMetaFilters && (
+              <span className="ml-0.5 min-w-[1.25rem] h-5 px-1.5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
+                {[tagFilter, folderFilter, campaignIdFilter].filter(Boolean).length}
+              </span>
+            )}
           </button>
           {showFilterMenu && (
             <div className="absolute top-full right-0 mt-2 w-72 bg-white rounded-2xl border border-neutral-border/80 shadow-float z-50 py-2">
@@ -297,22 +346,39 @@ export function LinksControls({
               <div className="px-4 py-2 space-y-3">
                 <div>
                   <label className="block text-xs font-medium text-neutral-muted mb-1">Tag</label>
-                  <input
-                    type="text"
-                    value={tagFilter}
-                    onChange={(e) => setTagFilter(e.target.value)}
-                    placeholder="e.g. marketing"
-                    className="w-full px-3 py-2 rounded-xl border border-neutral-border/80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/25"
-                  />
+                  {availableTags.length > 0 ? (
+                    <select
+                      value={tagFilter}
+                      onChange={(e) => setTagFilter(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-border/80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 bg-white"
+                    >
+                      <option value="">All tags</option>
+                      {availableTags.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={tagFilter}
+                      onChange={(e) => setTagFilter(e.target.value)}
+                      placeholder="No tags yet"
+                      disabled
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-border/80 text-sm bg-neutral-bg text-neutral-muted"
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-neutral-muted mb-1">Folder</label>
-                  <input
-                    type="text"
+                  <FolderPicker
                     value={folderFilter}
-                    onChange={(e) => setFolderFilter(e.target.value)}
-                    placeholder="e.g. social"
-                    className="w-full px-3 py-2 rounded-xl border border-neutral-border/80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/25"
+                    options={availableFolders}
+                    onChange={setFolderFilter}
+                    emptyLabel="All folders"
+                    placeholder="Select folder"
+                    triggerClassName="h-10 !border border-neutral-border/80 rounded-xl text-sm"
                   />
                 </div>
                 {isCampaignsEnabled() && (
@@ -345,7 +411,8 @@ export function LinksControls({
                     params.delete("tag");
                     params.delete("folder");
                     params.delete("campaign_id");
-                    router.push(`/dashboard/links?${params.toString()}`);
+                    resetPageParam(params);
+                    push(`/dashboard/links?${params.toString()}`);
                     setShowFilterMenu(false);
                   }}
                   className="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-neutral-border text-neutral-muted hover:text-neutral-text"
@@ -362,7 +429,8 @@ export function LinksControls({
                     else params.delete("folder");
                     if (campaignIdFilter.trim()) params.set("campaign_id", campaignIdFilter.trim());
                     else params.delete("campaign_id");
-                    router.push(`/dashboard/links?${params.toString()}`);
+                    resetPageParam(params);
+                    push(`/dashboard/links?${params.toString()}`);
                     setShowFilterMenu(false);
                   }}
                   className="flex-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary text-white shadow-button hover:bg-bright-indigo transition-all"
@@ -377,7 +445,7 @@ export function LinksControls({
       </div>
 
       {/* Active Filters Display */}
-      {(dateFilter || tagFilter || folderFilter || campaignIdFilter || isFiltering) && (
+      {(dateFilter || tagFilter || folderFilter || campaignIdFilter || isPending) && (
         <div className="mb-3 flex items-center gap-2 flex-wrap">
           {dateFilter && (
             <div className="px-3 py-1.5 rounded-lg bg-electric-sapphire/10 border border-electric-sapphire/20 flex items-center gap-2">
@@ -402,7 +470,8 @@ export function LinksControls({
                   setTagFilter("");
                   const params = new URLSearchParams(searchParams.toString());
                   params.delete("tag");
-                  router.push(`/dashboard/links?${params.toString()}`);
+                  resetPageParam(params);
+                  push(`/dashboard/links?${params.toString()}`);
                 }}
                 className="hover:bg-electric-sapphire/20 rounded p-0.5"
               >
@@ -420,7 +489,8 @@ export function LinksControls({
                   setFolderFilter("");
                   const params = new URLSearchParams(searchParams.toString());
                   params.delete("folder");
-                  router.push(`/dashboard/links?${params.toString()}`);
+                  resetPageParam(params);
+                  push(`/dashboard/links?${params.toString()}`);
                 }}
                 className="hover:bg-electric-sapphire/20 rounded p-0.5"
               >
@@ -439,7 +509,8 @@ export function LinksControls({
                   setCampaignIdFilter("");
                   const params = new URLSearchParams(searchParams.toString());
                   params.delete("campaign_id");
-                  router.push(`/dashboard/links?${params.toString()}`);
+                  resetPageParam(params);
+                  push(`/dashboard/links?${params.toString()}`);
                 }}
                 className="hover:bg-electric-sapphire/20 rounded p-0.5"
               >
@@ -447,10 +518,10 @@ export function LinksControls({
               </button>
             </div>
           )}
-          {isFiltering && (
+          {isPending && (
             <div className="px-3 py-1.5 rounded-lg bg-neutral-bg border border-neutral-border flex items-center gap-2">
               <Loader2 className="h-3 w-3 animate-spin text-electric-sapphire" />
-              <span className="text-xs font-medium text-neutral-muted">Applying filters...</span>
+              <span className="text-xs font-medium text-neutral-muted">Updating list…</span>
             </div>
           )}
         </div>

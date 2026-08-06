@@ -159,6 +159,8 @@ export interface Link {
   is_active: boolean;
   click_count: number;
   password_hash: string | null;
+  lead_capture_enabled?: boolean;
+  lead_capture_config?: import("@/lib/utils/lead-capture-config").LeadCaptureConfig | Record<string, unknown> | null;
   utm_parameters: Record<string, string> | null;
   tags?: string[] | null;
   folder?: string | null;
@@ -189,6 +191,8 @@ export interface QRCode {
   id: string;
   user_id: string | null;
   link_id: string | null;
+  title: string | null;
+  description: string | null;
   qr_data: string;
   created_at: string;
   is_active: boolean;
@@ -252,6 +256,15 @@ export interface SubscriptionWithPlan extends Subscription {
   plan: Plan | null;
 }
 
+export interface LinkEmailCapture {
+  id: string;
+  link_id: string;
+  email: string;
+  name: string | null;
+  responses?: Record<string, string | boolean> | null;
+  created_at: string;
+}
+
 export interface CreateLinkInput {
   original_url: string;
   short_code?: string;
@@ -260,6 +273,8 @@ export interface CreateLinkInput {
   og_image_url?: string | null;
   expires_at?: string | null;
   password?: string | null;
+  lead_capture_enabled?: boolean;
+  lead_capture_config?: import("@/lib/utils/lead-capture-config").LeadCaptureConfig | Record<string, unknown> | null;
   user_id?: string | null;
   utm_parameters?: Record<string, string> | null;
   campaign_id?: string | null;

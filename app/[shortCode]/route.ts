@@ -177,6 +177,20 @@ export async function GET(
       }
     }
 
+    // Lead capture gate (after password, before click tracking)
+    if (link.lead_capture_enabled) {
+      const {
+        getLeadAccessCookieName,
+        verifyLeadAccessCookie,
+      } = await import("@/lib/utils/lead-capture");
+      const leadCookie = request.cookies.get(getLeadAccessCookieName(shortCode))?.value;
+
+      if (!verifyLeadAccessCookie(leadCookie, link.id)) {
+        const leadUrl = new URL(`/${shortCode}/lead`, requestUrl.origin);
+        return NextResponse.redirect(leadUrl.toString(), { status: 302 });
+      }
+    }
+
     // Get link's default UTM parameters
     const linkUtmParams = (link.utm_parameters as Record<string, string>) || {};
 

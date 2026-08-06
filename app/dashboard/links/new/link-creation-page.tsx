@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Link2, Loader2, Upload, ChevronDown, ChevronRight, Crown, Calendar, Clock, Sparkles, X, Image as ImageIcon, Download, QrCode, Monitor, Lock } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Link2, Loader2, Upload, ChevronDown, ChevronRight, Crown, Calendar, Clock, Sparkles, X, Image as ImageIcon, QrCode, Monitor, Lock } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import QRCode from "qrcode";
@@ -10,6 +11,7 @@ import { usePlan } from "@/hooks/use-plan";
 import { SuccessModal } from "@/components/success-modal";
 import { BulkImportModal } from "@/components/bulk-import-modal";
 import { ColorPickerWithInput } from "@/components/color-picker-with-input";
+import { ProtectedQrPreview } from "@/components/qr-preview-protected";
 import { Button } from "@/components/ui/button";
 import {
   FormWithPreviewShell,
@@ -18,13 +20,24 @@ import {
   PreviewPanel,
 } from "@/components/ui/form-with-preview";
 import { isCampaignsEnabled } from "@/lib/features";
+import { FolderPicker } from "@/components/ui/folder-picker";
+import { LeadGateStudio } from "@/components/lead-capture/lead-gate-studio";
+import {
+  defaultLeadCaptureConfig,
+  normalizeLeadCaptureConfig,
+  type LeadCaptureConfig,
+} from "@/lib/utils/lead-capture-config";
 
 export function LinkCreationPage({
   userId,
   initialCampaignId = "",
+  availableFolders = [],
+  availableTags = [],
 }: {
   userId: string;
   initialCampaignId?: string;
+  availableFolders?: string[];
+  availableTags?: string[];
 }) {
   // Get plan data from Zustand store
   const {
@@ -48,12 +61,17 @@ export function LinkCreationPage({
   }, [refreshUserData]);
 
   const router = useRouter();
-  const [mode, setMode] = useState<"configure" | "design">("configure");
+  const [mode, setMode] = useState<"configure" | "design" | "leads">("configure");
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [customCode, setCustomCode] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordEnabled, setPasswordEnabled] = useState(false);
+  const [leadCaptureEnabled, setLeadCaptureEnabled] = useState(false);
+  const [leadCaptureConfig, setLeadCaptureConfig] = useState<LeadCaptureConfig>(
+    () => defaultLeadCaptureConfig()
+  );
   const [qrFormat, setQrFormat] = useState<"png" | "svg">("png");
   const [generateQR, setGenerateQR] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -198,25 +216,6 @@ export function LinkCreationPage({
     }
     const data = await res.json();
     return data.publicUrl as string;
-  };
-
-  // Handle QR code download
-  const handleDownloadQR = () => {
-    if (!previewQR) return;
-
-    try {
-      // Create a temporary anchor element
-      const link = document.createElement("a");
-      link.href = previewQR;
-      link.download = `qr-code-${customCode || "link"}-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success("QR code downloaded");
-    } catch (err) {
-      console.error("Failed to download QR code:", err);
-      toast.error("Failed to download QR code");
-    }
   };
 
   // Function to generate QR code with optional logo
@@ -417,7 +416,12 @@ export function LinkCreationPage({
           short_code: customCode || undefined,
           expires_at: expiresAt || null,
           title: title || undefined,
-          password: password && isPremium ? password : undefined,
+          password: passwordEnabled && password && isPremium ? password : undefined,
+          lead_capture_enabled: leadCaptureEnabled && isPremium,
+          lead_capture_config:
+            leadCaptureEnabled && isPremium
+              ? normalizeLeadCaptureConfig(leadCaptureConfig)
+              : null,
           campaign_id: selectedCampaignId || undefined,
           tags: tags.trim()
             ? tags.split(",").map((t) => t.trim()).filter(Boolean)
@@ -451,9 +455,27 @@ export function LinkCreationPage({
       if (generateQR) {
         const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
         const shortUrl = `${baseUrl}/${linkData.short_code}?utm_medium=qr&utm_source=qr`;
-        
-        // First, save the QR code to the database
+        const sizeMap: Record<string, number> = {
+          small: 200,
+          medium: 300,
+          large: 500,
+        };
+        const finalWidth = sizeMap[qrSize] || 300;
+        // Logo compositing requires canvas → always persist PNG when logo is on
+        const persistFormat = addLogo && logoImageUrl ? "png" : qrFormat;
+
         try {
+          const precomposed = await generateQRWithLogo(
+            shortUrl,
+            {
+              width: finalWidth,
+              color: { dark: qrColor, light: qrBgColor },
+            },
+            logoImageUrl || null,
+            addLogo,
+            persistFormat
+          );
+
           const qrResponse = await fetch("/api/qr", {
             method: "POST",
             headers: {
@@ -461,8 +483,12 @@ export function LinkCreationPage({
             },
             body: JSON.stringify({
               link_id: linkData.id,
-              url: shortUrl, // Use short URL so clicks are tracked
-              format: qrFormat, // Include format preference
+              fg_color: qrColor,
+              bg_color: qrBgColor,
+              size: qrSize,
+              format: persistFormat,
+              logo_data_url: addLogo ? logoImageUrl : undefined,
+              qr_data: precomposed,
             }),
           });
 
@@ -470,27 +496,13 @@ export function LinkCreationPage({
             const qrError = await qrResponse.json();
             console.error("Failed to save QR code:", qrError);
             toast.error("Link created, but QR code could not be saved");
+          } else {
+            const saved = await qrResponse.json();
+            setCreatedQRCode(saved.qr_data || precomposed);
           }
         } catch (qrSaveErr) {
           console.error("Failed to save QR code:", qrSaveErr);
           toast.error("Link created, but QR code could not be saved");
-        }
-
-        // Then generate styled QR code for success modal preview
-        try {
-          const qrData = await generateQRWithLogo(
-            shortUrl,
-            {
-              width: 300,
-              color: { dark: qrColor, light: qrBgColor },
-            },
-            logoImageUrl || null,
-            addLogo,
-            qrFormat
-          );
-          setCreatedQRCode(qrData);
-        } catch (qrErr) {
-          console.error("Failed to generate QR for success modal:", qrErr);
         }
       }
 
@@ -551,6 +563,10 @@ export function LinkCreationPage({
     setExpiresAt("");
     setTags("");
     setFolder("");
+    setPassword("");
+    setPasswordEnabled(false);
+    setLeadCaptureEnabled(false);
+    setLeadCaptureConfig(defaultLeadCaptureConfig());
     setPreviewQR("");
     setPreviewImageUrl(null);
     setPreviewImage(null);
@@ -559,6 +575,85 @@ export function LinkCreationPage({
 
   return (
     <>
+    <AnimatePresence mode="wait" initial={false}>
+    {mode === "leads" ? (
+      <motion.div
+        key="leads-studio"
+        initial={{ opacity: 0, y: 18, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -12, scale: 0.99 }}
+        transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+        className="h-[calc(100dvh-3.75rem)] -m-4 sm:-m-6 lg:-m-8"
+      >
+      <form onSubmit={handleSubmit} className="block h-full">
+        <LeadGateStudio
+          enabled={leadCaptureEnabled}
+          onEnabledChange={setLeadCaptureEnabled}
+          config={leadCaptureConfig}
+          onConfigChange={setLeadCaptureConfig}
+          isPremium={isPremium}
+          linkTitle={title}
+          modeSwitcher={
+            <FormModeTabs
+              value={mode}
+              onChange={setMode}
+              options={[
+                { id: "configure" as const, label: "Configure" },
+                { id: "design" as const, label: "Design" },
+                { id: "leads" as const, label: "Leads" },
+              ]}
+            />
+          }
+          footer={
+            <div className="space-y-3 pb-1">
+              {error && (
+                <p className="text-xs font-medium text-red-600">{error}</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => router.back()}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  disabled={loading || !url}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating…
+                    </>
+                  ) : (
+                    <>
+                      Create link
+                      <ChevronRight className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </div>
+              {!url && (
+                <p className="text-[11px] text-neutral-muted">
+                  Add a destination URL in Configure before creating.
+                </p>
+              )}
+            </div>
+          }
+        />
+      </form>
+      </motion.div>
+    ) : (
+    <motion.div
+      key="link-form"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+    >
     <FormWithPreviewShell
       form={
         <>
@@ -590,12 +685,12 @@ export function LinkCreationPage({
               options={[
                 { id: "configure" as const, label: "Configure" },
                 { id: "design" as const, label: "Design" },
+                { id: "leads" as const, label: "Leads" },
               ]}
             />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Show different content based on mode */}
             {mode === "configure" ? (
               <>
                 {/* Code Details Section */}
@@ -666,6 +761,7 @@ export function LinkCreationPage({
                     </label>
                     <input
                       type="text"
+                      list="link-tag-suggestions"
                       value={tags}
                       onChange={(e) => setTags(e.target.value)}
                       placeholder="marketing, launch"
@@ -676,23 +772,24 @@ export function LinkCreationPage({
                         "transition-all"
                       )}
                     />
+                    <datalist id="link-tag-suggestions">
+                      {availableTags.map((t) => (
+                        <option key={t} value={t} />
+                      ))}
+                    </datalist>
                     <p className="text-xs text-neutral-muted mt-1.5">Comma-separated</p>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-neutral-text mb-2 uppercase tracking-wide">
                       Folder (optional)
                     </label>
-                    <input
-                      type="text"
+                    <FolderPicker
                       value={folder}
-                      onChange={(e) => setFolder(e.target.value)}
-                      placeholder="e.g. social"
-                      className={cn(
-                        "w-full h-12 px-4 rounded-xl bg-white border-2 border-neutral-border",
-                        "text-neutral-text text-sm font-medium",
-                        "focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire",
-                        "transition-all"
-                      )}
+                      options={availableFolders}
+                      onChange={setFolder}
+                      allowCreate
+                      emptyLabel="No folder"
+                      placeholder="Pick or create a folder"
                     />
                   </div>
                 </div>
@@ -864,37 +961,46 @@ export function LinkCreationPage({
                 </div>
 
                 {/* Password Protection */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-electric-sapphire/5 to-bright-indigo/5 border border-electric-sapphire/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center">
-                      <Lock className="h-5 w-5 text-electric-sapphire" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-neutral-text flex items-center gap-2">
-                        Password protection
-                        <Crown className="h-3.5 w-3.5 text-neon-pink" />
+                <div className="p-4 rounded-xl bg-gradient-to-r from-electric-sapphire/5 to-bright-indigo/5 border border-electric-sapphire/10 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center shrink-0">
+                        <Lock className="h-5 w-5 text-electric-sapphire" />
                       </div>
-                      <div className="text-xs text-neutral-muted">
-                        Require a password to access this link
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-neutral-text flex items-center gap-2">
+                          Password protection
+                          <Crown className="h-3.5 w-3.5 text-neon-pink" />
+                        </div>
+                        <div className="text-xs text-neutral-muted">
+                          {isPremium
+                            ? "Require a password to access this link"
+                            : "Premium feature — upgrade to protect links"}
+                        </div>
                       </div>
                     </div>
+                    <ToggleSwitch
+                      enabled={passwordEnabled && isPremium}
+                      onChange={(on) => {
+                        if (!isPremium) return;
+                        setPasswordEnabled(on);
+                        if (!on) setPassword("");
+                      }}
+                      disabled={!isPremium}
+                      isPremium={!isPremium}
+                    />
                   </div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => {
-                      if (!isPremium) return;
-                      setPassword(e.target.value);
-                    }}
-                    placeholder={isPremium ? "Enter password" : "Premium feature"}
-                    disabled={!isPremium}
-                    className={cn(
-                      "h-10 px-3 rounded-xl border-2 text-xs font-medium transition-all w-48",
-                      isPremium
-                        ? "bg-white border-neutral-border text-neutral-text focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
-                        : "bg-neutral-bg border-neutral-border text-neutral-muted cursor-not-allowed opacity-50"
-                    )}
-                  />
+                  {passwordEnabled && isPremium && (
+                    <input
+                      type="password"
+                      name="link_password"
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter password"
+                      className="w-full h-10 px-3 rounded-xl border-2 border-neutral-border bg-white text-neutral-text text-xs font-medium focus:outline-none focus:ring-2 focus:ring-electric-sapphire/40 focus:border-electric-sapphire"
+                    />
+                  )}
                 </div>
 
                 {/* UTM Parameters Section */}
@@ -1396,17 +1502,11 @@ export function LinkCreationPage({
           />
           <div className="space-y-4">
             {generateQR && previewQR ? (
-              <PreviewPanel className="!p-6">
-                <img
-                  src={previewQR}
-                  alt="QR Code Preview"
-                  className="w-44 h-44 mx-auto mb-4 rounded-2xl shadow-soft"
-                />
-                <p className="text-xs font-semibold text-neutral-muted mb-4">QR Code</p>
-                <Button type="button" onClick={handleDownloadQR} className="w-full">
-                  <Download className="h-4 w-4" />
-                  Download QR Code
-                </Button>
+              <PreviewPanel className="!p-6 !pb-10">
+                <ProtectedQrPreview src={previewQR} size={176} className="mb-6" />
+                <p className="text-xs font-semibold text-neutral-muted mt-2">
+                  Watermarked preview — download unlocks after create
+                </p>
               </PreviewPanel>
             ) : generateQR ? (
               <PreviewPanel className="h-56">
@@ -1441,6 +1541,9 @@ export function LinkCreationPage({
         </>
       }
     />
+    </motion.div>
+    )}
+    </AnimatePresence>
 
       {/* Success Modal */}
       {createdLink && (

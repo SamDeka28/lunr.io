@@ -435,7 +435,7 @@ const apiCategories: EndpointCategory[] = [
         method: "POST",
         path: "/api/v1/qr",
         title: "Create a new QR code",
-        description: "Generate a new QR code. You can create a QR code for a custom URL or for an existing link by providing its ID.",
+        description: "Generate a new QR code. You can create a QR code for a custom URL or for an existing link by providing its ID. Optionally set a title and description so you can identify it later.",
         parameters: [
           {
             name: "url",
@@ -449,9 +449,23 @@ const apiCategories: EndpointCategory[] = [
             required: false,
             description: "ID of an existing link to create QR code for (required if url is not provided)",
           },
+          {
+            name: "title",
+            type: "string",
+            required: false,
+            description: "Human-readable name for this QR code (max 255 characters)",
+          },
+          {
+            name: "description",
+            type: "string",
+            required: false,
+            description: "Optional notes about where this QR is used",
+          },
         ],
         requestBody: {
           url: "https://example.com",
+          title: "Event check-in poster",
+          description: "Lobby entrance — March campaign",
         },
         responses: [
           {
@@ -460,6 +474,8 @@ const apiCategories: EndpointCategory[] = [
             body: JSON.stringify({
               id: "660e8400-e29b-41d4-a716-446655440000",
               link_id: null,
+              title: "Event check-in poster",
+              description: "Lobby entrance — March campaign",
               qr_data: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
               created_at: "2024-01-15T10:30:00Z",
               is_active: true,
@@ -475,6 +491,7 @@ const apiCategories: EndpointCategory[] = [
         ],
         examples: generateExamples("POST", "/api/v1/qr", {
           url: "https://example.com",
+          title: "Event check-in poster",
         }),
       },
       {

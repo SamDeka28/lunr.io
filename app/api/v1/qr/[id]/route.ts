@@ -30,6 +30,8 @@ async function handleGet(
     return NextResponse.json({
       id: qrCode.id,
       link_id: qrCode.link_id,
+      title: qrCode.title,
+      description: qrCode.description,
       qr_data: qrCode.qr_data,
       created_at: qrCode.created_at,
       is_active: qrCode.is_active,

@@ -260,6 +260,31 @@ export async function PATCH(
       updateData.password_hash = passwordHash;
     }
 
+    if (body.lead_capture_enabled !== undefined) {
+      if (body.lead_capture_enabled) {
+        const { PlanService } = await import("@/lib/services/plan.service");
+        const planService = new PlanService(supabase);
+        if (!(await planService.canUseLeadCapture(user.id))) {
+          return NextResponse.json(
+            {
+              error:
+                "Lead capture is a premium feature. Upgrade to collect emails before redirect.",
+            },
+            { status: 403 }
+          );
+        }
+      }
+      updateData.lead_capture_enabled = Boolean(body.lead_capture_enabled);
+    }
+    if (body.lead_capture_config !== undefined) {
+      const { normalizeLeadCaptureConfig } = await import(
+        "@/lib/utils/lead-capture-config"
+      );
+      updateData.lead_capture_config = body.lead_capture_enabled
+        ? normalizeLeadCaptureConfig(body.lead_capture_config)
+        : body.lead_capture_config || {};
+    }
+
     if (body.campaign_id !== undefined) {
       updateData.campaign_id = body.campaign_id || null;
     }

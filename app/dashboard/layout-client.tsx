@@ -55,7 +55,10 @@ export function DashboardLayoutClient({
 
   return (
     <NavigationLoaderProvider>
-      <div className="min-h-screen bg-neutral-bg flex overflow-x-hidden">
+      <div
+        className="dashboard-shell min-h-screen bg-neutral-bg flex overflow-x-hidden"
+        data-sidebar={sidebarOpen ? "expanded" : "collapsed"}
+      >
         <CollapsibleSidebar
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen(!sidebarOpen)}

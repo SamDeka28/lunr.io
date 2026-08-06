@@ -160,12 +160,25 @@ export class PlanService {
   }
 
   /**
+   * Check if user can use lead capture on links
+   */
+  async canUseLeadCapture(userId: string): Promise<boolean> {
+    if (await this.hasFeature(userId, "lead_capture")) {
+      return true;
+    }
+    const profile = await this.getUserPlan(userId);
+    const planName = profile?.plan?.name;
+    return !!planName && planName !== "free";
+  }
+
+  /**
    * Validate link creation request against plan
    */
   async validateLinkCreation(userId: string, data: {
     short_code?: string;
     expires_at?: string | null;
     password?: string | null;
+    lead_capture_enabled?: boolean | null;
   }): Promise<{ valid: boolean; error?: string }> {
     // Check if user can create links
     if (!(await this.canCreateLink(userId))) {
@@ -197,6 +210,14 @@ export class PlanService {
       return {
         valid: false,
         error: "Password protection is a premium feature. Upgrade to protect links with a password.",
+      };
+    }
+
+    // Check lead capture
+    if (data.lead_capture_enabled && !(await this.canUseLeadCapture(userId))) {
+      return {
+        valid: false,
+        error: "Lead capture is a premium feature. Upgrade to collect emails before redirect.",
       };
     }
 

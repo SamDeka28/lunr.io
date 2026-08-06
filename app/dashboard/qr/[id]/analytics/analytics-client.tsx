@@ -48,7 +48,7 @@ export function QRAnalyticsClient({
   const handleDownload = () => {
     const link = document.createElement("a");
     link.href = qrCode.qr_data;
-    link.download = `qr-code-${qrCode.id}.png`;
+    link.download = `qr-code-${(qrCode.title || qrCode.id).toString().replace(/[^\w.-]+/g, "-").slice(0, 40)}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -59,8 +59,8 @@ export function QRAnalyticsClient({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Check out this QR code",
-          text: "QR Code",
+          title: qrCode.title?.trim() || "Check out this QR code",
+          text: qrCode.description?.trim() || "QR Code",
           url: qrCode.qr_data,
         });
         toast.success("QR code shared!");
@@ -101,14 +101,28 @@ export function QRAnalyticsClient({
                   <QrCode className="h-5 w-5 text-neon-pink" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-neutral-text">QR Code Analytics</h1>
+                  <h1 className="text-2xl font-bold text-neutral-text">
+                    {qrCode.title?.trim() || "QR Code Analytics"}
+                  </h1>
                   <p className="text-sm text-neutral-muted mt-1">
-                    Created {new Date(qrCode.created_at).toLocaleDateString("en-US", {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                    {qrCode.description?.trim()
+                      ? qrCode.description
+                      : `Created ${new Date(qrCode.created_at).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        })}`}
                   </p>
+                  {qrCode.title?.trim() && (
+                    <p className="text-xs text-neutral-muted mt-1">
+                      Created{" "}
+                      {new Date(qrCode.created_at).toLocaleDateString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

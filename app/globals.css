@@ -12,6 +12,22 @@
   --border: #E6EAF2;
   --muted: #6B7280;
   --primary: #4361ee;
+  --dashboard-sidebar-offset: 0px;
+}
+
+/* Align floating UI (pagination) to the main content column, not the full viewport */
+.dashboard-shell[data-sidebar="expanded"],
+.dashboard-shell[data-sidebar="collapsed"] {
+  --dashboard-sidebar-offset: 0px;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-shell[data-sidebar="expanded"] {
+    --dashboard-sidebar-offset: 18rem; /* lg:w-72 */
+  }
+  .dashboard-shell[data-sidebar="collapsed"] {
+    --dashboard-sidebar-offset: 5rem; /* lg:w-20 */
+  }
 }
 
 * {
@@ -313,51 +329,172 @@ html {
   background: #4B5563;
 }
 
-/* Navigation loader — SVG path draw of lunr mark (loops until route loads) */
-@keyframes lunr-path-draw {
-  0% {
-    stroke-dashoffset: 1;
-  }
-  42% {
-    stroke-dashoffset: 0;
-  }
-  68% {
-    stroke-dashoffset: 0;
-  }
+/* Navigation loader — full brand mark + progress rail */
+@keyframes lunr-loader-float {
+  0%,
   100% {
-    stroke-dashoffset: 1;
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
   }
 }
 
-@keyframes lunr-dot-pop {
+@keyframes lunr-loader-halo {
   0%,
-  28% {
-    opacity: 0;
-    transform: scale(0.35);
+  100% {
+    opacity: 0.5;
+    transform: scale(0.96);
   }
-  42%,
-  68% {
+  50% {
+    opacity: 0.95;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes lunr-loader-bar {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(420%);
+  }
+}
+
+@keyframes lunr-loader-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes lunr-loader-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes lunr-loader-caption {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes lunr-loader-mark-in {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
     opacity: 1;
     transform: scale(1);
   }
-  82%,
-  100% {
-    opacity: 0;
-    transform: scale(0.35);
+}
+
+@keyframes lunr-loader-ring-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-.lunr-loader-path {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: lunr-path-draw 1.6s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+@keyframes lunr-loader-shine {
+  0% {
+    transform: translateX(-140%) rotate(18deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.55;
+  }
+  55% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateX(160%) rotate(18deg);
+    opacity: 0;
+  }
 }
 
-.lunr-loader-dot {
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: lunr-dot-pop 1.6s cubic-bezier(0.34, 1.2, 0.64, 1) infinite;
+.lunr-loader-overlay-in {
+  animation: lunr-loader-overlay-in 180ms ease-out both;
+}
+
+.lunr-loader-overlay-out {
+  animation: lunr-loader-overlay-out 220ms ease-in both;
+}
+
+.lunr-loader-mark {
+  animation: lunr-loader-float 2.4s ease-in-out infinite;
+}
+
+.lunr-loader-mark-img {
+  animation: lunr-loader-mark-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lunr-loader-halo {
+  animation: lunr-loader-halo 2.4s ease-in-out infinite;
+}
+
+.lunr-loader-bar {
+  animation: lunr-loader-bar 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.lunr-loader-caption {
+  animation: lunr-loader-caption 1.6s ease-in-out infinite;
+}
+
+.lunr-loader-ring {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(67, 97, 238, 0.08) 40deg,
+    rgba(67, 97, 238, 0.55) 110deg,
+    rgba(247, 37, 133, 0.45) 160deg,
+    transparent 210deg
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  animation: lunr-loader-ring-spin 1.15s linear infinite;
+}
+
+.lunr-loader-shine-beam {
+  position: absolute;
+  inset: -20% auto -20% 0;
+  width: 38%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.55),
+    transparent
+  );
+  animation: lunr-loader-shine 2.1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lunr-loader-overlay-in,
+  .lunr-loader-overlay-out,
+  .lunr-loader-mark,
+  .lunr-loader-mark-img,
+  .lunr-loader-halo,
+  .lunr-loader-bar,
+  .lunr-loader-caption,
+  .lunr-loader-ring,
+  .lunr-loader-shine-beam {
+    animation: none !important;
+  }
+
+  .lunr-loader-mark-img {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Toasts — brand surface, not default Sonner rainbow */

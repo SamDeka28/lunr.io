@@ -41,11 +41,16 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
         day: "numeric", 
         year: "numeric" 
       });
+      const displayTitle =
+        (typeof qr.title === "string" && qr.title.trim()) ||
+        (typeof qr.links?.title === "string" && qr.links.title.trim()) ||
+        (qr.links?.short_code ? `QR · /${qr.links.short_code}` : "Untitled QR");
       
       return {
         ...qr,
         shortUrl,
         createdDate,
+        displayTitle,
       };
     });
   }, [qrCodes]);
@@ -184,10 +189,18 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
                   <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-neutral-bg to-white p-2 border border-neutral-border flex items-center justify-center mb-2 mx-auto">
                     <img 
                       src={qr.qr_data} 
-                      alt="QR Code" 
+                      alt={qr.displayTitle} 
                       className="w-full h-full object-contain"
                     />
                   </div>
+                  <p className="text-sm font-semibold text-neutral-text text-center truncate mb-1">
+                    {qr.displayTitle}
+                  </p>
+                  {qr.description && (
+                    <p className="text-xs text-neutral-muted text-center line-clamp-2 mb-1">
+                      {qr.description}
+                    </p>
+                  )}
                   {qr.shortUrl && (
                     <p className="text-xs text-neutral-muted font-mono text-center truncate mb-2">
                       {qr.shortUrl}
@@ -243,11 +256,19 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
                 <div className="w-32 h-32 rounded-xl bg-gradient-to-br from-neutral-bg to-white p-3 border-2 border-neutral-border flex items-center justify-center flex-shrink-0">
                   <img 
                     src={qr.qr_data} 
-                    alt="QR Code" 
+                    alt={qr.displayTitle} 
                     className="w-full h-full object-contain"
                   />
                 </div>
                 <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-neutral-text truncate mb-1">
+                    {qr.displayTitle}
+                  </p>
+                  {qr.description && (
+                    <p className="text-xs text-neutral-muted line-clamp-2 mb-2">
+                      {qr.description}
+                    </p>
+                  )}
                   {qr.shortUrl && (
                     <div className="mb-2">
                       <Link
@@ -324,7 +345,7 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
                 <div className="w-20 h-20 sm:w-32 sm:h-32 rounded-xl bg-gradient-to-br from-neutral-bg to-white p-2 sm:p-3 border-2 border-neutral-border flex items-center justify-center">
                   <img 
                     src={qr.qr_data} 
-                    alt="QR Code" 
+                    alt={qr.displayTitle} 
                     className="w-full h-full object-contain"
                   />
                 </div>
@@ -334,20 +355,9 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
               <div className="flex-1 min-w-0">
                 {/* Title and Link */}
                 <div className="mb-3">
-                  <div className="flex items-center gap-2 mb-2 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 min-w-0">
                     <h3 className="text-sm font-semibold text-neutral-text min-w-0 truncate">
-                      {qr.shortUrl ? (
-                        <Link
-                          href={qr.shortUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-mono text-sm text-electric-sapphire hover:text-bright-indigo font-semibold truncate block"
-                        >
-                          {qr.shortUrl}
-                        </Link>
-                      ) : (
-                        "QR Code"
-                      )}
+                      {qr.displayTitle}
                     </h3>
                     {qr.shortUrl && (
                       <button
@@ -368,6 +378,21 @@ export default function QRCodeList({ qrCodes, canCreate, viewType = "list", onSe
                       </button>
                     )}
                   </div>
+                  {qr.description && (
+                    <p className="text-xs text-neutral-muted line-clamp-2 mb-1.5">
+                      {qr.description}
+                    </p>
+                  )}
+                  {qr.shortUrl && (
+                    <Link
+                      href={qr.shortUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-xs text-electric-sapphire hover:text-bright-indigo font-medium truncate block mb-1.5"
+                    >
+                      {qr.shortUrl}
+                    </Link>
+                  )}
                   {qr.links && (
                     <div className="flex items-center gap-2 min-w-0">
                       <a

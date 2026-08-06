@@ -110,6 +110,8 @@ export async function POST(request: NextRequest) {
     const {
       link_id,
       url,
+      title,
+      description,
       fg_color = "#000000",
       bg_color = "#FFFFFF",
       size = "medium",
@@ -203,11 +205,20 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const trimmedTitle =
+      typeof title === "string" && title.trim() ? title.trim().slice(0, 255) : null;
+    const trimmedDescription =
+      typeof description === "string" && description.trim()
+        ? description.trim().slice(0, 2000)
+        : null;
+
     const { data: qrCode, error: insertError } = await supabase
       .from("qr_codes")
       .insert({
         user_id: user.id,
         link_id: resolvedLinkId,
+        title: trimmedTitle,
+        description: trimmedDescription,
         qr_data: qrData,
       })
       .select()

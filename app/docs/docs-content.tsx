@@ -185,12 +185,15 @@ Currently, you can select multiple links for future bulk operations. Individual 
 
 1. **Navigate to QR Codes**: Click "QR Codes" in the sidebar
 2. **Click "Generate QR Code"**: Start the creation process
-3. **Select a Link**: Choose an existing link or create a new one
-4. **Generate**: Your QR code is created instantly
-5. **Download**: Download in PNG format for printing or sharing
+3. **Add a title** (optional but recommended): Name the QR so you can find it later — e.g. "Lobby poster" or "Product insert"
+4. **Select a Link**: Choose an existing link or enter a URL
+5. **Customize** (premium): Colors, size, and logo
+6. **Generate**: Your QR code is created instantly
+7. **Download**: Download in PNG format for printing or sharing
 
 ## QR Code Features
 
+- **Titles & descriptions**: Identify QR codes in your list without opening each one
 - **High Quality**: Download in high resolution for printing
 - **Instant Generation**: Create QR codes in seconds
 - **Link Integration**: Automatically linked to your shortened URLs
@@ -198,6 +201,7 @@ Currently, you can select multiple links for future bulk operations. Individual 
 
 ## Best Practices
 
+- Name QR codes after where they'll appear (print, packaging, event)
 - Use high contrast colors for better scanning
 - Ensure sufficient size when printing (minimum 2x2 cm)
 - Test QR codes before printing large batches
