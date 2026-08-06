@@ -17,6 +17,7 @@ import {
   HelpCircle,
   Code,
   ExternalLink,
+  Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
@@ -36,6 +37,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   CreditCard,
   Code,
   HelpCircle,
+  Lightbulb,
 };
 
 interface DocsArticleClientProps {
@@ -62,10 +64,21 @@ export function DocsArticleClient({
       : null;
 
   const renderMarkdown = (text: string) => {
+    // Links first so nested formatting inside labels still works after
+    text = text.replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      '<a href="$2" class="text-primary font-medium underline underline-offset-2 hover:text-bright-indigo">$1</a>'
+    );
     // Process bold text
-    text = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-neutral-text">$1</strong>');
+    text = text.replace(
+      /\*\*(.*?)\*\*/g,
+      '<strong class="font-semibold text-neutral-text">$1</strong>'
+    );
     // Process inline code
-    text = text.replace(/`([^`]+)`/g, '<code class="bg-neutral-bg border border-neutral-border rounded px-1.5 py-0.5 font-mono text-sm text-primary">$1</code>');
+    text = text.replace(
+      /`([^`]+)`/g,
+      '<code class="bg-neutral-bg border border-neutral-border rounded px-1.5 py-0.5 font-mono text-sm text-primary">$1</code>'
+    );
     return { __html: text };
   };
 
@@ -78,6 +91,32 @@ export function DocsArticleClient({
     let inCodeBlock = false;
     let codeBlockLines: string[] = [];
     let codeBlockLanguage = "";
+    let tableRows: string[][] = [];
+    let tableHasHeader = false;
+
+    const isTableRow = (line: string) => {
+      const t = line.trim();
+      return t.startsWith("|") && t.includes("|", 1);
+    };
+
+    const isTableSeparator = (line: string) => {
+      const t = line.trim();
+      if (!t.includes("|")) return false;
+      // e.g. |---|---| or | :--- | ---: |
+      const cells = t.replace(/^\|/, "").replace(/\|$/, "").split("|");
+      return (
+        cells.length > 0 &&
+        cells.every((cell) => /^:?-{1,}:?$/.test(cell.trim()))
+      );
+    };
+
+    const parseTableRow = (line: string) =>
+      line
+        .trim()
+        .replace(/^\|/, "")
+        .replace(/\|$/, "")
+        .split("|")
+        .map((cell) => cell.trim());
 
     const flushList = () => {
       if (currentList.length > 0 && listType) {
@@ -113,10 +152,12 @@ export function DocsArticleClient({
             key={`code-${listKey++}`}
             className="bg-neutral-bg border border-neutral-border rounded-lg p-4 overflow-x-auto my-6"
           >
-            <code className={cn(
-              "text-sm font-mono text-neutral-text block whitespace-pre",
-              codeBlockLanguage && `language-${codeBlockLanguage}`
-            )}>
+            <code
+              className={cn(
+                "text-sm font-mono text-neutral-text block whitespace-pre",
+                codeBlockLanguage && `language-${codeBlockLanguage}`
+              )}
+            >
               {codeContent}
             </code>
           </pre>
@@ -126,18 +167,69 @@ export function DocsArticleClient({
       }
     };
 
+    const flushTable = () => {
+      if (tableRows.length === 0) return;
+
+      const header = tableHasHeader ? tableRows[0] : null;
+      const body = tableHasHeader ? tableRows.slice(1) : tableRows;
+
+      elements.push(
+        <div
+          key={`table-${listKey++}`}
+          className="my-6 overflow-x-auto rounded-xl border border-neutral-border/80 bg-white shadow-soft"
+        >
+          <table className="w-full min-w-[28rem] text-left text-sm border-collapse">
+            {header && (
+              <thead>
+                <tr className="bg-neutral-bg/80 border-b border-neutral-border/80">
+                  {header.map((cell, i) => (
+                    <th
+                      key={i}
+                      className="px-4 py-3 font-semibold text-neutral-text whitespace-nowrap"
+                      dangerouslySetInnerHTML={renderMarkdown(cell)}
+                    />
+                  ))}
+                </tr>
+              </thead>
+            )}
+            <tbody>
+              {body.map((row, ri) => (
+                <tr
+                  key={ri}
+                  className="border-b border-neutral-border/60 last:border-b-0 align-top"
+                >
+                  {row.map((cell, ci) => (
+                    <td
+                      key={ci}
+                      className={cn(
+                        "px-4 py-3 text-neutral-muted leading-relaxed",
+                        ci === 0 && "font-medium text-neutral-text w-[34%] min-w-[8rem]"
+                      )}
+                      dangerouslySetInnerHTML={renderMarkdown(cell)}
+                    />
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+
+      tableRows = [];
+      tableHasHeader = false;
+    };
+
     lines.forEach((line, idx) => {
       const trimmed = line.trim();
 
       // Code block start/end
       if (trimmed.startsWith("```")) {
         if (inCodeBlock) {
-          // End of code block
           flushCodeBlock();
           inCodeBlock = false;
         } else {
-          // Start of code block
           flushList();
+          flushTable();
           flushCodeBlock();
           const match = trimmed.match(/^```(\w+)?/);
           codeBlockLanguage = match?.[1] || "";
@@ -146,19 +238,37 @@ export function DocsArticleClient({
         return;
       }
 
-      // If we're in a code block, collect lines
       if (inCodeBlock) {
-        codeBlockLines.push(line); // Keep original line (with indentation)
+        codeBlockLines.push(line);
         return;
       }
 
-      // Headings
-      if (trimmed.startsWith("## ")) {
+      // Markdown tables (GFM pipe tables)
+      if (isTableRow(trimmed)) {
+        if (isTableSeparator(trimmed)) {
+          // Separator after the first row marks that row as header
+          if (tableRows.length === 1) tableHasHeader = true;
+          return;
+        }
         flushList();
         flushCodeBlock();
-        const text = trimmed.replace(/^##+\s/, "");
-        const level = trimmed.match(/^#+/)?.[0].length || 2;
-        const HeadingTag = `h${Math.min(level, 6)}` as keyof JSX.IntrinsicElements;
+        tableRows.push(parseTableRow(trimmed));
+        return;
+      }
+
+      if (tableRows.length > 0) {
+        flushTable();
+      }
+
+      // Headings (## through ######)
+      const headingMatch = trimmed.match(/^(#{2,6})\s+(.+)$/);
+      if (headingMatch) {
+        flushList();
+        flushTable();
+        flushCodeBlock();
+        const level = headingMatch[1].length;
+        const text = headingMatch[2];
+        const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
         elements.push(
           <HeadingTag
             key={`heading-${idx}`}
@@ -166,7 +276,8 @@ export function DocsArticleClient({
               "font-bold text-neutral-text mt-10 mb-4 first:mt-0",
               level === 2 && "text-2xl",
               level === 3 && "text-xl",
-              level === 4 && "text-lg"
+              level === 4 && "text-lg",
+              level >= 5 && "text-base"
             )}
           >
             {text}
@@ -180,6 +291,7 @@ export function DocsArticleClient({
       if (numberedMatch) {
         if (listType !== "ol") {
           flushList();
+          flushTable();
           flushCodeBlock();
           listType = "ol";
         }
@@ -191,6 +303,7 @@ export function DocsArticleClient({
       if (trimmed.startsWith("- ")) {
         if (listType !== "ul") {
           flushList();
+          flushTable();
           flushCodeBlock();
           listType = "ul";
         }
@@ -198,9 +311,10 @@ export function DocsArticleClient({
         return;
       }
 
-      // Empty line - flush list and code block, add spacing
+      // Empty line
       if (trimmed === "") {
         flushList();
+        flushTable();
         flushCodeBlock();
         return;
       }
@@ -208,6 +322,7 @@ export function DocsArticleClient({
       // CTA marker
       if (trimmed === "<!-- CTA:API_REFERENCE -->") {
         flushList();
+        flushTable();
         flushCodeBlock();
         elements.push(
           <div
@@ -241,6 +356,7 @@ export function DocsArticleClient({
 
       // Regular paragraph
       flushList();
+      flushTable();
       flushCodeBlock();
       elements.push(
         <p
@@ -253,6 +369,7 @@ export function DocsArticleClient({
 
     flushList();
     flushCodeBlock();
+    flushTable();
     return elements;
   };
 

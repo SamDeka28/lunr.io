@@ -710,10 +710,10 @@ CREATE POLICY "Allow insert analytics for active links"
 
 -- Insert default plans
 INSERT INTO plans (name, display_name, description, price_monthly, price_yearly, max_links, max_qr_codes, max_pages, features) VALUES
-  ('free', 'Free', 'Perfect for getting started', 0, 0, 2, 2, 0, '{"custom_back_half": false, "analytics": true, "qr_codes": true, "expiration": false, "pages": false, "password_protection": false}'::jsonb),
-  ('pro', 'Pro', 'For professionals and small teams', 9.99, 99.99, 100, 100, 5, '{"custom_back_half": true, "analytics": true, "qr_codes": true, "expiration": true, "utm_parameters": true, "custom_domains": false, "pages": true, "password_protection": true}'::jsonb),
-  ('business', 'Business', 'For growing businesses', 29.99, 299.99, 1000, 1000, 50, '{"custom_back_half": true, "analytics": true, "qr_codes": true, "expiration": true, "utm_parameters": true, "custom_domains": true, "team_collaboration": true, "pages": true, "password_protection": true}'::jsonb),
-  ('enterprise', 'Enterprise', 'For large organizations', 99.99, 999.99, -1, -1, -1, '{"custom_back_half": true, "analytics": true, "qr_codes": true, "expiration": true, "utm_parameters": true, "custom_domains": true, "team_collaboration": true, "api_access": true, "priority_support": true, "pages": true, "password_protection": true}'::jsonb)
+  ('free', 'Free', 'Perfect for getting started', 0, 0, 2, 2, 0, '{"custom_back_half": false, "analytics": true, "qr_codes": true, "expiration": false, "pages": false, "password_protection": false, "lead_capture": false}'::jsonb),
+  ('pro', 'Pro', 'For professionals and small teams', 9.99, 99.99, 100, 100, 5, '{"custom_back_half": true, "analytics": true, "qr_codes": true, "expiration": true, "utm_parameters": true, "custom_domains": false, "pages": true, "password_protection": true, "lead_capture": true}'::jsonb),
+  ('business', 'Business', 'For growing businesses', 29.99, 299.99, 1000, 1000, 50, '{"custom_back_half": true, "analytics": true, "qr_codes": true, "expiration": true, "utm_parameters": true, "custom_domains": true, "team_collaboration": true, "pages": true, "password_protection": true, "lead_capture": true}'::jsonb),
+  ('enterprise', 'Enterprise', 'For large organizations', 99.99, 999.99, -1, -1, -1, '{"custom_back_half": true, "analytics": true, "qr_codes": true, "expiration": true, "utm_parameters": true, "custom_domains": true, "team_collaboration": true, "api_access": true, "priority_support": true, "pages": true, "password_protection": true, "lead_capture": true}'::jsonb)
 ON CONFLICT (name) DO UPDATE SET
   max_pages = EXCLUDED.max_pages,
   features = EXCLUDED.features;

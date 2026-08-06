@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  BarChart3,
   BookOpen,
+  ChevronDown,
   Copy,
   DollarSign,
   Download,
@@ -17,10 +19,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils/cn";
-import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InfoTooltip, LabelWithTip } from "@/components/ui/info-tooltip";
 import { formatCampaignMoney, normalizeCurrency } from "@/lib/utils/currency";
+import {
+  formatCampaignTypeChip,
+  isPartnerCampaignType,
+} from "@/lib/utils/campaign-studio";
+import { PixelStudio } from "@/components/pixel/pixel-studio";
 import type { CampaignWithStats, CampaignCreator, CampaignSpendEntry } from "@/types/database.types";
 
 type Tab =
@@ -28,17 +34,24 @@ type Tab =
   | "creators"
   | "links"
   | "analytics"
-  | "spend"
-  | "settings";
+  | "conversions"
+  | "spend";
 
-const TABS: { id: Tab; label: string }[] = [
+const PRIMARY_TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
-  { id: "creators", label: "Creators" },
   { id: "links", label: "Links" },
   { id: "analytics", label: "Analytics" },
-  { id: "spend", label: "Spend" },
-  { id: "settings", label: "Settings" },
 ];
+
+const MORE_TABS: { id: Tab; label: string }[] = [
+  { id: "creators", label: "Partners" },
+  { id: "conversions", label: "Pixel" },
+  { id: "spend", label: "Spend" },
+];
+
+const ALL_TABS = [...PRIMARY_TABS, ...MORE_TABS];
+
+const TIPS_STORAGE_KEY = "lunr.campaignStudio.hideTips";
 
 const PLATFORMS = [
   "instagram",
@@ -62,12 +75,20 @@ const CREATOR_CSV_HEADERS =
   "display_name,handle,platform,fee_amount,destination_url";
 
 const CREATOR_CSV_TEMPLATE = `${CREATOR_CSV_HEADERS}
-Alex Creator,alex,instagram,500,https://example.com/landing
+Alex Partner,alex,instagram,500,https://example.com/landing
 Jordan Lee,jordanlee,tiktok,750,https://example.com/landing
 Sam Rivera,samr,youtube,,https://example.com/landing
 `;
 
-const SETUP_GUIDE_HREF = "/docs/campaigns/influencer-setup";
+const SETUP_GUIDE_HREF = "/docs/campaigns/creating-campaigns";
+
+function resolveInitialTab(initialTab: string): Tab | "settings" {
+  if (initialTab === "partners") return "creators";
+  if (initialTab === "tracking" || initialTab === "pixel") return "conversions";
+  if (initialTab === "settings") return "settings";
+  if (ALL_TABS.some((t) => t.id === initialTab)) return initialTab as Tab;
+  return "overview";
+}
 
 function downloadCreatorCsvTemplate() {
   const blob = new Blob([CREATOR_CSV_TEMPLATE], {
@@ -76,7 +97,7 @@ function downloadCreatorCsvTemplate() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "creator-import-template.csv";
+  a.download = "partner-import-template.csv";
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -108,8 +129,9 @@ export function CampaignWorkspace({
   userId: string;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>(
-    TABS.some((t) => t.id === initialTab) ? (initialTab as Tab) : "overview"
+  const resolved = resolveInitialTab(initialTab);
+  const [tab, setTab] = useState<Tab>(() =>
+    resolved === "settings" ? "overview" : resolved
   );
   const [campaign] = useState(initialCampaign);
   const [creators, setCreators] = useState<CampaignCreator[]>([]);
@@ -120,6 +142,8 @@ export function CampaignWorkspace({
   });
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<{ from: string; to: string }>(() => {
     const to = new Date();
     const from = new Date(to.getTime() - 29 * 86400000);
@@ -130,8 +154,13 @@ export function CampaignWorkspace({
   });
 
   const status = getCampaignStatusLabel(campaign);
-  const isInfluencer = campaign.campaign_type === "influencer";
+  const showPartners =
+    isPartnerCampaignType(campaign.campaign_type) || creators.length > 0;
   const currency = normalizeCurrency(campaign.currency);
+  const moreActive = MORE_TABS.some((t) => t.id === tab);
+  const conversionsCount = Number(analytics?.totals?.conversions ?? 0);
+  const showPixelBadge =
+    links.length > 0 && conversionsCount === 0 && tab !== "conversions";
 
   const loadCreators = useCallback(async () => {
     const res = await fetch(`/api/campaigns/${campaign.id}/creators`);
@@ -162,128 +191,254 @@ export function CampaignWorkspace({
   }, [campaign.id, range.from, range.to]);
 
   useEffect(() => {
+    if (resolved === "settings") {
+      router.replace(`/dashboard/campaigns/${campaign.id}/edit`);
+    }
+  }, [resolved, campaign.id, router]);
+
+  useEffect(() => {
     if (tab === "creators" || tab === "overview") void loadCreators();
     if (tab === "links" || tab === "overview") void loadLinks();
     if (tab === "spend" || tab === "overview") void loadSpend();
-    if (tab === "analytics" || tab === "overview") void loadAnalytics();
+    if (tab === "analytics" || tab === "overview" || tab === "conversions") {
+      void loadAnalytics();
+    }
   }, [tab, loadCreators, loadLinks, loadSpend, loadAnalytics]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onPointer = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    };
+    // Use click (not mousedown) so the toggle button's click isn't raced by a close
+    document.addEventListener("click", onPointer);
+    return () => document.removeEventListener("click", onPointer);
+  }, [moreOpen]);
 
   const setTabAndUrl = (next: Tab) => {
     setTab(next);
+    setMoreOpen(false);
     router.replace(`/dashboard/campaigns/${campaign.id}?tab=${next}`);
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-3">
         <Link
           href="/dashboard/campaigns"
           className="p-2 rounded-xl hover:bg-neutral-bg text-neutral-muted"
+          aria-label="Back to campaigns"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <PageHeader
-          title={campaign.name}
-          description={campaign.description || "Campaign workspace"}
-        />
+        <p className="text-xs font-medium text-neutral-muted">
+          Campaign Studio
+        </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <StatusChip status={status} />
-        {campaign.campaign_type && (
-          <span className="text-xs font-medium text-neutral-muted px-2.5 py-1 rounded-full bg-white border border-neutral-border/80">
-            {campaign.campaign_type.replace(/_/g, " ")}
-          </span>
-        )}
-        <span className="text-xs font-medium text-neutral-muted px-2.5 py-1 rounded-full bg-white border border-neutral-border/80">
-          {currency}
-        </span>
-        <div className="flex items-center gap-3 ml-auto">
-          <Link
-            href={SETUP_GUIDE_HREF}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-muted hover:text-primary"
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            Setup guide
-          </Link>
-          <Link
-            href={`/dashboard/campaigns/${campaign.id}/edit`}
-            className="text-xs font-semibold text-primary hover:text-bright-indigo"
-          >
-            Edit details
-          </Link>
+      <div
+        className="rounded-2xl border border-neutral-border/80 shadow-soft"
+        style={{
+          background:
+            "radial-gradient(120% 80% at 100% 0%, rgba(67,97,238,0.06), transparent 45%), #F3F5FA",
+        }}
+      >
+        <div className="px-5 pt-5 pb-4 border-b border-neutral-border/70 bg-white/85 backdrop-blur-xl">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-muted mb-1">
+                Campaign Studio
+              </p>
+              <h1 className="text-xl sm:text-2xl font-semibold text-neutral-text tracking-tight truncate">
+                {campaign.name}
+              </h1>
+              {campaign.description ? (
+                <p className="text-sm text-neutral-muted mt-1 line-clamp-2 max-w-2xl">
+                  {campaign.description}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <Link
+                href={SETUP_GUIDE_HREF}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-muted hover:text-primary"
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                Setup guide
+              </Link>
+              <Link
+                href={`/dashboard/campaigns/${campaign.id}/edit`}
+                className="text-xs font-semibold text-primary hover:text-bright-indigo"
+              >
+                Edit details
+              </Link>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            <StatusChip status={status} />
+            {campaign.campaign_type && (
+              <span className="text-xs font-medium text-neutral-muted px-2.5 py-1 rounded-full bg-white border border-neutral-border/80 capitalize">
+                {formatCampaignTypeChip(campaign.campaign_type)}
+              </span>
+            )}
+            <span className="text-xs font-medium text-neutral-muted px-2.5 py-1 rounded-full bg-white border border-neutral-border/80">
+              {currency}
+            </span>
+          </div>
+        </div>
+
+        <div className="px-4 py-3 border-b border-neutral-border/70 bg-neutral-surface/40">
+          <div className="flex items-center gap-1 p-1 bg-white/80 border border-neutral-border/70 rounded-full shadow-soft">
+            <div className="flex items-center gap-1 min-w-0 flex-1 overflow-x-auto">
+              {PRIMARY_TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTabAndUrl(t.id)}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors",
+                    tab === t.id
+                      ? "bg-primary text-white shadow-button"
+                      : "text-neutral-muted hover:text-neutral-text"
+                  )}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative shrink-0" ref={moreRef}>
+              <button
+                type="button"
+                aria-expanded={moreOpen}
+                aria-haspopup="menu"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMoreOpen((o) => !o);
+                }}
+                className={cn(
+                  "inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors",
+                  moreActive || moreOpen
+                    ? "bg-primary text-white shadow-button"
+                    : "text-neutral-muted hover:text-neutral-text"
+                )}
+              >
+                More
+                {showPartners || showPixelBadge ? (
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                ) : null}
+                <ChevronDown
+                  className={cn(
+                    "h-3.5 w-3.5 opacity-80 transition-transform",
+                    moreOpen && "rotate-180"
+                  )}
+                />
+              </button>
+              {moreOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-2 z-50 min-w-[11rem] rounded-xl border border-neutral-border/80 bg-white shadow-lg p-1"
+                >
+                  {MORE_TABS.map((t) => {
+                    const emphasizePartners =
+                      t.id === "creators" && showPartners;
+                    const emphasizePixel =
+                      t.id === "conversions" && showPixelBadge;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => setTabAndUrl(t.id)}
+                        className={cn(
+                          "w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-colors",
+                          tab === t.id
+                            ? "bg-primary/10 text-primary"
+                            : "text-neutral-text hover:bg-neutral-bg"
+                        )}
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          {t.label}
+                          {emphasizePartners && (
+                            <span className="text-[10px] font-medium text-neutral-muted">
+                              active
+                            </span>
+                          )}
+                          {emphasizePixel && (
+                            <span className="text-[10px] font-medium text-amber-700">
+                              set up
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-6">
+          {tab === "overview" && (
+            <OverviewTab
+              campaign={campaign}
+              creators={creators}
+              links={links}
+              spendTotal={spend.total}
+              analytics={analytics}
+              currency={currency}
+              onGo={setTabAndUrl}
+            />
+          )}
+          {tab === "creators" && (
+            <CreatorsTab
+              campaignId={campaign.id}
+              creators={creators}
+              defaultDestination={campaign.default_destination_url || ""}
+              currency={currency}
+              onRefresh={loadCreators}
+              isPartnerType={isPartnerCampaignType(campaign.campaign_type)}
+            />
+          )}
+          {tab === "links" && (
+            <LinksTab campaignId={campaign.id} links={links} onRefresh={loadLinks} />
+          )}
+          {tab === "analytics" && (
+            <AnalyticsTab
+              analytics={analytics}
+              loading={loading}
+              range={range}
+              setRange={setRange}
+              onRefresh={loadAnalytics}
+              campaignId={campaign.id}
+              currency={currency}
+              onGoConversions={() => setTabAndUrl("conversions")}
+            />
+          )}
+          {tab === "conversions" && (
+            <PixelStudio
+              campaignId={campaign.id}
+              currency={currency}
+              onLogged={loadAnalytics}
+            />
+          )}
+          {tab === "spend" && (
+            <SpendTab
+              campaignId={campaign.id}
+              spend={spend}
+              creators={creators}
+              plannedBudget={Number(campaign.budget) || 0}
+              currency={currency}
+              onRefresh={loadSpend}
+            />
+          )}
         </div>
       </div>
-
-      <div className="flex gap-1 overflow-x-auto p-1 bg-white/80 border border-neutral-border/80 rounded-full shadow-soft">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTabAndUrl(t.id)}
-            className={cn(
-              "px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors",
-              tab === t.id
-                ? "bg-primary text-white shadow-button"
-                : "text-neutral-muted hover:text-neutral-text"
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === "overview" && (
-        <OverviewTab
-          campaign={campaign}
-          creators={creators}
-          links={links}
-          spendTotal={spend.total}
-          analytics={analytics}
-          isInfluencer={isInfluencer}
-          currency={currency}
-          onGo={setTabAndUrl}
-        />
-      )}
-      {tab === "creators" && (
-        <CreatorsTab
-          campaignId={campaign.id}
-          creators={creators}
-          defaultDestination={campaign.default_destination_url || ""}
-          currency={currency}
-          onRefresh={loadCreators}
-          isInfluencer={isInfluencer}
-        />
-      )}
-      {tab === "links" && (
-        <LinksTab campaignId={campaign.id} links={links} onRefresh={loadLinks} />
-      )}
-      {tab === "analytics" && (
-        <AnalyticsTab
-          analytics={analytics}
-          loading={loading}
-          range={range}
-          setRange={setRange}
-          onRefresh={loadAnalytics}
-          campaignId={campaign.id}
-          currency={currency}
-        />
-      )}
-      {tab === "spend" && (
-        <SpendTab
-          campaignId={campaign.id}
-          spend={spend}
-          creators={creators}
-          plannedBudget={Number(campaign.budget) || 0}
-          currency={currency}
-          onRefresh={loadSpend}
-        />
-      )}
-      {tab === "settings" && (
-        <SettingsHint campaignId={campaign.id} />
-      )}
     </div>
   );
 }
@@ -311,59 +466,167 @@ function StatusChip({
   );
 }
 
+function HowCampaignWorks({
+  hasLinks,
+  hasPartners,
+  onGo,
+  onDismiss,
+}: {
+  hasLinks: boolean;
+  hasPartners: boolean;
+  onGo: (tab: Tab) => void;
+  onDismiss: () => void;
+}) {
+  const steps = [
+    {
+      n: "1",
+      title: "Add short links",
+      body: "Assign or create links so clicks roll up to this initiative.",
+      cta: hasLinks ? undefined : ("Add links" as const),
+      tab: "links" as Tab,
+    },
+    {
+      n: "2",
+      title: "Optional partners",
+      body: "Only if people need their own tracking URL.",
+      cta: hasPartners ? undefined : ("Add partners" as const),
+      tab: "creators" as Tab,
+    },
+    {
+      n: "3",
+      title: "Wire conversions",
+      body: "Install Pixel Studio on your thank-you page, then review Analytics.",
+      cta: "Open Pixel" as const,
+      tab: "conversions" as Tab,
+    },
+  ];
+
+  return (
+    <div className="rounded-2xl border border-primary/15 bg-white/90 p-5 shadow-soft">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div>
+          <h2 className="text-sm font-semibold text-neutral-text tracking-tight">
+            Get this campaign ready
+          </h2>
+          <p className="text-xs text-neutral-muted mt-1 max-w-xl leading-relaxed">
+            Group links for one initiative — then measure clicks, conversions, and spend together.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="text-[11px] font-semibold text-neutral-muted hover:text-neutral-text"
+        >
+          Dismiss tips
+        </button>
+      </div>
+      <ol className="grid sm:grid-cols-3 gap-3">
+        {steps.map((step) => (
+          <li
+            key={step.n}
+            className="rounded-xl border border-neutral-border/70 bg-neutral-bg/40 p-3.5 flex flex-col gap-2"
+          >
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-primary text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+                {step.n}
+              </span>
+              <span className="text-xs font-semibold text-neutral-text">{step.title}</span>
+            </div>
+            <p className="text-[11px] text-neutral-muted leading-relaxed flex-1">{step.body}</p>
+            {step.cta && step.tab && (
+              <button
+                type="button"
+                onClick={() => onGo(step.tab!)}
+                className="text-[11px] font-semibold text-primary hover:text-bright-indigo text-left"
+              >
+                {step.cta} →
+              </button>
+            )}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 function OverviewTab({
   campaign,
   creators,
   links,
   spendTotal,
   analytics,
-  isInfluencer,
   currency,
   onGo,
 }: any) {
   const totals = analytics?.totals;
+  const topPartners = (analytics?.creatorLeaderboard || []).slice(0, 5);
+  const isPartnerType = isPartnerCampaignType(campaign.campaign_type);
+  const hasLinks = links.length > 0;
+  const [tipsHidden, setTipsHidden] = useState(false);
+
+  useEffect(() => {
+    try {
+      setTipsHidden(localStorage.getItem(TIPS_STORAGE_KEY) === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const dismissTips = () => {
+    setTipsHidden(true);
+    try {
+      localStorage.setItem(TIPS_STORAGE_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const showTips = !tipsHidden && !hasLinks;
+
+  const nextAction = (() => {
+    if (!hasLinks) {
+      return {
+        label: "Add links",
+        body: "Links are required before analytics and conversions mean anything.",
+        tab: "links" as Tab,
+      };
+    }
+    if (isPartnerType && creators.length === 0) {
+      return {
+        label: "Add partners",
+        body: "Generate unique tracking links for each partner or placement.",
+        tab: "creators" as Tab,
+      };
+    }
+    if ((totals?.conversions ?? 0) === 0) {
+      return {
+        label: "Set up Pixel",
+        body: "Install a thank-you pixel or postback so CPA and partner conversions populate.",
+        tab: "conversions" as Tab,
+      };
+    }
+    if (spendTotal <= 0 && Number(campaign.budget || 0) > 0) {
+      return {
+        label: "Log spend",
+        body: "Add real costs so CPC and CPA reflect your books, not only planned budget.",
+        tab: "spend" as Tab,
+      };
+    }
+    return null;
+  })();
+
   return (
     <div className="space-y-6">
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat label="Links" value={links.length} />
-        <Stat label="Creators" value={creators.length} />
-        <Stat label="Clicks (range)" value={totals?.clicks ?? "—"} />
-        <Stat
-          label="Spend"
-          value={
-            spendTotal > 0
-              ? formatCampaignMoney(spendTotal, currency)
-              : `Plan ${formatCampaignMoney(campaign.budget || 0, currency)}`
-          }
+      {showTips && (
+        <HowCampaignWorks
+          hasLinks={hasLinks}
+          hasPartners={creators.length > 0}
+          onGo={onGo}
+          onDismiss={dismissTips}
         />
-      </div>
-      {isInfluencer && creators.length === 0 ? (
-        <EmptyState
-          icon={<Users className="h-8 w-8" />}
-          title="Add your first creator"
-          description="Generate unique tracking links per influencer and measure who drives clicks and conversions. See the setup guide if you’re new to campaign ops."
-          action={
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => onGo("creators")}
-                className="px-5 py-2.5 rounded-full bg-primary text-white text-sm font-semibold shadow-button"
-              >
-                Add creators
-              </button>
-              <Link
-                href={SETUP_GUIDE_HREF}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full border border-neutral-border text-sm font-semibold hover:border-primary/40"
-              >
-                <BookOpen className="h-4 w-4" />
-                Setup guide
-              </Link>
-            </div>
-          }
-        />
-      ) : !isInfluencer && links.length === 0 ? (
+      )}
+
+      {!hasLinks && !showTips ? (
         <EmptyState
           icon={<Link2 className="h-8 w-8" />}
           title="Add links to this campaign"
@@ -378,29 +641,117 @@ function OverviewTab({
             </button>
           }
         />
-      ) : (
-        <div className="bg-white rounded-card border border-neutral-border/80 shadow-soft p-5">
-          <h3 className="font-semibold text-neutral-text mb-3">Top creators</h3>
-          {(analytics?.creatorLeaderboard || []).slice(0, 5).length === 0 ? (
-            <p className="text-sm text-neutral-muted">No creator clicks in this range yet.</p>
-          ) : (
-            <ul className="space-y-2">
-              {(analytics?.creatorLeaderboard || []).slice(0, 5).map((c: any) => (
-                <li key={c.id} className="flex justify-between text-sm">
-                  <span className="font-medium text-neutral-text">
-                    {c.display_name}
-                    <span className="text-neutral-muted"> · {c.platform}</span>
-                  </span>
-                  <span className="text-neutral-muted">{c.clicks} clicks</span>
-                </li>
-              ))}
-            </ul>
+      ) : null}
+
+      {hasLinks && (
+        <>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Stat label="Clicks" value={totals?.clicks ?? "—"} tip="Clicks in the default analytics range." />
+            <Stat
+              label="Conversions"
+              tip="Goal events from Pixel Studio, postback, or manual log."
+              value={totals?.conversions ?? "—"}
+            />
+            <Stat
+              label="Conv. rate"
+              tip="Conversions ÷ clicks for the analytics range."
+              value={
+                totals?.conversion_rate != null
+                  ? `${Number(totals.conversion_rate).toFixed(1)}%`
+                  : "—"
+              }
+            />
+            <Stat
+              label={spendTotal > 0 ? "CPA" : "Spend"}
+              tip={
+                spendTotal > 0
+                  ? "Cost per acquisition = logged spend ÷ conversions."
+                  : "Logged spend so far. Planned budget is only a ceiling."
+              }
+              value={
+                spendTotal > 0 && totals?.cpa != null
+                  ? formatCampaignMoney(totals.cpa, currency)
+                  : spendTotal > 0
+                    ? formatCampaignMoney(spendTotal, currency)
+                    : formatCampaignMoney(0, currency)
+              }
+            />
+          </div>
+
+          {nextAction && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-neutral-border/80 bg-white px-4 py-3.5 shadow-soft">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-neutral-text">{nextAction.label}</p>
+                <p className="text-xs text-neutral-muted mt-0.5">{nextAction.body}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onGo(nextAction.tab)}
+                className="shrink-0 px-4 py-2 rounded-full bg-primary text-white text-sm font-semibold shadow-button"
+              >
+                {nextAction.label}
+              </button>
+            </div>
           )}
-        </div>
+
+          {isPartnerType && creators.length === 0 ? (
+            <EmptyState
+              icon={<Users className="h-8 w-8" />}
+              title="Add your first partner"
+              description="Generate unique tracking links per partner or placement and measure who drives clicks and conversions."
+              action={
+                <button
+                  type="button"
+                  onClick={() => onGo("creators")}
+                  className="px-5 py-2.5 rounded-full bg-primary text-white text-sm font-semibold shadow-button"
+                >
+                  Add partners
+                </button>
+              }
+            />
+          ) : null}
+
+          {creators.length > 0 && (
+            <div className="bg-white rounded-card border border-neutral-border/80 shadow-soft p-5">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <h3 className="font-semibold text-neutral-text">Top partners</h3>
+                <button
+                  type="button"
+                  onClick={() => onGo("creators")}
+                  className="text-xs font-semibold text-primary hover:text-bright-indigo"
+                >
+                  View all
+                </button>
+              </div>
+              {topPartners.length === 0 ? (
+                <p className="text-sm text-neutral-muted">
+                  No partner clicks in this range yet.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {topPartners.map((c: any) => (
+                    <li key={c.id} className="flex justify-between text-sm">
+                      <span className="font-medium text-neutral-text">
+                        {c.display_name}
+                        <span className="text-neutral-muted"> · {c.platform}</span>
+                      </span>
+                      <span className="text-neutral-muted">{c.clicks} clicks</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-4 text-xs text-neutral-muted">
+            <span>{links.length} links</span>
+            <span>{creators.length} partners</span>
+            <span>
+              Planned budget {formatCampaignMoney(campaign.budget || 0, currency)}
+            </span>
+          </div>
+        </>
       )}
-      <p className="text-xs text-neutral-muted">
-        Planned budget is a planning estimate. CPC uses real spend when logged.
-      </p>
     </div>
   );
 }
@@ -431,14 +782,14 @@ function CreatorsTab({
   defaultDestination,
   currency,
   onRefresh,
-  isInfluencer,
+  isPartnerType,
 }: {
   campaignId: string;
   creators: CampaignCreator[];
   defaultDestination: string;
   currency: string;
   onRefresh: () => void;
-  isInfluencer: boolean;
+  isPartnerType: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -451,6 +802,7 @@ function CreatorsTab({
     deliverable_notes: "",
   });
   const [csvText, setCsvText] = useState("");
+  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
     setForm((prev) => ({
@@ -466,7 +818,7 @@ function CreatorsTab({
     const destination = form.destination_url.trim() || defaultDestination.trim();
     if (!destination) {
       toast.error(
-        "Destination URL is required — enter a landing page here, or set Default destination URL in Settings."
+        "Destination URL is required — enter a landing page here, or set a default destination when editing the campaign."
       );
       return;
     }
@@ -489,7 +841,7 @@ function CreatorsTab({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
-      toast.success("Creator added");
+      toast.success("Partner added");
       setOpen(false);
       setForm({
         display_name: "",
@@ -501,7 +853,7 @@ function CreatorsTab({
       });
       onRefresh();
     } catch (err: any) {
-      toast.error(err.message || "Failed to add creator");
+      toast.error(err.message || "Failed to add partner");
     } finally {
       setSaving(false);
     }
@@ -531,7 +883,7 @@ function CreatorsTab({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Import failed");
-      toast.success(`Imported ${data.created} creators`);
+      toast.success(`Imported ${data.created} partners`);
       if (data.errors?.length) toast.message(`${data.errors.length} rows failed`);
       setCsvText("");
       onRefresh();
@@ -565,9 +917,9 @@ function CreatorsTab({
 
   return (
     <div className="space-y-4">
-      {!isInfluencer && (
+      {!isPartnerType && (
         <p className="text-sm text-neutral-muted">
-          Creators are optional for this campaign type. Use them for partners or placements, or manage Links only.
+          Partners are optional — use for affiliates, creators, or placements
         </p>
       )}
       <div className="flex flex-wrap gap-2">
@@ -576,7 +928,7 @@ function CreatorsTab({
           onClick={() => setOpen((v) => !v)}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-white text-sm font-semibold shadow-button"
         >
-          <Plus className="h-4 w-4" /> Add creator
+          <Plus className="h-4 w-4" /> Add partner
         </button>
       </div>
 
@@ -586,14 +938,14 @@ function CreatorsTab({
             <Field label="Display name" value={form.display_name} onChange={(v) => setForm({ ...form, display_name: v })} />
             <Field
               label="Handle"
-              tip="Their social username (without or with @). Used in UTM content so you can tell creators apart in analytics."
+              tip="Their username or handle (without or with @). Used in UTM content so you can tell partners apart in analytics."
               value={form.handle}
               onChange={(v) => setForm({ ...form, handle: v })}
               placeholder="@handle"
             />
             <div>
               <LabelWithTip
-                tip="Social network this creator posts on. Becomes the default utm_source on their tracking link."
+                tip="Channel or network this partner uses. Becomes the default utm_source on their tracking link."
                 className="mb-1.5 text-xs font-semibold text-neutral-muted"
               >
                 Platform
@@ -610,7 +962,7 @@ function CreatorsTab({
             </div>
             <Field
               label={`Fee (${currency})`}
-              tip={`What you pay this creator in ${currency}. Marking them Paid can auto-log this amount under Spend.`}
+              tip={`What you pay this partner in ${currency}. Marking them Paid can auto-log this amount under Spend.`}
               value={form.fee_amount}
               onChange={(v) => setForm({ ...form, fee_amount: v })}
               placeholder="500"
@@ -618,7 +970,7 @@ function CreatorsTab({
             <div className="sm:col-span-2">
               <Field
                 label="Destination URL"
-                tip="The landing page this creator’s short link opens (e.g. your product page). If empty, we use the campaign’s Default destination URL from Settings."
+                tip="The landing page this partner’s short link opens. If empty, we use the campaign’s default destination."
                 value={form.destination_url}
                 onChange={(v) => setForm({ ...form, destination_url: v })}
                 placeholder={
@@ -642,7 +994,7 @@ function CreatorsTab({
                       href={`/dashboard/campaigns/${campaignId}/edit`}
                       className="font-semibold text-primary hover:underline"
                     >
-                      set Default destination URL in Settings
+                      edit campaign details
                     </Link>
                     .
                   </>
@@ -661,15 +1013,35 @@ function CreatorsTab({
         </div>
       )}
 
-      <div className="bg-white rounded-card border border-neutral-border/80 shadow-soft p-5 space-y-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="font-semibold text-neutral-text">Bulk CSV import</h3>
-            <p className="text-xs text-neutral-muted mt-1">
-              Columns: {CREATOR_CSV_HEADERS}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setShowImport((v) => !v)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-border text-sm font-semibold hover:border-primary/40"
+        >
+          <Download className="h-4 w-4" />
+          {showImport ? "Hide import" : "Import"}
+        </button>
+        <Link
+          href={SETUP_GUIDE_HREF}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-neutral-border text-sm font-semibold hover:border-primary/40"
+        >
+          <BookOpen className="h-4 w-4" />
+          Setup guide
+        </Link>
+      </div>
+
+      {showImport && (
+        <div className="bg-white rounded-card border border-neutral-border/80 shadow-soft p-5 space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-neutral-text">Bulk CSV import</h3>
+              <p className="text-xs text-neutral-muted mt-1">
+                Columns: {CREATOR_CSV_HEADERS}
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -681,46 +1053,46 @@ function CreatorsTab({
               <Download className="h-3.5 w-3.5" />
               Download template
             </button>
-            <Link
-              href={SETUP_GUIDE_HREF}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-neutral-border text-xs font-semibold hover:border-primary/40"
-            >
-              <BookOpen className="h-3.5 w-3.5" />
-              Setup guide
-            </Link>
           </div>
+          <textarea
+            value={csvText}
+            onChange={(e) => setCsvText(e.target.value)}
+            rows={4}
+            className="w-full rounded-xl border border-neutral-border/80 p-3 text-sm font-mono"
+            placeholder={CREATOR_CSV_TEMPLATE.trim()}
+          />
+          <button
+            type="button"
+            disabled={saving || !csvText.trim()}
+            onClick={importCsv}
+            className="px-4 py-2 rounded-full border border-neutral-border text-sm font-semibold hover:border-primary/40"
+          >
+            Import partners
+          </button>
         </div>
-        <textarea
-          value={csvText}
-          onChange={(e) => setCsvText(e.target.value)}
-          rows={4}
-          className="w-full rounded-xl border border-neutral-border/80 p-3 text-sm font-mono"
-          placeholder={CREATOR_CSV_TEMPLATE.trim()}
-        />
-        <button
-          type="button"
-          disabled={saving || !csvText.trim()}
-          onClick={importCsv}
-          className="px-4 py-2 rounded-full border border-neutral-border text-sm font-semibold hover:border-primary/40"
-        >
-          Import creators
-        </button>
-      </div>
+      )}
 
       {creators.length === 0 ? (
         <EmptyState
           icon={<Users className="h-8 w-8" />}
-          title={isInfluencer ? "No creators yet" : "No creators on this campaign"}
-          description="Add creators to generate unique tracking links per person."
+          title={isPartnerType ? "No partners yet" : "No partners on this campaign"}
+          description="Add partners to generate unique tracking links per person or placement."
+          action={
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-white text-sm font-semibold shadow-button"
+            >
+              <Plus className="h-4 w-4" /> Add partner
+            </button>
+          }
         />
       ) : (
         <div className="bg-white rounded-card border border-neutral-border/80 shadow-soft overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-neutral-bg/80 text-neutral-muted text-left">
               <tr>
-                <th className="px-4 py-3 font-semibold">Creator</th>
+                <th className="px-4 py-3 font-semibold">Partner</th>
                 <th className="px-4 py-3 font-semibold">Platform</th>
                 <th className="px-4 py-3 font-semibold">
                   <span className="inline-flex items-center gap-1">
@@ -825,6 +1197,7 @@ function LinksTab({
   const [loading, setLoading] = useState(false);
   const [loadingAvailable, setLoadingAvailable] = useState(true);
   const [search, setSearch] = useState("");
+  const [showAssign, setShowAssign] = useState(false);
 
   const loadAvailable = useCallback(async () => {
     setLoadingAvailable(true);
@@ -906,6 +1279,13 @@ function LinksTab({
         >
           <Plus className="h-4 w-4" /> New link in campaign
         </Link>
+        <button
+          type="button"
+          onClick={() => setShowAssign((v) => !v)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-border text-sm font-semibold hover:border-primary/40"
+        >
+          {showAssign ? "Hide assign" : "Assign existing"}
+        </button>
         <Link
           href={`/dashboard/links?campaign_id=${campaignId}`}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-border text-sm font-semibold hover:border-primary/40"
@@ -918,7 +1298,7 @@ function LinksTab({
         <EmptyState
           icon={<Link2 className="h-8 w-8" />}
           title="No links in this campaign yet"
-          description="Create a new short link tied to this campaign, or assign links you already have. Creator tracking links also show up here once you add creators."
+          description="Create a short link for this initiative, or assign ones you already have. Partner links appear here too."
           action={
             <div className="flex flex-wrap items-center justify-center gap-2">
               <Link
@@ -927,72 +1307,81 @@ function LinksTab({
               >
                 <Plus className="h-4 w-4" /> Create link
               </Link>
+              <button
+                type="button"
+                onClick={() => setShowAssign(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-neutral-border text-sm font-semibold hover:border-primary/40"
+              >
+                Assign existing
+              </button>
             </div>
           }
         />
       )}
 
-      <div className="bg-white rounded-card border border-neutral-border/80 shadow-soft p-5 space-y-3">
-        <div>
-          <h3 className="font-semibold text-neutral-text">Assign existing links</h3>
-          <p className="text-xs text-neutral-muted mt-1">
-            Pick short links that aren’t in another campaign yet.
-          </p>
-        </div>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by short code, title, or URL…"
-          className="w-full h-10 px-3 rounded-xl border border-neutral-border/80 text-sm"
-        />
-        <div className="max-h-48 overflow-y-auto space-y-1 border border-neutral-border/70 rounded-xl p-2 min-h-[4.5rem]">
-          {loadingAvailable ? (
-            <p className="px-2 py-3 text-sm text-neutral-muted flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading your links…
+      {showAssign && (
+        <div className="bg-white rounded-card border border-neutral-border/80 shadow-soft p-5 space-y-3">
+          <div>
+            <h3 className="font-semibold text-neutral-text">Assign existing links</h3>
+            <p className="text-xs text-neutral-muted mt-1">
+              Pick short links that aren’t in another campaign yet.
             </p>
-          ) : assignable.length === 0 ? (
-            <p className="px-2 py-3 text-sm text-neutral-muted">
-              {unassigned.length === 0
-                ? available.length === 0
-                  ? "You don’t have any links yet — create one first."
-                  : "All your links are already in a campaign. Create a new link or unassign one elsewhere."
-                : "No links match your search."}
-            </p>
-          ) : (
-            assignable.map((l) => (
-              <label
-                key={l.id}
-                className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-neutral-bg rounded-lg cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={selected.includes(l.id)}
-                  onChange={(e) => {
-                    setSelected((prev) =>
-                      e.target.checked
-                        ? [...prev, l.id]
-                        : prev.filter((id) => id !== l.id)
-                    );
-                  }}
-                />
-                <span className="font-medium shrink-0">/{l.short_code}</span>
-                <span className="text-neutral-muted truncate">
-                  {l.title || l.original_url}
-                </span>
-              </label>
-            ))
-          )}
+          </div>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by short code, title, or URL…"
+            className="w-full h-10 px-3 rounded-xl border border-neutral-border/80 text-sm"
+          />
+          <div className="max-h-48 overflow-y-auto space-y-1 border border-neutral-border/70 rounded-xl p-2 min-h-[4.5rem]">
+            {loadingAvailable ? (
+              <p className="px-2 py-3 text-sm text-neutral-muted flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading your links…
+              </p>
+            ) : assignable.length === 0 ? (
+              <p className="px-2 py-3 text-sm text-neutral-muted">
+                {unassigned.length === 0
+                  ? available.length === 0
+                    ? "You don’t have any links yet — create one first."
+                    : "All your links are already in a campaign. Create a new link or unassign one elsewhere."
+                  : "No links match your search."}
+              </p>
+            ) : (
+              assignable.map((l) => (
+                <label
+                  key={l.id}
+                  className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-neutral-bg rounded-lg cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(l.id)}
+                    onChange={(e) => {
+                      setSelected((prev) =>
+                        e.target.checked
+                          ? [...prev, l.id]
+                          : prev.filter((id) => id !== l.id)
+                      );
+                    }}
+                  />
+                  <span className="font-medium shrink-0">/{l.short_code}</span>
+                  <span className="text-neutral-muted truncate">
+                    {l.title || l.original_url}
+                  </span>
+                </label>
+              ))
+            )}
+          </div>
+          <button
+            type="button"
+            disabled={!selected.length || loading}
+            onClick={assign}
+            className="px-4 py-2 rounded-full bg-primary text-white text-sm font-semibold disabled:opacity-40"
+          >
+            {loading ? "Assigning…" : "Assign selected"}
+          </button>
         </div>
-        <button
-          type="button"
-          disabled={!selected.length || loading}
-          onClick={assign}
-          className="px-4 py-2 rounded-full bg-primary text-white text-sm font-semibold disabled:opacity-40"
-        >
-          {loading ? "Assigning…" : "Assign selected"}
-        </button>
-      </div>
+      )}
 
       {links.length > 0 && (
         <div className="bg-white rounded-card border border-neutral-border/80 shadow-soft overflow-hidden">
@@ -1048,6 +1437,7 @@ function AnalyticsTab({
   onRefresh,
   campaignId,
   currency,
+  onGoConversions,
 }: any) {
   return (
     <div className="space-y-4">
@@ -1083,6 +1473,13 @@ function AnalyticsTab({
         >
           Export CSV
         </a>
+        <button
+          type="button"
+          onClick={onGoConversions}
+          className="h-10 px-4 rounded-full border border-neutral-border text-sm font-semibold text-neutral-text hover:bg-neutral-bg"
+        >
+          Pixel Studio
+        </button>
       </div>
 
       {loading && (
@@ -1102,7 +1499,7 @@ function AnalyticsTab({
             />
             <Stat
               label="Conversions"
-              tip="Goal events recorded for this campaign’s links (purchases, signups, etc.)."
+              tip="Goal events recorded for this campaign’s links (purchases, signups, etc.). Configure the pixel in Pixel Studio."
               value={analytics.totals.conversions}
             />
             <Stat
@@ -1112,7 +1509,7 @@ function AnalyticsTab({
             />
             <Stat
               label="Spend"
-              tip="Sum of logged spend entries (including creator fees)."
+              tip="Sum of logged spend entries (including partner fees)."
               value={formatCampaignMoney(analytics.totals.total_spend || 0, currency)}
             />
             <Stat
@@ -1142,7 +1539,7 @@ function AnalyticsTab({
 
           <div className="grid lg:grid-cols-2 gap-4">
             <Leaderboard
-              title="Creator leaderboard"
+              title="Partner leaderboard"
               rows={(analytics.creatorLeaderboard || []).map((c: any) => ({
                 label: `${c.display_name} · ${c.platform}`,
                 value: `${c.clicks} clicks · ${c.conversions} conv`,
@@ -1171,6 +1568,23 @@ function AnalyticsTab({
             />
           </div>
         </>
+      )}
+
+      {!loading && !analytics && (
+        <EmptyState
+          icon={<BarChart3 className="h-8 w-8" />}
+          title="No analytics for this range"
+          description="Try a wider date range, or send traffic and fire Pixel events — then refresh."
+          action={
+            <button
+              type="button"
+              onClick={onGoConversions}
+              className="px-5 py-2.5 rounded-full border border-neutral-border text-sm font-semibold hover:border-primary/40"
+            >
+              Open Pixel Studio
+            </button>
+          }
+        />
       )}
     </div>
   );
@@ -1272,7 +1686,7 @@ function SpendTab({
         />
       </div>
       <p className="text-xs text-neutral-muted">
-        Amounts use campaign currency ({currency}). Planned budget is a ceiling/estimate. Marking a creator as paid can auto-log their fee.
+        Amounts use campaign currency ({currency}). Planned budget is a ceiling/estimate. Marking a partner as paid can auto-log their fee.
       </p>
 
       <div className="bg-white rounded-card border border-neutral-border/80 shadow-soft p-5 space-y-3">
@@ -1282,7 +1696,7 @@ function SpendTab({
         <div className="grid sm:grid-cols-3 gap-3">
           <Field label={`Amount (${currency})`} value={amount} onChange={setAmount} placeholder="100" />
           <div>
-            <label className="block text-xs font-semibold text-neutral-muted mb-1.5">Creator (optional)</label>
+            <label className="block text-xs font-semibold text-neutral-muted mb-1.5">Partner (optional)</label>
             <select
               value={creatorId}
               onChange={(e) => setCreatorId(e.target.value)}
@@ -1306,55 +1720,46 @@ function SpendTab({
         </button>
       </div>
 
-      <div className="bg-white rounded-card border border-neutral-border/80 shadow-soft overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-neutral-bg/80 text-left text-neutral-muted">
-            <tr>
-              <th className="px-4 py-3 font-semibold">Date</th>
-              <th className="px-4 py-3 font-semibold">Amount</th>
-              <th className="px-4 py-3 font-semibold">Note</th>
-              <th className="px-4 py-3 font-semibold"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {spend.entries.map((e) => (
-              <tr key={e.id} className="border-t border-neutral-border/70">
-                <td className="px-4 py-3">{e.spent_on}</td>
-                <td className="px-4 py-3">
-                  {formatCampaignMoney(e.amount, e.currency || currency)}
-                </td>
-                <td className="px-4 py-3 text-neutral-muted">{e.note || "—"}</td>
-                <td className="px-4 py-3 text-right">
-                  <button type="button" onClick={() => remove(e.id)} className="text-neutral-muted hover:text-rose-600">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </td>
+      {spend.entries.length === 0 ? (
+        <EmptyState
+          icon={<DollarSign className="h-8 w-8" />}
+          title="No spend logged yet"
+          description="Log media costs or partner fees here so CPC and CPA stay honest in Analytics."
+        />
+      ) : (
+        <div className="bg-white rounded-card border border-neutral-border/80 shadow-soft overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-bg/80 text-left text-neutral-muted">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Date</th>
+                <th className="px-4 py-3 font-semibold">Amount</th>
+                <th className="px-4 py-3 font-semibold">Note</th>
+                <th className="px-4 py-3 font-semibold"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {spend.entries.length === 0 && (
-          <p className="p-6 text-sm text-neutral-muted">No spend logged yet.</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function SettingsHint({ campaignId }: { campaignId: string }) {
-  return (
-    <div className="bg-white rounded-card border border-neutral-border/80 shadow-soft p-6 space-y-3">
-      <h3 className="font-semibold text-neutral-text">Campaign settings</h3>
-      <p className="text-sm text-neutral-muted">
-        Edit name, dates, currency, UTM defaults, planned budget, default destination URL, and type in the full editor.
-        Changing UTM defaults fills empty keys on member links without overwriting creator-specific values.
-      </p>
-      <Link
-        href={`/dashboard/campaigns/${campaignId}/edit`}
-        className="inline-flex px-4 py-2 rounded-full bg-primary text-white text-sm font-semibold shadow-button"
-      >
-        Open settings editor
-      </Link>
+            </thead>
+            <tbody>
+              {spend.entries.map((e) => (
+                <tr key={e.id} className="border-t border-neutral-border/70">
+                  <td className="px-4 py-3">{e.spent_on}</td>
+                  <td className="px-4 py-3">
+                    {formatCampaignMoney(e.amount, e.currency || currency)}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-muted">{e.note || "—"}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => remove(e.id)}
+                      className="text-neutral-muted hover:text-rose-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

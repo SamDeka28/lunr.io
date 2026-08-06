@@ -52,6 +52,7 @@ export interface CreateCampaignInput {
   currency?: string | null;
   utm_defaults?: CampaignUtmDefaults | null;
   default_destination_url?: string | null;
+  is_active?: boolean;
   user_id: string;
 }
 

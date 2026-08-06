@@ -51,6 +51,20 @@ export class ConversionService {
       }
     }
 
+    if (campaignId) {
+      const { data: campaign } = await this.supabase
+        .from("campaigns")
+        .select("id, user_id")
+        .eq("id", campaignId)
+        .maybeSingle();
+      if (!campaign) {
+        throw new Error("Campaign not found");
+      }
+      if (campaign.user_id !== input.user_id) {
+        throw new Error("Campaign does not belong to this account");
+      }
+    }
+
     if (linkId) {
       const { data: creator } = await this.supabase
         .from("campaign_creators")

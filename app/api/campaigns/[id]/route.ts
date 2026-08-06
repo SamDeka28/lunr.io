@@ -76,7 +76,17 @@ export async function PUT(
       target_clicks,
       budget,
       utm_defaults,
+      default_destination_url,
+      currency,
+      is_active,
     } = body;
+
+    if (!name || name.trim().length === 0) {
+      return NextResponse.json(
+        { error: "Campaign name is required" },
+        { status: 400 }
+      );
+    }
 
     const campaignService = new CampaignService(supabase);
     const { campaign, utmLinksUpdated } = await campaignService.updateCampaign(id, user.id, {
@@ -91,6 +101,7 @@ export async function PUT(
       currency: body.currency,
       utm_defaults,
       default_destination_url: body.default_destination_url,
+      ...(typeof is_active === "boolean" ? { is_active } : {}),
     });
 
     return NextResponse.json({ ...campaign, utm_links_updated: utmLinksUpdated });

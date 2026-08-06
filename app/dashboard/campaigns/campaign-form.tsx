@@ -10,9 +10,7 @@ import {
   Target,
   DollarSign,
   Tag,
-  Link2,
   X,
-  Sparkles,
   Search,
   ChevronDown,
   Check,
@@ -24,23 +22,15 @@ import Link from "next/link";
 import type { Campaign } from "@/types/database.types";
 import { LabelWithTip, InfoTooltip } from "@/components/ui/info-tooltip";
 import { CAMPAIGN_CURRENCIES, normalizeCurrency } from "@/lib/utils/currency";
+import {
+  CAMPAIGN_TYPES,
+  DEFAULT_CAMPAIGN_TYPE,
+} from "@/lib/utils/campaign-studio";
 
 interface CampaignFormProps {
   userId: string;
   campaign?: Campaign | null;
 }
-
-const CAMPAIGN_TYPES = [
-  { value: "influencer", label: "Influencer / Creator" },
-  { value: "product_launch", label: "Product Launch" },
-  { value: "seasonal_promotion", label: "Seasonal Promotion" },
-  { value: "email_marketing", label: "Email Marketing" },
-  { value: "social_media", label: "Social Media" },
-  { value: "content_marketing", label: "Content Marketing" },
-  { value: "paid_advertising", label: "Paid Advertising" },
-  { value: "event", label: "Event" },
-  { value: "other", label: "Other" },
-];
 
 export function CampaignForm({ userId, campaign }: CampaignFormProps) {
   const router = useRouter();
@@ -49,7 +39,9 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [campaignType, setCampaignType] = useState(campaign ? "" : "influencer");
+  const [campaignType, setCampaignType] = useState(
+    campaign ? "" : DEFAULT_CAMPAIGN_TYPE
+  );
   const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -73,6 +65,7 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
   const [linksLoading, setLinksLoading] = useState(false);
   const [linksSearchQuery, setLinksSearchQuery] = useState("");
   const [linksDropdownOpen, setLinksDropdownOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // Initialize form fields from campaign data
   useEffect(() => {
@@ -334,21 +327,6 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
     }
   };
 
-  // Calculate form completion
-  const formCompletion = {
-    name: name.trim().length > 0,
-    description: description.trim().length > 0,
-    campaignType: campaignType.length > 0,
-    tags: tags.trim().length > 0,
-    dates: startDate || endDate,
-    goals: targetClicks.trim() || budget.trim(),
-    links: selectedLinkIds.size > 0,
-  };
-  
-  const completionCount = Object.values(formCompletion).filter(Boolean).length;
-  const totalFields = Object.keys(formCompletion).length;
-  const completionPercentage = Math.round((completionCount / totalFields) * 100);
-
   // Get selected links for display
   const selectedLinks = links.filter(link => selectedLinkIds.has(link.id));
   const filteredLinks = links.filter((link) => {
@@ -363,174 +341,211 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
 
   return (
     <div className="space-y-6">
-      {/* Form Progress Indicator */}
-      {isEditing && (
-        <div className="bg-white rounded-card shadow-soft border border-neutral-border p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-electric-sapphire" />
-              <span className="text-sm font-semibold text-neutral-text">Form Completion</span>
-            </div>
-            <span className="text-sm font-bold text-electric-sapphire">{completionPercentage}%</span>
-          </div>
-          <div className="w-full h-2 bg-neutral-bg rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-electric-sapphire to-bright-indigo transition-all duration-300"
-              style={{ width: `${completionPercentage}%` }}
-            />
-          </div>
-        </div>
-      )}
-      
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Main Form */}
+        {!isEditing && (
+          <div className="rounded-2xl border border-neutral-border/80 bg-white p-5 shadow-soft">
+            <h2 className="text-sm font-semibold text-neutral-text mb-1">
+              Quick start
+            </h2>
+            <p className="text-sm text-neutral-muted leading-relaxed">
+              Name the initiative and set a few planning fields. You&apos;ll add links, partners, and Pixel
+              tracking in Campaign Studio after create.
+            </p>
+          </div>
+        )}
+
         <div className="space-y-6">
-          {/* Top Row - Basic Info and Links Side by Side */}
-          <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-            {/* Basic Information - Takes 3 columns */}
-            <div className="xl:col-span-3 space-y-6">
-              {/* Basic Information */}
-              <div className="bg-white rounded-xl border border-neutral-border p-5">
-                <div className="flex items-center gap-3 mb-5">
-                  <Monitor className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold text-neutral-text">Basic information</h3>
+          <div className="bg-white rounded-xl border border-neutral-border p-5">
+            <div className="flex items-center gap-3 mb-5">
+              <Monitor className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-neutral-text">Basic information</h3>
+            </div>
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-neutral-text mb-2">
+                  Campaign Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., Summer Sale 2024, Product Launch Q4"
+                  required
+                  maxLength={255}
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-neutral-text mb-2">
+                    Campaign Type
+                  </label>
+                  <select
+                    value={campaignType}
+                    onChange={(e) => setCampaignType(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text transition-all bg-white"
+                  >
+                    <option value="">Select type (optional)</option>
+                    {CAMPAIGN_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="space-y-5">
-                  {/* Campaign Name */}
-                  <div>
-                    <label className="block text-sm font-semibold text-neutral-text mb-2">
-                      Campaign Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g., Summer Sale 2024, Product Launch Q4"
-                      required
-                      maxLength={255}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
-                    />
-                  </div>
-
-                  {/* Campaign Type and Tags */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-neutral-text mb-2">
-                        Campaign Type
-                      </label>
-                      <select
-                        value={campaignType}
-                        onChange={(e) => setCampaignType(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text transition-all bg-white"
-                      >
-                        <option value="">Select type (optional)</option>
-                        {CAMPAIGN_TYPES.map((type) => (
-                          <option key={type.value} value={type.value}>
-                            {type.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-neutral-text mb-2">
-                        <Tag className="h-4 w-4 inline mr-1.5" />
-                        Tags
-                      </label>
-                      <input
-                        type="text"
-                        value={tags}
-                        onChange={(e) => setTags(e.target.value)}
-                        placeholder="e.g., summer, sale, email, social"
-                        className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  <div>
-                    <label className="block text-sm font-semibold text-neutral-text mb-2">
-                      Description
-                    </label>
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Describe the goals, target audience, and key messaging for this campaign..."
-                      rows={4}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all resize-none"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-semibold text-neutral-text mb-2">
+                    <Tag className="h-4 w-4 inline mr-1.5" />
+                    Tags
+                  </label>
+                  <input
+                    type="text"
+                    value={tags}
+                    onChange={(e) => setTags(e.target.value)}
+                    placeholder="e.g., summer, sale, email, social"
+                    className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                  />
                 </div>
               </div>
 
-              {/* Dates & Timeline */}
-              <div className="bg-white rounded-card shadow-soft border border-neutral-border p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-energy/10 to-sky-aqua/10 flex items-center justify-center">
-                    <Calendar className="h-5 w-5 text-blue-energy" />
-                  </div>
-                  <h3 className="text-lg font-bold text-neutral-text">Dates & Timeline</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-neutral-text mb-2">
-                      Start Date
-                    </label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-neutral-text mb-2">
-                      Start Time
-                    </label>
-                    <input
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-neutral-text mb-2">
-                      End Date
-                    </label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      min={startDate || undefined}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-neutral-text mb-2">
-                      End Time
-                    </label>
-                    <input
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text transition-all"
-                    />
-                  </div>
+              <div>
+                <label className="block text-sm font-semibold text-neutral-text mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Optional — goals, audience, or messaging notes"
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all resize-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-neutral-border p-5">
+            <div className="flex items-center gap-3 mb-5">
+              <Calendar className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-neutral-text">Dates</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-neutral-text mb-2">Start Date</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-neutral-text mb-2">Start Time</label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-neutral-text mb-2">End Date</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate || undefined}
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-neutral-text mb-2">End Time</label>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-neutral-border p-5">
+            <div className="flex items-center gap-3 mb-5">
+              <DollarSign className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-neutral-text">Budget</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <LabelWithTip
+                  tip="Currency for planned budget, partner fees, and spend."
+                  className="mb-2"
+                >
+                  Currency
+                </LabelWithTip>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text bg-white transition-all"
+                >
+                  {CAMPAIGN_CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <LabelWithTip
+                  tip="Planning estimate — not actual cost. CPC uses logged spend under Spend."
+                  className="mb-2"
+                >
+                  Planned budget
+                </LabelWithTip>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-neutral-muted">
+                    {currency}
+                  </span>
+                  <input
+                    type="number"
+                    value={budget}
+                    onChange={(e) => setBudget(e.target.value)}
+                    placeholder="e.g., 5000"
+                    min="0"
+                    step="0.01"
+                    className="w-full pl-14 pr-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                  />
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* Goals & Targets */}
-              <div className="bg-white rounded-card shadow-soft border border-neutral-border p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-vivid-royal/10 to-indigo-bloom/10 flex items-center justify-center">
-                    <Target className="h-5 w-5 text-vivid-royal" />
-                  </div>
-                  <h3 className="text-lg font-bold text-neutral-text">Goals & Targets</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white rounded-xl border border-neutral-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((o) => !o)}
+              className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-neutral-bg/50 transition-colors"
+            >
+              <div>
+                <h3 className="text-sm font-semibold text-neutral-text">Advanced</h3>
+                <p className="text-xs text-neutral-muted mt-0.5">
+                  Destination URL, UTM defaults, click target, and optional link assignment
+                </p>
+              </div>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-neutral-muted transition-transform shrink-0",
+                  advancedOpen && "rotate-180"
+                )}
+              />
+            </button>
+
+            {advancedOpen && (
+              <div className="border-t border-neutral-border p-5 space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <LabelWithTip
-                      tip="Goal for how many clicks this campaign should drive. Progress shows on overview and compare."
+                      tip="Goal for how many clicks this campaign should drive."
                       className="mb-2"
                     >
                       <span className="inline-flex items-center gap-1.5">
@@ -544,260 +559,241 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
                       onChange={(e) => setTargetClicks(e.target.value)}
                       placeholder="e.g., 10000"
                       min="0"
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                      className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
                     />
                   </div>
                   <div>
                     <LabelWithTip
-                      tip="Currency for planned budget, creator fees, and spend. Used when displaying money across this campaign."
+                      tip="Default long URL for partner tracking links."
                       className="mb-2"
                     >
-                      Currency
+                      Default destination URL
                     </LabelWithTip>
-                    <select
-                      value={currency}
-                      onChange={(e) => setCurrency(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text bg-white transition-all"
-                    >
-                      {CAMPAIGN_CURRENCIES.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
+                    <input
+                      type="url"
+                      value={defaultDestinationUrl}
+                      onChange={(e) => setDefaultDestinationUrl(e.target.value)}
+                      placeholder="https://example.com/landing"
+                      className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                    />
                   </div>
-                  <div className="col-span-2">
-                    <LabelWithTip
-                      tip="Planning estimate or spending ceiling — not actual cost. Cost per click (CPC) uses logged spend when you add it under Spend."
-                      className="mb-2"
-                    >
-                      <span className="inline-flex items-center gap-1.5">
-                        <DollarSign className="h-4 w-4" />
-                        Planned budget
-                      </span>
-                    </LabelWithTip>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-neutral-muted">
-                        {currency}
-                      </span>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-semibold text-neutral-text mb-1 inline-flex items-center gap-2">
+                    Default UTM parameters
+                    <InfoTooltip text="UTM tags are query params added to URLs so analytics tools can tell where traffic came from." />
+                  </h4>
+                  <p className="text-xs text-neutral-muted mb-4">
+                    Applied to links assigned to this campaign. Link-specific values always win.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <LabelWithTip tip="e.g. newsletter, instagram, google" className="mb-2">
+                        utm_source
+                      </LabelWithTip>
                       <input
-                        type="number"
-                        value={budget}
-                        onChange={(e) => setBudget(e.target.value)}
-                        placeholder="e.g., 5000"
-                        min="0"
-                        step="0.01"
-                        className="w-full pl-14 pr-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                        type="text"
+                        value={utmSource}
+                        onChange={(e) => setUtmSource(e.target.value)}
+                        placeholder="e.g., newsletter"
+                        className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                      />
+                    </div>
+                    <div>
+                      <LabelWithTip tip="e.g. email, social, cpc, affiliate" className="mb-2">
+                        utm_medium
+                      </LabelWithTip>
+                      <input
+                        type="text"
+                        value={utmMedium}
+                        onChange={(e) => setUtmMedium(e.target.value)}
+                        placeholder="e.g., email"
+                        className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                      />
+                    </div>
+                    <div>
+                      <LabelWithTip tip="Defaults to a slug of the campaign name if blank" className="mb-2">
+                        utm_campaign
+                      </LabelWithTip>
+                      <input
+                        type="text"
+                        value={utmCampaign}
+                        onChange={(e) => {
+                          setUtmCampaignTouched(true);
+                          setUtmCampaign(e.target.value);
+                        }}
+                        placeholder="Defaults to campaign name slug"
+                        className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                      />
+                    </div>
+                    <div>
+                      <LabelWithTip tip="Optional. Often used for paid search keywords." className="mb-2">
+                        utm_term
+                      </LabelWithTip>
+                      <input
+                        type="text"
+                        value={utmTerm}
+                        onChange={(e) => setUtmTerm(e.target.value)}
+                        placeholder="Optional"
+                        className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <LabelWithTip tip="Optional. Differentiates creatives or partner handles." className="mb-2">
+                        utm_content
+                      </LabelWithTip>
+                      <input
+                        type="text"
+                        value={utmContent}
+                        onChange={(e) => setUtmContent(e.target.value)}
+                        placeholder="Optional"
+                        className="w-full px-4 py-3 rounded-xl border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
                       />
                     </div>
                   </div>
                 </div>
-                <div className="mt-4">
-                  <LabelWithTip
-                    tip="The long URL each short link opens — e.g. your product or landing page. Used as the default when generating creator tracking links."
-                    className="mb-2"
-                  >
-                    Default destination URL
-                  </LabelWithTip>
-                  <input
-                    type="url"
-                    value={defaultDestinationUrl}
-                    onChange={(e) => setDefaultDestinationUrl(e.target.value)}
-                    placeholder="https://example.com/landing"
-                    className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
-                  />
-                </div>
-              </div>
 
-              {/* Default UTM parameters */}
-              <div className="bg-white rounded-card shadow-soft border border-neutral-border p-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-sapphire/10 to-bright-indigo/10 flex items-center justify-center">
-                    <Tag className="h-5 w-5 text-electric-sapphire" />
-                  </div>
-                  <h3 className="text-lg font-bold text-neutral-text inline-flex items-center gap-2">
-                    Default UTM Parameters
-                    <InfoTooltip text="UTM tags are query params added to URLs so analytics tools can tell where traffic came from (which channel, campaign, or creator)." />
-                  </h3>
-                </div>
-                <p className="text-sm text-neutral-muted mb-5">
-                  Applied to links assigned to this campaign. Link-specific UTM values always win.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <LabelWithTip
-                      tip="Where the traffic originates — e.g. newsletter, instagram, google. For influencers this is often set per creator (their platform)."
-                      className="mb-2"
-                    >
-                      utm_source
-                    </LabelWithTip>
-                    <input
-                      type="text"
-                      value={utmSource}
-                      onChange={(e) => setUtmSource(e.target.value)}
-                      placeholder="e.g., newsletter"
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
-                    />
-                  </div>
-                  <div>
-                    <LabelWithTip
-                      tip="The marketing channel type — e.g. email, social, cpc, influencer."
-                      className="mb-2"
-                    >
-                      utm_medium
-                    </LabelWithTip>
-                    <input
-                      type="text"
-                      value={utmMedium}
-                      onChange={(e) => setUtmMedium(e.target.value)}
-                      placeholder="e.g., email"
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
-                    />
-                  </div>
-                  <div>
-                    <LabelWithTip
-                      tip="Name of this marketing effort. Defaults to a slug of the campaign name if left blank."
-                      className="mb-2"
-                    >
-                      utm_campaign
-                    </LabelWithTip>
-                    <input
-                      type="text"
-                      value={utmCampaign}
-                      onChange={(e) => {
-                        setUtmCampaignTouched(true);
-                        setUtmCampaign(e.target.value);
-                      }}
-                      placeholder="Defaults to campaign name slug"
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
-                    />
-                  </div>
-                  <div>
-                    <LabelWithTip
-                      tip="Optional. Often used for paid search keywords."
-                      className="mb-2"
-                    >
-                      utm_term
-                    </LabelWithTip>
-                    <input
-                      type="text"
-                      value={utmTerm}
-                      onChange={(e) => setUtmTerm(e.target.value)}
-                      placeholder="Optional"
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <LabelWithTip
-                      tip="Optional. Differentiates creatives or placements — for influencers we often put their handle here."
-                      className="mb-2"
-                    >
-                      utm_content
-                    </LabelWithTip>
-                    <input
-                      type="text"
-                      value={utmContent}
-                      onChange={(e) => setUtmContent(e.target.value)}
-                      placeholder="Optional"
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column - Associated Links */}
-            <div className="xl:col-span-2">
-              <div className="bg-white rounded-card shadow-soft border border-neutral-border p-6 h-full">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-pink/10 to-raspberry-plum/10 flex items-center justify-center">
-                    <Link2 className="h-5 w-5 text-neon-pink" />
-                  </div>
-                  <h3 className="text-lg font-bold text-neutral-text">Associated Links</h3>
-                </div>
-
-              {linksLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin text-electric-sapphire" />
-                </div>
-              ) : links.length === 0 ? (
-                <div className="text-center py-8">
-                  <Link2 className="h-12 w-12 text-neutral-muted mx-auto mb-3" />
-                  <p className="text-sm text-neutral-muted mb-4">
-                    No links available. Create links to assign them to this campaign.
+                <div>
+                  <h4 className="text-sm font-semibold text-neutral-text mb-1">
+                    Assign existing links
+                  </h4>
+                  <p className="text-xs text-neutral-muted mb-4">
+                    Optional. Prefer adding links from the Campaign Studio Links tab after create.
                   </p>
-                  <Link
-                    href="/dashboard/links/new"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold hover:from-bright-indigo hover:to-vivid-royal transition-all"
-                  >
-                    Create Link
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Multiselect Dropdown */}
-                  <div className="relative" ref={dropdownRef}>
-                    <button
-                      type="button"
-                      onClick={() => setLinksDropdownOpen(!linksDropdownOpen)}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-neutral-border hover:border-electric-sapphire focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text transition-all flex items-center justify-between bg-white"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Search className="h-4 w-4 text-neutral-muted" />
-                        <span className={cn(linksSearchQuery ? "text-neutral-text" : "text-neutral-muted")}>
-                          {linksSearchQuery || "Search and select links..."}
-                        </span>
-                      </span>
-                      <ChevronDown className={cn("h-4 w-4 text-neutral-muted transition-transform", linksDropdownOpen && "rotate-180")} />
-                    </button>
 
-                    {linksDropdownOpen && (
-                      <div className="absolute z-50 w-full mt-2 bg-white rounded-xl border-2 border-neutral-border shadow-lg max-h-80 overflow-hidden flex flex-col">
-                        {/* Search Input */}
-                        <div className="p-3 border-b border-neutral-border">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-muted" />
-                            <input
-                              type="text"
-                              value={linksSearchQuery}
-                              onChange={(e) => setLinksSearchQuery(e.target.value)}
-                              placeholder="Search by code, title, or URL..."
-                              className="w-full pl-10 pr-10 py-2 rounded-lg border-2 border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
-                              autoFocus
-                            />
-                            {linksSearchQuery && (
-                              <button
-                                onClick={() => setLinksSearchQuery("")}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-neutral-muted hover:text-neutral-text hover:bg-neutral-bg transition-colors"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
+                  {linksLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-5 w-5 animate-spin text-electric-sapphire" />
+                    </div>
+                  ) : links.length === 0 ? (
+                    <p className="text-sm text-neutral-muted">
+                      No links yet.{" "}
+                      <Link
+                        href="/dashboard/links/new"
+                        className="text-electric-sapphire font-medium hover:underline"
+                      >
+                        Create a link
+                      </Link>{" "}
+                      or assign from Studio later.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="relative" ref={dropdownRef}>
+                        <button
+                          type="button"
+                          onClick={() => setLinksDropdownOpen(!linksDropdownOpen)}
+                          className="w-full px-4 py-3 rounded-xl border border-neutral-border hover:border-electric-sapphire focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text transition-all flex items-center justify-between bg-white"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Search className="h-4 w-4 text-neutral-muted" />
+                            <span
+                              className={cn(
+                                linksSearchQuery ? "text-neutral-text" : "text-neutral-muted"
+                              )}
+                            >
+                              {linksSearchQuery || "Search and select links..."}
+                            </span>
+                          </span>
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 text-neutral-muted transition-transform",
+                              linksDropdownOpen && "rotate-180"
                             )}
-                          </div>
-                        </div>
+                          />
+                        </button>
 
-                        {/* Links List */}
-                        <div className="overflow-y-auto max-h-64">
-                          {filteredLinks.length === 0 ? (
-                            <div className="p-6 text-center">
-                              <p className="text-sm text-neutral-muted">
-                                {linksSearchQuery ? "No links found" : "All links are selected"}
-                              </p>
+                        {linksDropdownOpen && (
+                          <div className="absolute z-50 w-full mt-2 bg-white rounded-xl border border-neutral-border shadow-lg max-h-80 overflow-hidden flex flex-col">
+                            <div className="p-3 border-b border-neutral-border">
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-muted" />
+                                <input
+                                  type="text"
+                                  value={linksSearchQuery}
+                                  onChange={(e) => setLinksSearchQuery(e.target.value)}
+                                  placeholder="Search by code, title, or URL..."
+                                  className="w-full pl-10 pr-10 py-2 rounded-lg border border-neutral-border focus:border-electric-sapphire focus:ring-2 focus:ring-electric-sapphire/40 text-sm font-medium text-neutral-text placeholder:text-neutral-muted transition-all"
+                                  autoFocus
+                                />
+                                {linksSearchQuery && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setLinksSearchQuery("")}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-neutral-muted hover:text-neutral-text hover:bg-neutral-bg transition-colors"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                          ) : (
-                            filteredLinks.map((link) => {
-                              const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+
+                            <div className="overflow-y-auto max-h-64">
+                              {filteredLinks.length === 0 ? (
+                                <div className="p-6 text-center">
+                                  <p className="text-sm text-neutral-muted">
+                                    {linksSearchQuery ? "No links found" : "All links are selected"}
+                                  </p>
+                                </div>
+                              ) : (
+                                filteredLinks.map((link) => (
+                                  <button
+                                    key={link.id}
+                                    type="button"
+                                    onClick={() => {
+                                      toggleLinkSelection(link.id);
+                                      setLinksSearchQuery("");
+                                    }}
+                                    className="w-full px-4 py-3 text-left hover:bg-neutral-bg transition-colors border-b border-neutral-border last:border-b-0 flex items-center gap-3"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="font-mono text-sm font-semibold text-electric-sapphire">
+                                          /{link.short_code}
+                                        </span>
+                                        {link.click_count > 0 && (
+                                          <span className="text-xs text-neutral-muted">
+                                            ({link.click_count} clicks)
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="text-xs text-neutral-muted truncate">
+                                        {link.title || link.original_url}
+                                      </div>
+                                    </div>
+                                    <Check className="h-4 w-4 text-electric-sapphire flex-shrink-0" />
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {selectedLinks.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-semibold text-neutral-text uppercase tracking-wide">
+                              Selected ({selectedLinks.length})
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedLinkIds(new Set())}
+                              className="text-xs font-semibold text-neutral-muted hover:text-electric-sapphire transition-colors"
+                            >
+                              Clear all
+                            </button>
+                          </div>
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {selectedLinks.map((link) => {
+                              const baseUrl =
+                                typeof window !== "undefined" ? window.location.origin : "";
                               const shortUrl = `${baseUrl}/${link.short_code}`;
-                              
+
                               return (
-                                <button
+                                <div
                                   key={link.id}
-                                  type="button"
-                                  onClick={() => {
-                                    toggleLinkSelection(link.id);
-                                    setLinksSearchQuery("");
-                                  }}
-                                  className="w-full px-4 py-3 text-left hover:bg-neutral-bg transition-colors border-b border-neutral-border last:border-b-0 flex items-center gap-3"
+                                  className="flex items-center gap-3 p-3 rounded-xl border border-neutral-border bg-neutral-bg/40"
                                 >
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
@@ -814,88 +810,38 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
                                       {link.title || link.original_url}
                                     </div>
                                   </div>
-                                  <Check className="h-4 w-4 text-electric-sapphire flex-shrink-0" />
-                                </button>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <a
+                                      href={shortUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-1.5 rounded-lg text-neutral-muted hover:text-electric-sapphire hover:bg-electric-sapphire/10 transition-colors"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                    </a>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeLink(link.id)}
+                                      className="p-1.5 rounded-lg text-neutral-muted hover:text-red-600 hover:bg-red-50 transition-colors"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </div>
                               );
-                            })
-                          )}
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Selected Links List */}
-                  {selectedLinks.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-neutral-text uppercase tracking-wide">
-                          Selected Links ({selectedLinks.length})
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedLinkIds(new Set())}
-                          className="text-xs font-semibold text-neutral-muted hover:text-electric-sapphire transition-colors"
-                        >
-                          Clear all
-                        </button>
-                      </div>
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {selectedLinks.map((link) => {
-                          const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-                          const shortUrl = `${baseUrl}/${link.short_code}`;
-                          
-                          return (
-                            <div
-                              key={link.id}
-                              className="flex items-center gap-3 p-3 rounded-xl border-2 border-electric-sapphire/20 bg-gradient-to-r from-electric-sapphire/5 to-bright-indigo/5"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-mono text-sm font-semibold text-electric-sapphire">
-                                    /{link.short_code}
-                                  </span>
-                                  {link.click_count > 0 && (
-                                    <span className="text-xs text-neutral-muted">
-                                      ({link.click_count} clicks)
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-xs text-neutral-muted truncate">
-                                  {link.title || link.original_url}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <a
-                                  href={shortUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="p-1.5 rounded-lg text-neutral-muted hover:text-electric-sapphire hover:bg-electric-sapphire/10 transition-colors"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                </a>
-                                <button
-                                  type="button"
-                                  onClick={() => removeLink(link.id)}
-                                  className="p-1.5 rounded-lg text-neutral-muted hover:text-red-600 hover:bg-red-50 transition-colors"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
-        </div>
 
-        {/* Actions */}
         <div className="bg-white rounded-xl border border-neutral-border p-5">
           <div className="flex items-center justify-between">
             <Link
@@ -920,8 +866,10 @@ export function CampaignForm({ userId, campaign }: CampaignFormProps) {
                   <Loader2 className="h-4 w-4 inline mr-2 animate-spin" />
                   {isEditing ? "Updating..." : "Creating..."}
                 </>
+              ) : isEditing ? (
+                "Update Campaign"
               ) : (
-                isEditing ? "Update Campaign" : "Create & open workspace"
+                "Create & open workspace"
               )}
             </button>
           </div>

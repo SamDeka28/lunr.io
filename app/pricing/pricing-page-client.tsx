@@ -76,6 +76,18 @@ export function PricingPageClient({ plans, isAuthenticated }: PricingPageClientP
       if (plan.features.advanced_analytics) features.push("Advanced Analytics");
       if (plan.features.expiration) features.push("Link Expiration");
       if (plan.features.password_protection) features.push("Password Protection");
+      if (plan.features.lead_capture) features.push("Lead Capture / Lead Gate");
+      if (plan.features.utm_parameters) features.push("UTM Parameters");
+      if (plan.features.qr_customization) features.push("QR Customization");
+      // Campaign Studio is Pro+ (session + v1 gated); surface on paid plans
+      if (
+        plan.name !== "free" &&
+        (plan.features.utm_parameters ||
+          plan.features.password_protection ||
+          plan.price_monthly > 0)
+      ) {
+        features.push("Campaign Studio");
+      }
     }
 
     return features;

@@ -1,48 +1,78 @@
 import Link from "next/link";
+import { BookOpen, Plus } from "lucide-react";
 import { DashboardContainer } from "@/components/ui/dashboard-container";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
-import { Plus } from "lucide-react";
+function CampaignRowSkeleton() {
+  return (
+    <div className="bg-white border-b border-neutral-border px-4 py-3.5 last:border-b-0">
+      <div className="flex items-center gap-3 sm:gap-4">
+        <Skeleton className="h-4 w-4 rounded shrink-0" />
+        <Skeleton className="hidden sm:block h-10 w-10 rounded-xl shrink-0" />
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Skeleton className="h-5 w-40 max-w-full" />
+            <Skeleton className="h-5 w-14 rounded-full" />
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-3 w-14" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Skeleton className="h-8 w-16 rounded-full" />
+          <Skeleton className="h-8 w-8 rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function CampaignsLoading() {
   return (
     <DashboardContainer>
-      {/* Header Section - Static, shows immediately */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-neutral-text mb-2">Campaigns</h1>
-            <p className="text-sm text-neutral-muted">
-              Organize and track your marketing campaigns
-            </p>
-          </div>
-          <Link
-            href="/dashboard/campaigns/new"
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-electric-sapphire to-bright-indigo text-white text-sm font-semibold hover:from-bright-indigo hover:to-vivid-royal transition-all active:scale-[0.98] flex items-center gap-2 shadow-button"
-          >
-            <Plus className="h-4 w-4" />
-            Create campaign
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title="Campaign Studio"
+        description="Group links, partners, spend, and analytics by initiative — then compare what wins"
+        actions={
+          <>
+            <Skeleton className="h-10 w-28 rounded-full hidden sm:block" />
+            <Link
+              href="/docs/campaigns/creating-campaigns"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-neutral-border bg-white text-sm font-semibold text-neutral-text hover:border-primary/40 hover:text-primary"
+            >
+              <BookOpen className="h-4 w-4" />
+              Studio guide
+            </Link>
+            <Link href="/dashboard/campaigns/new">
+              <Button>
+                <Plus className="h-4 w-4" />
+                New campaign
+              </Button>
+            </Link>
+          </>
+        }
+      />
 
-      {/* Campaigns List Skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div
-            key={i}
-            className="rounded-card border border-neutral-border bg-white p-6 shadow-soft"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-neutral-border animate-pulse" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-32 bg-neutral-border rounded-lg animate-pulse" />
-                <div className="h-3 w-20 bg-neutral-border rounded-lg animate-pulse" />
-              </div>
-            </div>
-            <div className="h-3 w-full bg-neutral-border rounded-lg animate-pulse mb-2" />
-            <div className="h-3 w-2/3 bg-neutral-border rounded-lg animate-pulse" />
+      <div className="space-y-4">
+        <div className="space-y-0 rounded-2xl border border-neutral-border overflow-hidden bg-white shadow-soft">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <CampaignRowSkeleton key={i} />
+          ))}
+        </div>
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <Skeleton className="h-4 w-40" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <Skeleton className="h-9 w-9 rounded-full" />
           </div>
-        ))}
+        </div>
       </div>
     </DashboardContainer>
   );

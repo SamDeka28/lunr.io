@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,10 +12,9 @@ import {
   Trash2,
   BarChart3,
   Plus,
-  Target,
-  Activity,
-  Sparkles,
   GitCompare,
+  RotateCcw,
+  MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
@@ -58,13 +57,105 @@ function CampaignStatusChip({ campaign }: { campaign: Campaign }) {
   );
 }
 
-export function CampaignsList({ campaigns }: { campaigns: (Campaign | CampaignWithStats)[] }) {
+function RowMenu({
+  campaignId,
+  showArchived,
+  onArchive,
+  onRestore,
+}: {
+  campaignId: string;
+  showArchived: boolean;
+  onArchive: () => void;
+  onRestore: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointer);
+    return () => document.removeEventListener("mousedown", onPointer);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="p-2 rounded-xl text-neutral-muted hover:text-neutral-text hover:bg-neutral-surface transition-colors"
+        aria-label="Campaign actions"
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-20 min-w-[10.5rem] rounded-xl border border-neutral-border/80 bg-white shadow-soft p-1">
+          <Link
+            href={`/dashboard/campaigns/${campaignId}?tab=analytics`}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-neutral-text hover:bg-neutral-bg"
+            onClick={() => setOpen(false)}
+          >
+            <BarChart3 className="h-3.5 w-3.5 text-neutral-muted" />
+            Analytics
+          </Link>
+          <Link
+            href={`/dashboard/campaigns/${campaignId}/edit`}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-neutral-text hover:bg-neutral-bg"
+            onClick={() => setOpen(false)}
+          >
+            <Edit className="h-3.5 w-3.5 text-neutral-muted" />
+            Edit details
+          </Link>
+          {showArchived ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onRestore();
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Restore
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onArchive();
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Archive
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function CampaignsList({
+  campaigns,
+  showArchived = false,
+}: {
+  campaigns: (Campaign | CampaignWithStats)[];
+  showArchived?: boolean;
+}) {
   const router = useRouter();
   const [selectedCampaigns, setSelectedCampaigns] = useState<Set<string>>(new Set());
   const [comparing, setComparing] = useState(false);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Archive this campaign? Links will stay active but will be unassigned from the campaign.")) {
+    if (
+      !confirm(
+        "Archive this campaign? Links will stay active but will be unassigned from the campaign."
+      )
+    ) {
       return;
     }
 
@@ -81,6 +172,25 @@ export function CampaignsList({ campaigns }: { campaigns: (Campaign | CampaignWi
       }
     } catch {
       toast.error("Failed to archive campaign");
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    try {
+      const response = await fetch(`/api/campaigns/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: true }),
+      });
+      if (response.ok) {
+        toast.success("Campaign restored");
+        router.refresh();
+      } else {
+        const err = await response.json().catch(() => ({}));
+        toast.error(err.error || "Failed to restore campaign");
+      }
+    } catch {
+      toast.error("Failed to restore campaign");
     }
   };
 
@@ -115,118 +225,29 @@ export function CampaignsList({ campaigns }: { campaigns: (Campaign | CampaignWi
 
   if (campaigns.length === 0) {
     return (
-      <div className="space-y-8">
-        <EmptyState
-          icon={<Monitor className="h-8 w-8" />}
-          title="Run your first campaign"
-          description="Start with an influencer campaign—add creators, generate unique tracking links, log fees—or use the same workspace for email, paid, and launch campaigns."
-          action={
+      <EmptyState
+        icon={<Monitor className="h-8 w-8" />}
+        title={showArchived ? "No archived campaigns" : "Create your first campaign"}
+        description={
+          showArchived
+            ? "Archived campaigns will appear here. Restore any time to bring them back."
+            : "Group links by launch, channel, or initiative — then measure partners, spend, and conversions in one workspace."
+        }
+        action={
+          showArchived ? (
+            <Link href="/dashboard/campaigns">
+              <Button variant="outline">Back to active</Button>
+            </Link>
+          ) : (
             <Link href="/dashboard/campaigns/new">
               <Button>
                 <Plus className="h-4 w-4" />
-                Create Your First Campaign
+                New campaign
               </Button>
             </Link>
-          }
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-2xl shadow-soft border border-neutral-border p-6">
-            <div className="w-12 h-12 rounded-xl bg-neutral-surface flex items-center justify-center mb-4">
-              <Target className="h-6 w-6 text-neutral-muted" />
-            </div>
-            <h4 className="text-lg font-semibold text-neutral-text mb-2">
-              Organize by initiative
-            </h4>
-            <p className="text-sm text-neutral-muted">
-              Group links by product launches, seasonal promotions, or marketing channels.
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-soft border border-neutral-border p-6">
-            <div className="w-12 h-12 rounded-xl bg-neutral-surface flex items-center justify-center mb-4">
-              <BarChart3 className="h-6 w-6 text-neutral-muted" />
-            </div>
-            <h4 className="text-lg font-semibold text-neutral-text mb-2">
-              Track performance
-            </h4>
-            <p className="text-sm text-neutral-muted">
-              See aggregated analytics, CPC from budget, and progress toward click targets.
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-soft border border-neutral-border p-6">
-            <div className="w-12 h-12 rounded-xl bg-neutral-surface flex items-center justify-center mb-4">
-              <Activity className="h-6 w-6 text-neutral-muted" />
-            </div>
-            <h4 className="text-lg font-semibold text-neutral-text mb-2">
-              Compare campaigns
-            </h4>
-            <p className="text-sm text-neutral-muted">
-              Pick two campaigns to compare clicks, unique visitors, and efficiency side by side.
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-neutral-surface rounded-2xl border border-neutral-border p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center border border-neutral-border">
-              <Sparkles className="h-5 w-5 text-neutral-muted" />
-            </div>
-            <h4 className="text-xl font-semibold text-neutral-text">How campaigns work</h4>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-neutral-text text-white flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
-                  1
-                </div>
-                <div>
-                  <h5 className="font-semibold text-neutral-text mb-1">Create a campaign</h5>
-                  <p className="text-sm text-neutral-muted">
-                    Set dates, budget, targets, and default UTM parameters.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-neutral-text text-white flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
-                  2
-                </div>
-                <div>
-                  <h5 className="font-semibold text-neutral-text mb-1">Assign links</h5>
-                  <p className="text-sm text-neutral-muted">
-                    Campaign UTM defaults merge into assigned links (link values win).
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-neutral-text text-white flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
-                  3
-                </div>
-                <div>
-                  <h5 className="font-semibold text-neutral-text mb-1">Track analytics</h5>
-                  <p className="text-sm text-neutral-muted">
-                    View CPC, goal progress, and aggregated click metrics.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-neutral-text text-white flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
-                  4
-                </div>
-                <div>
-                  <h5 className="font-semibold text-neutral-text mb-1">Compare & optimize</h5>
-                  <p className="text-sm text-neutral-muted">
-                    Select two campaigns on the list to compare performance.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+          )
+        }
+      />
     );
   }
 
@@ -278,118 +299,81 @@ export function CampaignsList({ campaigns }: { campaigns: (Campaign | CampaignWi
             <div
               key={campaign.id}
               className={cn(
-                "bg-white border-b border-neutral-border p-5",
+                "bg-white border-b border-neutral-border px-4 py-3.5",
                 "hover:bg-neutral-surface/60 transition-colors",
                 index === campaigns.length - 1 && "border-b-0",
                 isSelected && "bg-primary/5"
               )}
             >
-              <div className="flex items-start gap-4">
-                <div className="pt-1">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleSelect(campaign.id)}
-                    className="w-4 h-4 rounded border-neutral-border text-primary focus:ring-primary/40 cursor-pointer"
-                    aria-label={`Select ${campaign.name}`}
-                  />
-                </div>
+              <div className="flex items-center gap-3 sm:gap-4">
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggleSelect(campaign.id)}
+                  className="w-4 h-4 rounded border-neutral-border text-primary focus:ring-primary/40 cursor-pointer shrink-0"
+                  aria-label={`Select ${campaign.name}`}
+                />
 
-                <div className="flex-shrink-0">
-                  <div className="w-14 h-14 rounded-xl bg-neutral-surface flex items-center justify-center border border-neutral-border">
-                    <Monitor className="h-7 w-7 text-neutral-muted" />
-                  </div>
+                <div className="hidden sm:flex w-10 h-10 rounded-xl bg-neutral-surface items-center justify-center border border-neutral-border shrink-0">
+                  <Monitor className="h-5 w-5 text-neutral-muted" />
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="mb-3">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href={`/dashboard/campaigns/${campaign.id}`}
-                      className="text-lg font-semibold text-neutral-text mb-1 hover:text-primary transition-colors inline-block"
+                      className="text-base font-semibold text-neutral-text hover:text-primary transition-colors truncate"
                     >
                       {campaign.name}
                     </Link>
-                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                      <CampaignStatusChip campaign={campaign} />
-                      {campaign.campaign_type && (
-                        <span className="text-[11px] font-medium text-neutral-muted px-2 py-0.5 rounded-full bg-neutral-bg border border-neutral-border/80 capitalize">
-                          {campaign.campaign_type.replace(/_/g, " ")}
-                        </span>
-                      )}
-                    </div>
-                    {campaign.description && (
-                      <p className="text-sm text-neutral-muted line-clamp-2 mt-2">
-                        {campaign.description}
-                      </p>
+                    <CampaignStatusChip campaign={campaign} />
+                    {campaign.campaign_type && (
+                      <span className="text-[11px] font-medium text-neutral-muted px-2 py-0.5 rounded-full bg-neutral-bg border border-neutral-border/80 capitalize hidden md:inline">
+                        {campaign.campaign_type.replace(/_/g, " ")}
+                      </span>
                     )}
                   </div>
-
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-neutral-muted">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5" />
-                      <span>
-                        {campaign.start_date && campaign.end_date
-                          ? `${formatDate(campaign.start_date)} - ${formatDate(campaign.end_date)}`
-                          : campaign.start_date
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-muted mt-1">
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {campaign.start_date && campaign.end_date
+                        ? `${formatDate(campaign.start_date)} – ${formatDate(campaign.end_date)}`
+                        : campaign.start_date
                           ? `Started ${formatDate(campaign.start_date)}`
-                          : "No dates set"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Link2 className="h-3.5 w-3.5" />
-                      <span>{stats.total_links || 0} links</span>
-                    </div>
+                          : "No dates"}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Link2 className="h-3 w-3" />
+                      {stats.total_links || 0} links
+                    </span>
                     {stats.total_clicks !== undefined && (
-                      <div className="flex items-center gap-1.5">
-                        <TrendingUp className="h-3.5 w-3.5" />
-                        <span>{stats.total_clicks || 0} clicks</span>
-                      </div>
+                      <span className="inline-flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3" />
+                        {stats.total_clicks || 0} clicks
+                      </span>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <Link
                     href={`/dashboard/campaigns/${campaign.id}`}
                     className="px-3.5 py-2 rounded-full bg-primary text-white text-xs font-semibold shadow-button hover:bg-bright-indigo transition-colors"
                   >
-                    Open workspace
+                    Open
                   </Link>
-                  <Link
-                    href={`/dashboard/campaigns/${campaign.id}?tab=analytics`}
-                    className="p-2 rounded-xl text-neutral-muted hover:text-neutral-text hover:bg-neutral-surface transition-colors"
-                    title="Analytics"
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                  </Link>
-                  <Link
-                    href={`/dashboard/campaigns/${campaign.id}/edit`}
-                    className="p-2 rounded-xl text-neutral-muted hover:text-neutral-text hover:bg-neutral-surface transition-colors"
-                    title="Edit settings"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(campaign.id)}
-                    className="p-2 rounded-xl text-neutral-muted hover:text-red-600 hover:bg-red-50 transition-colors"
-                    title="Archive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <RowMenu
+                    campaignId={campaign.id}
+                    showArchived={showArchived}
+                    onArchive={() => handleDelete(campaign.id)}
+                    onRestore={() => handleRestore(campaign.id)}
+                  />
                 </div>
               </div>
             </div>
           );
         })}
       </div>
-
-      {campaigns.length > 0 && (
-        <div className="text-center py-4">
-          <span className="text-sm text-neutral-muted">
-            You&apos;ve reached the end of your campaigns
-          </span>
-        </div>
-      )}
     </div>
   );
 }

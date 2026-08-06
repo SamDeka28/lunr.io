@@ -46,6 +46,22 @@ async function handlePost(request: AuthenticatedApiRequest) {
   try {
     const supabase = createServiceClient();
     const userId = request.apiKey!.user_id;
+
+    // Align with dashboard: campaigns require a paid plan
+    const { PlanService } = await import("@/lib/services/plan.service");
+    const planService = new PlanService(supabase);
+    const profile = await planService.getUserPlan(userId);
+    const planName = profile?.plan?.name || "free";
+    if (planName === "free") {
+      return NextResponse.json(
+        {
+          error:
+            "Campaigns are available on Pro and higher plans. Upgrade to create campaigns.",
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const {
       name,

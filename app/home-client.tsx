@@ -142,13 +142,13 @@ export default function HomePageClient() {
     {
       step: "02",
       title: "Enhance Your Links",
-      description: "Generate QR codes for offline sharing, create beautiful landing pages, organize links into campaigns, and customize with your branding.",
+      description: "Generate QR codes for offline sharing, design lead gates before redirect, create landing pages, organize campaigns, and customize with your branding.",
       icon: QrCode,
     },
     {
       step: "03",
       title: "Analyze & Optimize",
-      description: "Track clicks in real-time, view referrers and campaign performance, and measure what matters today. Geographic breakdowns are coming soon.",
+      description: "Track clicks in real-time, view referrers and campaign performance, export leads, and measure what matters. Geographic breakdowns are coming soon.",
       icon: BarChart3,
     },
   ];
@@ -159,16 +159,24 @@ export default function HomePageClient() {
       answer: "When you create a short link, we store your original URL in our secure database and generate a unique short code. When someone clicks your short link, they're instantly redirected to your original URL while we track the click data for analytics.",
     },
     {
+      question: "What is lead capture?",
+      answer: "Lead capture (Lead Gate) lets you collect emails and custom form fields before someone reaches your destination URL. Design the gate in Lead Gate Studio with themes, fields, and branding, then export responses from link analytics. Available on Pro and higher.",
+    },
+    {
+      question: "Can I password-protect a link?",
+      answer: "Yes. On Pro and higher you can require a password before redirect. Password gates run before lead capture when both are enabled.",
+    },
+    {
       question: "Can I use my own domain?",
       answer: "Yes! Our Business and Enterprise plans include custom domain support for bio pages. You can connect your own domain, verify ownership via DNS, and serve pages on your brand. Branded short links on custom domains (yourdomain.com/yourlink) are coming soon.",
     },
     {
       question: "What analytics do you provide?",
-      answer: "We provide analytics including total clicks, unique visitors, device types, referrers, browser information, and time-series data. You can also track UTM parameters for campaign attribution. Geographic data is coming soon.",
+      answer: "We provide analytics including total clicks, unique visitors, device types, referrers, browser information, time-series data, and lead responses when lead capture is enabled. You can also track UTM parameters for campaign attribution. Geographic data is coming soon.",
     },
     {
       question: "Are there any limits on the free plan?",
-      answer: "The free plan includes 2 short links and 2 QR codes, which is perfect for getting started. You get basic analytics, real-time tracking, and can create custom back-halves. Upgrade to Pro or higher for more links and advanced features.",
+      answer: "The free plan includes 2 short links and 2 QR codes, which is perfect for getting started. You get basic analytics, real-time tracking, and can create custom back-halves. Upgrade to Pro or higher for more links, password protection, lead capture, and advanced features.",
     },
     {
       question: "How secure is my data?",
@@ -176,7 +184,7 @@ export default function HomePageClient() {
     },
     {
       question: "Can I export my analytics data?",
-      answer: "CSV and bulk export are coming soon. Enterprise plans include API access for programmatic data retrieval and integration with your existing tools.",
+      answer: "Yes. You can export link analytics and lead captures as CSV from the dashboard. Enterprise plans also include API access for programmatic data retrieval and integration with your existing tools.",
     },
     {
       question: "Do you offer API access?",
@@ -370,7 +378,8 @@ export default function HomePageClient() {
                   {[
                     "URL shortening",
                     "QR codes",
-                    "Campaign management",
+                    "Lead capture",
+                    "Campaign Studio",
                     "Developer APIs",
                   ].map((feature, index, list) => (
                     <li key={feature} className="inline-flex items-center">
@@ -527,7 +536,7 @@ export default function HomePageClient() {
                 </span>
               </h3>
               <p className="text-lg text-neutral-muted mb-6 leading-relaxed">
-                Enterprise-grade URL shortening infrastructure. Create short links at scale with custom back-halves, expiration controls, and programmatic access via API. Custom domains for short links are coming soon.
+                Enterprise-grade URL shortening infrastructure. Create short links at scale with custom back-halves, expiration controls, password gates, lead capture before redirect, and programmatic access via API. Custom domains for short links are coming soon.
               </p>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3 group">
@@ -547,6 +556,12 @@ export default function HomePageClient() {
                     <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Password protection for sensitive links</span>
+                </li>
+                <li className="flex items-start gap-3 group">
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                    <Check className="h-4 w-4 text-primary" />
+                  </div>
+                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Lead Gate Studio — collect emails &amp; form fields before redirect</span>
                 </li>
               </ul>
             </div>
@@ -643,9 +658,71 @@ export default function HomePageClient() {
                   <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 group-hover:rotate-12 transition-all duration-300">
                     <Check className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Customizable styling to match your brand</span>
+                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Customizable colors, sizes, and center logos</span>
+                </li>
+                <li className="flex items-start gap-3 group">
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 group-hover:rotate-12 transition-all duration-300">
+                    <Check className="h-4 w-4 text-primary" />
+                  </div>
+                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Watermarked previews until the QR is saved</span>
                 </li>
               </ul>
+            </div>
+          </div>
+
+          {/* Feature — Lead capture */}
+          <div className="grid lg:grid-cols-2 gap-16 items-center mb-24 relative">
+            <div className="relative z-10">
+              <SectionLabel align="left">Lead capture</SectionLabel>
+              <h3 className="text-3xl font-bold text-neutral-text mb-4">
+                Lead Gate{" "}
+                <span className="text-primary">Studio</span>
+              </h3>
+              <p className="text-lg text-neutral-muted mb-6 leading-relaxed">
+                Collect emails and custom fields before visitors reach your destination. Design branded gates with themes, typography, and live preview — then export leads from analytics.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-3 group">
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                    <Check className="h-4 w-4 text-primary" />
+                  </div>
+                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Drag-and-drop fields, themes, and brand styling</span>
+                </li>
+                <li className="flex items-start gap-3 group">
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                    <Check className="h-4 w-4 text-primary" />
+                  </div>
+                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Runs after password gate, before redirect</span>
+                </li>
+                <li className="flex items-start gap-3 group">
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                    <Check className="h-4 w-4 text-primary" />
+                  </div>
+                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">View and CSV-export responses in link analytics</span>
+                </li>
+              </ul>
+            </div>
+            <div className="relative group">
+              <div className="absolute -top-4 -right-4 w-20 h-20 bg-primary/15 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500" />
+              <div className="relative bg-primary/10 rounded-3xl p-8 border border-primary/20 group-hover:border-primary/40 transition-all duration-300 group-hover:shadow-2xl">
+                <div className="bg-white rounded-2xl p-6 shadow-xl space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Mail className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-neutral-text">Continue to destination</div>
+                      <div className="text-xs text-neutral-muted">Enter your email to unlock the link</div>
+                    </div>
+                  </div>
+                  <div className="h-10 rounded-xl border border-neutral-border bg-neutral-bg/60 px-3 flex items-center text-sm text-neutral-muted">
+                    you@company.com
+                  </div>
+                  <div className="h-10 rounded-xl bg-primary text-white text-sm font-semibold flex items-center justify-center">
+                    Continue
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -680,6 +757,12 @@ export default function HomePageClient() {
                     <Check className="h-4 w-4 text-primary" />
                   </div>
                   <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">UTM parameter tracking for campaigns</span>
+                </li>
+                <li className="flex items-start gap-3 group">
+                  <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 group-hover:-rotate-12 transition-all duration-300">
+                    <Check className="h-4 w-4 text-primary" />
+                  </div>
+                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Lead responses with CSV export</span>
                 </li>
               </ul>
             </div>
@@ -741,34 +824,34 @@ export default function HomePageClient() {
               </div>
             </div>
             <div className="relative z-10 order-1 lg:order-2">
-              <SectionLabel align="left">Campaign infrastructure</SectionLabel>
+              <SectionLabel align="left">Campaign Studio</SectionLabel>
               <h3 className="text-3xl font-bold text-neutral-text mb-4">
-                Campaign Management{" "}
+                Campaign{" "}
                 <span className="text-primary">
-                  at Scale
+                  Studio
                 </span>
               </h3>
               <p className="text-lg text-neutral-muted mb-6 leading-relaxed">
-                Organize and manage links across multiple campaigns. Track performance, assign UTM parameters, and scale your marketing infrastructure with powerful campaign tools.
+                Group links by launch, channel, or initiative. Share UTM defaults, add optional partners with unique tracking links, log spend, record conversions, and compare what wins.
               </p>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3 group">
                   <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
                     <Check className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Organize links into campaign groups</span>
+                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Organize links into campaign workspaces</span>
                 </li>
                 <li className="flex items-start gap-3 group">
                   <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
                     <Check className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Bulk UTM parameter management</span>
+                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Partners, spend, conversions, and side-by-side compare</span>
                 </li>
                 <li className="flex items-start gap-3 group">
                   <div className="p-1 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
                     <Check className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Campaign-level analytics and reporting</span>
+                  <span className="text-neutral-muted group-hover:text-neutral-text transition-colors">Campaign-level analytics, UTM breakdowns, and CSV export</span>
                 </li>
               </ul>
             </div>
@@ -1014,7 +1097,7 @@ export default function HomePageClient() {
                     </span>
                   </h3>
                   <p className="text-lg text-neutral-muted mb-6 leading-relaxed">
-                    Take your links to the next level. Generate QR codes, create beautiful landing pages, organize into campaigns, and customize everything to match your brand.
+                    Take your links to the next level. Generate QR codes, design lead gates, create landing pages, organize campaigns, and customize everything to match your brand.
                   </p>
                   
                   {/* Interactive Visual */}

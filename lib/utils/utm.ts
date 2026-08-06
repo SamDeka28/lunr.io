@@ -69,8 +69,9 @@ export function fillEmptyUtmFromDefaults(
 }
 
 /**
- * Build influencer-oriented UTM params for a creator tracking link.
- * Creator/link explicit values win over campaign defaults.
+ * Build UTM params for a partner / placement tracking link.
+ * Uses campaign defaults; sets source from platform and content from handle
+ * when those keys are empty. Does not force utm_medium=influencer.
  */
 export function buildCreatorLinkUtm(options: {
   campaignDefaults?: Record<string, string> | null;
@@ -78,11 +79,18 @@ export function buildCreatorLinkUtm(options: {
   handle?: string | null;
   utmSourceOverride?: string | null;
   utmContentOverride?: string | null;
+  utmMediumOverride?: string | null;
 }): Record<string, string> | null {
   const platform = options.platform?.trim().toLowerCase() || undefined;
   const handle = options.handle?.trim().replace(/^@/, "") || undefined;
-  return mergeCampaignUtmDefaults(options.campaignDefaults, {
-    utm_medium: "influencer",
+  const defaults = options.campaignDefaults || {};
+  const medium =
+    options.utmMediumOverride?.trim() ||
+    defaults.utm_medium ||
+    (platform ? "social" : undefined);
+
+  return mergeCampaignUtmDefaults(defaults, {
+    ...(medium ? { utm_medium: medium } : {}),
     ...(options.utmSourceOverride?.trim() || platform
       ? { utm_source: options.utmSourceOverride?.trim() || platform }
       : {}),
@@ -95,19 +103,16 @@ export function buildCreatorLinkUtm(options: {
 /**
  * Build campaign utm_defaults from form/API input.
  * Defaults utm_campaign to the campaign name slug when not provided.
- * For influencer campaigns, default utm_medium to influencer when unset.
  */
 export function buildCampaignUtmDefaults(
   name: string,
   input?: Partial<UtmParameters> | null,
-  campaignType?: string | null
+  _campaignType?: string | null
 ): Record<string, string> | null {
   const slug = slugifyCampaignName(name);
-  const isInfluencer = campaignType === "influencer";
   return cleanUtmParameters({
     utm_source: input?.utm_source,
-    utm_medium:
-      input?.utm_medium || (isInfluencer ? "influencer" : undefined),
+    utm_medium: input?.utm_medium,
     utm_campaign: input?.utm_campaign || slug || undefined,
     utm_term: input?.utm_term,
     utm_content: input?.utm_content,

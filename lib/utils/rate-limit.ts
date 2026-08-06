@@ -114,6 +114,7 @@ export const RateLimitPresets = {
   auth: { limit: 20, windowMs: 15 * 60_000 }, // 20 / 15min per IP
   password: { limit: 10, windowMs: 15 * 60_000 }, // 10 / 15min per IP+code
   leadCapture: { limit: 20, windowMs: 15 * 60_000 }, // 20 / 15min per IP+code
+  conversionTrack: { limit: 60, windowMs: 60_000 }, // 60/min per IP (pixel/postback)
 } as const;
 
 export function rateLimitHeaders(result: RateLimitResult): Record<string, string> {

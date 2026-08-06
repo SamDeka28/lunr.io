@@ -279,6 +279,14 @@ export async function GET(
       }
     }
 
+    // Pass short code to the destination for conversion pixel attribution
+    try {
+      const { appendLunrScParam } = await import("@/lib/utils/conversion-track");
+      redirectUrl = appendLunrScParam(redirectUrl, shortCode);
+    } catch (error) {
+      console.error("Failed to append lunr_sc:", error);
+    }
+
     // Temporary redirect (302) so destination edits propagate; browsers won't permanently cache
     return NextResponse.redirect(redirectUrl, { status: 302 });
   } catch (error: any) {

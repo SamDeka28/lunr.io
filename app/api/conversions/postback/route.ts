@@ -16,14 +16,54 @@ function clientIp(request: NextRequest): string {
 }
 
 /**
- * POST /api/conversions/track
- * Body JSON track (HMAC token). Prefer pixel/postback for thank-you pages.
+ * GET /api/conversions/postback — server-to-server conversion postback (query params).
+ * POST with JSON body also supported.
  */
+export async function GET(request: NextRequest) {
+  try {
+    const ip = clientIp(request);
+    const rl = await rateLimit(
+      `conv-postback:${ip}`,
+      RateLimitPresets.conversionTrack.limit,
+      RateLimitPresets.conversionTrack.windowMs
+    );
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429, headers: rateLimitHeaders(rl) }
+      );
+    }
+
+    const supabase = createServiceClient();
+    const result = await recordPublicConversion(
+      supabase,
+      paramsFromSearchParams(request.nextUrl.searchParams)
+    );
+
+    if (!result.ok) {
+      return NextResponse.json(
+        { ok: false, error: result.error },
+        { status: result.status, headers: rateLimitHeaders(rl) }
+      );
+    }
+
+    return NextResponse.json(
+      { ok: true, id: result.event.id },
+      { status: 201, headers: rateLimitHeaders(rl) }
+    );
+  } catch (error: any) {
+    return NextResponse.json(
+      { ok: false, error: error.message || "Failed to record conversion" },
+      { status: 400 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const ip = clientIp(request);
     const rl = await rateLimit(
-      `conv-track:${ip}`,
+      `conv-postback:${ip}`,
       RateLimitPresets.conversionTrack.limit,
       RateLimitPresets.conversionTrack.windowMs
     );
@@ -43,51 +83,7 @@ export async function POST(request: NextRequest) {
 
     if (!result.ok) {
       return NextResponse.json(
-        { error: result.error },
-        { status: result.status, headers: rateLimitHeaders(rl) }
-      );
-    }
-
-    return NextResponse.json(result.event, {
-      status: 201,
-      headers: rateLimitHeaders(rl),
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to track conversion" },
-      { status: 400 }
-    );
-  }
-}
-
-/**
- * GET /api/conversions/track — same as postback (JSON).
- * Query: uid, t, campaign_id|link_id|sc, e, v, cur, idk
- */
-export async function GET(request: NextRequest) {
-  try {
-    const ip = clientIp(request);
-    const rl = await rateLimit(
-      `conv-track:${ip}`,
-      RateLimitPresets.conversionTrack.limit,
-      RateLimitPresets.conversionTrack.windowMs
-    );
-    if (!rl.success) {
-      return NextResponse.json(
-        { error: "Too many requests" },
-        { status: 429, headers: rateLimitHeaders(rl) }
-      );
-    }
-
-    const supabase = createServiceClient();
-    const result = await recordPublicConversion(
-      supabase,
-      paramsFromSearchParams(request.nextUrl.searchParams)
-    );
-
-    if (!result.ok) {
-      return NextResponse.json(
-        { error: result.error },
+        { ok: false, error: result.error },
         { status: result.status, headers: rateLimitHeaders(rl) }
       );
     }
@@ -98,7 +94,7 @@ export async function GET(request: NextRequest) {
     );
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || "Failed to track conversion" },
+      { ok: false, error: error.message || "Failed to record conversion" },
       { status: 400 }
     );
   }

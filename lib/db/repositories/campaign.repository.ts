@@ -134,13 +134,14 @@ export class CampaignRepository {
     userId: string,
     data: Partial<CreateCampaignInput>
   ): Promise<Campaign> {
-    const updateData: any = {
-      name: data.name,
-      description: data.description,
-      start_date: data.start_date || null,
-      end_date: data.end_date || null,
+    const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
+
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.start_date !== undefined) updateData.start_date = data.start_date || null;
+    if (data.end_date !== undefined) updateData.end_date = data.end_date || null;
 
     // Only include these fields if they are explicitly provided
     if (data.campaign_type !== undefined) {
@@ -163,6 +164,9 @@ export class CampaignRepository {
     }
     if (data.default_destination_url !== undefined) {
       updateData.default_destination_url = data.default_destination_url || null;
+    }
+    if (data.is_active !== undefined) {
+      updateData.is_active = data.is_active;
     }
 
     const { data: campaign, error } = await this.supabase

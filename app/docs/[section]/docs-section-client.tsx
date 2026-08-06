@@ -17,6 +17,7 @@ import {
   Zap,
   HelpCircle,
   Code,
+  Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
@@ -36,6 +37,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   CreditCard,
   Code,
   HelpCircle,
+  Lightbulb,
 };
 
 interface DocsSectionClientProps {

@@ -16,7 +16,7 @@ import {
 export default async function CampaignsPage({
   searchParams,
 }: {
-  searchParams: { page?: string; pageSize?: string };
+  searchParams: { page?: string; pageSize?: string; archived?: string };
 }) {
   const supabase = await createClient();
   const user = await getCachedUser();
@@ -25,15 +25,21 @@ export default async function CampaignsPage({
     redirect("/login");
   }
 
+  const showArchived = searchParams.archived === "1";
   const { page, pageSize, from, to } = parsePagination(searchParams);
 
-  const campaignsResult = await supabase
+  let campaignsQuery = supabase
     .from("campaigns")
     .select("*", { count: "exact" })
     .eq("user_id", user.id)
-    .eq("is_active", true)
     .order("created_at", { ascending: false })
     .range(from, to);
+
+  campaignsQuery = showArchived
+    ? campaignsQuery.eq("is_active", false)
+    : campaignsQuery.eq("is_active", true);
+
+  const campaignsResult = await campaignsQuery;
 
   const { data: campaigns, count } = campaignsResult;
   const filteredTotal = count ?? 0;
@@ -42,6 +48,7 @@ export default async function CampaignsPage({
   if (page > pagination.totalPages && filteredTotal > 0) {
     const params = new URLSearchParams();
     if (pagination.totalPages > 1) params.set("page", String(pagination.totalPages));
+    if (showArchived) params.set("archived", "1");
     const qs = params.toString();
     redirect(qs ? `/dashboard/campaigns?${qs}` : "/dashboard/campaigns");
   }
@@ -82,23 +89,29 @@ export default async function CampaignsPage({
   return (
     <DashboardContainer>
       <PageHeader
-        title="Campaigns"
-        description="Organize, track, and compare your marketing campaigns"
+        title="Campaign Studio"
+        description="Group links, partners, spend, and analytics by initiative — then compare what wins"
         actions={
           <>
             <Link
-              href="/docs/campaigns/influencer-setup"
+              href={showArchived ? "/dashboard/campaigns" : "/dashboard/campaigns?archived=1"}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-neutral-border bg-white text-sm font-semibold text-neutral-text hover:border-primary/40 hover:text-primary"
+            >
+              {showArchived ? "Active campaigns" : "Archived"}
+            </Link>
+            <Link
+              href="/docs/campaigns/creating-campaigns"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-neutral-border bg-white text-sm font-semibold text-neutral-text hover:border-primary/40 hover:text-primary"
             >
               <BookOpen className="h-4 w-4" />
-              Setup guide
+              Studio guide
             </Link>
             <Link href="/dashboard/campaigns/new">
               <Button>
                 <Plus className="h-4 w-4" />
-                Create campaign
+                New campaign
               </Button>
             </Link>
           </>
@@ -106,7 +119,7 @@ export default async function CampaignsPage({
       />
 
       <div className="space-y-4">
-        <CampaignsList campaigns={campaignsWithStats || []} />
+        <CampaignsList campaigns={campaignsWithStats || []} showArchived={showArchived} />
         <Pagination pagination={pagination} itemLabel="campaigns" />
       </div>
     </DashboardContainer>

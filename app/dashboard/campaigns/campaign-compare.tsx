@@ -185,7 +185,7 @@ export function CampaignCompare({
 
           <MetricRow label="Links" a={a.total_links} b={b.total_links} />
           <MetricRow
-            label="Creators"
+            label="Partners"
             a={a.total_creators ?? 0}
             b={b.total_creators ?? 0}
           />

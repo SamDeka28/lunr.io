@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Code, Link2, Monitor, Radio, BarChart3, Key, Copy, Check, QrCode, ChevronRight, BookOpen } from "lucide-react";
+import { Code, Link2, Monitor, Radio, BarChart3, Key, Copy, Check, QrCode, ChevronRight, BookOpen, Mail } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -122,7 +122,7 @@ const apiCategories: EndpointCategory[] = [
     id: "links",
     category: "Links",
     icon: Link2,
-    description: "Create, manage, and track your shortened links programmatically.",
+    description: "Create, manage, and track your shortened links programmatically. Password protection and lead capture are configured in the dashboard today (not via API keys).",
     endpoints: [
       {
         method: "GET",
@@ -162,7 +162,7 @@ const apiCategories: EndpointCategory[] = [
         method: "POST",
         path: "/api/v1/links",
         title: "Create a new link",
-        description: "Create a new shortened link. You can optionally provide a custom short code, title, expiration date, and UTM parameters. If a QR code was previously generated for this link, it will be included in the response.",
+        description: "Create a new shortened link. You can optionally provide a custom short code, title, expiration date, and UTM parameters. Password protection and lead capture / Lead Gate Studio are managed in the dashboard (not available on this API key endpoint yet).",
         parameters: [
           {
             name: "original_url",
@@ -401,6 +401,228 @@ const apiCategories: EndpointCategory[] = [
     ],
   },
   {
+    id: "lead-capture",
+    category: "Lead Capture",
+    icon: Mail,
+    description:
+      "Lead gates are designed in the dashboard (Lead Gate Studio). Use these endpoints to submit public forms and export captured leads. Session cookie auth is required for owner endpoints; the public submit endpoint needs no API key.",
+    endpoints: [
+      {
+        method: "POST",
+        path: "/api/links/lead-capture",
+        title: "Submit a lead gate form",
+        description:
+          "Public endpoint used by the lead gate page. Validates required fields for the short code, stores the response, and returns success so the visitor can continue to the destination. No API key required.",
+        parameters: [
+          {
+            name: "short_code",
+            type: "string",
+            required: true,
+            description: "Short code of the gated link",
+          },
+          {
+            name: "email",
+            type: "string",
+            required: false,
+            description: "Visitor email when an email field is configured",
+          },
+          {
+            name: "name",
+            type: "string",
+            required: false,
+            description: "Visitor name when a name field is configured",
+          },
+          {
+            name: "responses",
+            type: "object",
+            required: false,
+            description: "Map of custom field id → value for additional studio fields",
+          },
+        ],
+        requestBody: {
+          short_code: "abc123",
+          email: "visitor@example.com",
+          name: "Alex",
+          responses: {
+            "field_company": "Acme Inc",
+          },
+        },
+        responses: [
+          {
+            status: 200,
+            description: "Lead saved",
+            body: JSON.stringify(
+              {
+                ok: true,
+                short_code: "abc123",
+                duplicate: false,
+              },
+              null,
+              2
+            ),
+          },
+          {
+            status: 400,
+            description: "Validation failed",
+            body: JSON.stringify(
+              { error: "Email is required" },
+              null,
+              2
+            ),
+          },
+        ],
+        examples: [
+          {
+            language: "curl",
+            label: "cURL",
+            code: `curl -X POST https://your-domain.com/api/links/lead-capture \\
+  -H "Content-Type: application/json" \\
+  -d '{
+  "short_code": "abc123",
+  "email": "visitor@example.com",
+  "name": "Alex",
+  "responses": { "field_company": "Acme Inc" }
+}'`,
+          },
+          {
+            language: "javascript",
+            label: "JavaScript",
+            code: `const response = await fetch('https://your-domain.com/api/links/lead-capture', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    short_code: 'abc123',
+    email: 'visitor@example.com',
+    name: 'Alex',
+    responses: { field_company: 'Acme Inc' },
+  }),
+});
+
+const data = await response.json();`,
+          },
+          {
+            language: "python",
+            label: "Python",
+            code: `import requests
+
+response = requests.post(
+  "https://your-domain.com/api/links/lead-capture",
+  json={
+    "short_code": "abc123",
+    "email": "visitor@example.com",
+    "name": "Alex",
+    "responses": {"field_company": "Acme Inc"},
+  },
+)
+data = response.json()`,
+          },
+          {
+            language: "php",
+            label: "PHP",
+            code: `$payload = [
+  "short_code" => "abc123",
+  "email" => "visitor@example.com",
+  "name" => "Alex",
+  "responses" => ["field_company" => "Acme Inc"],
+];
+
+$ch = curl_init("https://your-domain.com/api/links/lead-capture");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+$response = curl_exec($ch);
+curl_close($ch);
+$result = json_decode($response, true);`,
+          },
+        ],
+      },
+      {
+        method: "GET",
+        path: "/api/links/{id}/leads",
+        title: "List or export leads",
+        description:
+          "Owner-only (dashboard session). Returns captured leads for a link. Add ?format=csv to download a CSV including custom field columns from Lead Gate Studio.",
+        parameters: [
+          {
+            name: "id",
+            type: "string (UUID)",
+            required: true,
+            description: "Link ID you own",
+          },
+          {
+            name: "format",
+            type: "string",
+            required: false,
+            description: 'Set to "csv" for a CSV download; omit for JSON',
+          },
+        ],
+        responses: [
+          {
+            status: 200,
+            description: "JSON list of leads",
+            body: JSON.stringify(
+              {
+                leads: [
+                  {
+                    id: "770e8400-e29b-41d4-a716-446655440000",
+                    email: "visitor@example.com",
+                    name: "Alex",
+                    responses: { field_company: "Acme Inc" },
+                    created_at: "2024-01-17T14:30:00Z",
+                  },
+                ],
+                total: 1,
+                lead_capture_enabled: true,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+        examples: [
+          {
+            language: "curl",
+            label: "cURL",
+            code: `# Requires an authenticated dashboard session cookie
+curl "https://your-domain.com/api/links/550e8400-e29b-41d4-a716-446655440000/leads"
+curl "https://your-domain.com/api/links/550e8400-e29b-41d4-a716-446655440000/leads?format=csv" \\
+  -o leads.csv`,
+          },
+          {
+            language: "javascript",
+            label: "JavaScript",
+            code: `// Call from the authenticated dashboard (cookies included)
+const res = await fetch('/api/links/550e8400-e29b-41d4-a716-446655440000/leads');
+const data = await res.json();
+
+// CSV download
+window.location.href =
+  '/api/links/550e8400-e29b-41d4-a716-446655440000/leads?format=csv';`,
+          },
+          {
+            language: "python",
+            label: "Python",
+            code: `import requests
+
+# Pass your session cookie from an authenticated browser login
+cookies = {"sb-access-token": "..."}
+r = requests.get(
+  "https://your-domain.com/api/links/550e8400-e29b-41d4-a716-446655440000/leads",
+  cookies=cookies,
+)
+print(r.json())`,
+          },
+          {
+            language: "php",
+            label: "PHP",
+            code: `// Prefer the dashboard CSV export UI.
+// Programmatic access requires a valid session cookie.`,
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: "qr-codes",
     category: "QR Codes",
     icon: QrCode,
@@ -435,7 +657,7 @@ const apiCategories: EndpointCategory[] = [
         method: "POST",
         path: "/api/v1/qr",
         title: "Create a new QR code",
-        description: "Generate a new QR code. You can create a QR code for a custom URL or for an existing link by providing its ID. Optionally set a title and description so you can identify it later.",
+        description: "Generate a new QR code. You can create a QR code for a custom URL or for an existing link by providing its ID. Optionally set a title and description. Colors, size, and logo embedding are available from the dashboard QR builder (pass a precomposed \`qr_data\` image when using the session \`POST /api/qr\` endpoint).",
         parameters: [
           {
             name: "url",
@@ -842,6 +1064,172 @@ const apiCategories: EndpointCategory[] = [
           value: 49.99,
           currency: "USD",
         }),
+      },
+      {
+        method: "GET",
+        path: "/api/conversions/pixel",
+        title: "Conversion pixel (GIF)",
+        description:
+          "Public 1×1 GIF pixel for thank-you pages. Authenticated with HMAC token (uid + t). Always returns a GIF. Optional sc for partner attribution. Copy snippets from Campaign Studio → Pixel Studio.",
+        parameters: [
+          {
+            name: "uid",
+            type: "string (UUID)",
+            required: true,
+            description: "Your user id",
+          },
+          {
+            name: "t",
+            type: "string",
+            required: true,
+            description: "HMAC token for this campaign (or link/short code)",
+          },
+          {
+            name: "campaign_id",
+            type: "string (UUID)",
+            required: false,
+            description: "Campaign id (required for campaign-scoped tokens)",
+          },
+          {
+            name: "sc",
+            type: "string",
+            required: false,
+            description: "Short code from lunr_sc for partner attribution",
+          },
+          {
+            name: "e",
+            type: "string",
+            required: false,
+            description: "Event name (default purchase/conversion)",
+          },
+          {
+            name: "v",
+            type: "number",
+            required: false,
+            description: "Optional monetary value",
+          },
+          {
+            name: "idk",
+            type: "string",
+            required: false,
+            description: "Idempotency / order id",
+          },
+        ],
+        responses: [
+          {
+            status: 200,
+            description: "1×1 transparent GIF",
+            body: "(binary image/gif)",
+          },
+        ],
+        examples: [
+          {
+            language: "curl",
+            label: "cURL",
+            code: `curl -I "https://your-domain.com/api/conversions/pixel?uid=USER_ID&t=TOKEN&campaign_id=CAMPAIGN_ID&e=purchase&sc=abc123"`,
+          },
+          {
+            language: "javascript",
+            label: "JavaScript",
+            code: `new Image().src = "https://your-domain.com/api/conversions/pixel?uid=USER_ID&t=TOKEN&campaign_id=CAMPAIGN_ID&e=purchase";`,
+          },
+          {
+            language: "python",
+            label: "Python",
+            code: `import urllib.request\nurllib.request.urlopen("https://your-domain.com/api/conversions/pixel?uid=USER_ID&t=TOKEN&campaign_id=CAMPAIGN_ID")`,
+          },
+          {
+            language: "php",
+            label: "PHP",
+            code: `file_get_contents("https://your-domain.com/api/conversions/pixel?uid=USER_ID&t=TOKEN&campaign_id=CAMPAIGN_ID");`,
+          },
+        ],
+      },
+      {
+        method: "GET",
+        path: "/api/conversions/postback",
+        title: "Conversion postback (S2S)",
+        description:
+          "Server-to-server conversion postback. Same HMAC fields as the pixel; returns JSON. Prefer this from your order backend with idk for deduplication. POST with JSON also supported.",
+        parameters: [
+          {
+            name: "uid",
+            type: "string (UUID)",
+            required: true,
+            description: "Your user id",
+          },
+          {
+            name: "t",
+            type: "string",
+            required: true,
+            description: "HMAC token",
+          },
+          {
+            name: "campaign_id",
+            type: "string (UUID)",
+            required: false,
+            description: "Campaign id for campaign-scoped tokens",
+          },
+          {
+            name: "sc",
+            type: "string",
+            required: false,
+            description: "Short code attribution",
+          },
+          {
+            name: "e",
+            type: "string",
+            required: false,
+            description: "Event name",
+          },
+          {
+            name: "v",
+            type: "number",
+            required: false,
+            description: "Value",
+          },
+          {
+            name: "cur",
+            type: "string",
+            required: false,
+            description: "Currency code",
+          },
+          {
+            name: "idk",
+            type: "string",
+            required: false,
+            description: "Idempotency key / order id",
+          },
+        ],
+        responses: [
+          {
+            status: 201,
+            description: "Conversion recorded",
+            body: JSON.stringify({ ok: true, id: "990e8400-e29b-41d4-a716-446655440000" }, null, 2),
+          },
+        ],
+        examples: [
+          {
+            language: "curl",
+            label: "cURL",
+            code: `curl "https://your-domain.com/api/conversions/postback?uid=USER_ID&t=TOKEN&campaign_id=CAMPAIGN_ID&e=purchase&v=49.99&cur=USD&idk=order_123&sc=abc123"`,
+          },
+          {
+            language: "javascript",
+            label: "JavaScript",
+            code: `await fetch("https://your-domain.com/api/conversions/postback?uid=USER_ID&t=TOKEN&campaign_id=CAMPAIGN_ID&e=purchase&v=49.99&idk=order_123");`,
+          },
+          {
+            language: "python",
+            label: "Python",
+            code: `import requests\nrequests.get("https://your-domain.com/api/conversions/postback", params={"uid":"USER_ID","t":"TOKEN","campaign_id":"CAMPAIGN_ID","e":"purchase","idk":"order_123"})`,
+          },
+          {
+            language: "php",
+            label: "PHP",
+            code: `file_get_contents("https://your-domain.com/api/conversions/postback?uid=USER_ID&t=TOKEN&campaign_id=CAMPAIGN_ID&e=purchase&idk=order_123");`,
+          },
+        ],
       },
     ],
   },
